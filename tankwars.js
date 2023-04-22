@@ -15,14 +15,16 @@ canvas.width = canvasWidth;
 canvas.height = canvasHeight;
 
 class Tank {
-    constructor(x, y) {
+    constructor(x, y, isAI = false, aiLevel = 0) {
         this.x = x;
         this.y = y;
         this.width = 20;
         this.height = 10;
         this.angle = Math.PI / 4;
         this.power = 50;
-		this.color = getRandomColor();
+        this.color = getRandomColor();
+        this.isAI = isAI;
+        this.aiLevel = aiLevel;
     }
 
     draw() {
@@ -96,19 +98,16 @@ removeTerrain(x, y, radius) {
 let wind = (Math.random() * 2 - 1) / 4;
 let terrain = new Terrain();
 
-const getParams = getUrlParams();
-const numAI = parseInt(getParams.ai) || 0;
+const tankPositions = getRandomTankPositions(numPlayers);
+const aiPlayers = urlParams.ai ? urlParams.ai.split(',').map(p => parseInt(p)) : [];
 
-const tankPositions = getRandomTankPositions(numPlayers + numAI);
 const tanks = [];
-
 for (let i = 0; i < numPlayers; i++) {
-    tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y));
+    const isAI = aiPlayers.includes(i + 1);
+    const aiLevel = isAI ? 1 : 0; // For now, just set AI level to 1
+    tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel));
 }
 
-for (let i = 0; i < numAI; i++) {
-    tanks.push(new Tank(tankPositions[numPlayers + i].x, tankPositions[numPlayers + i].y, true, 1));
-}
 let currentPlayer = 0;
 
 function createExplosion(x, y, radius) {
@@ -150,15 +149,23 @@ function draw() {
         requestAnimationFrame(draw);
     }
 
-    // Check if the current player is AI, and if so, make the AI fire
-    if (tanks[currentPlayer].isAI) {
-        setTimeout(() => {
-            aiFire(tanks[currentPlayer]);
-        }, 1000);
-    }
 }
 
+function gameLoop() {
+    if (!isGameOver) {
+		console.log('Loop');
+        draw();
 
+        // Check if the current player is AI, and if so, make the AI fire
+        
+            setInterval(() => {
+				console.log('aiFire');
+				if (tanks[currentPlayer].isAI) {
+					aiFire(tanks[currentPlayer]);
+            }
+		}, 1000);
+    }
+}
 
 function drawHUD() {
     let tank = tanks[currentPlayer];
@@ -297,6 +304,17 @@ function getRandomColor() {
     return color;
 }
 
+function aiFire(tank) {
+    if (tank.aiLevel === 1) {
+        // Randomly choose angle and power for AI level 1
+        tank.angle = Math.random() * Math.PI / 2;
+        tank.power = Math.random() * 100;
+    }
+
+    // You can add more AI levels with different logic here
+
+    fire();
+}
 
 document.addEventListener('keydown', (event) => {
     let tank = tanks[currentPlayer];
@@ -316,5 +334,4 @@ document.addEventListener('keydown', (event) => {
         }
     }
 });
-draw();
-
+gameLoop();

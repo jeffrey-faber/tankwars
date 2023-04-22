@@ -5,15 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tank Wars</title>
     <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            line-height: 1.5;
+            text-align: center;
+        }
         canvas {
             display: block;
             margin: auto;
             background-color: skyblue;
         }
+        input[type="number"], input[type="text"] {
+            width: 100px;
+            margin: 5px;
+            padding: 5px;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            text-align: center;
+        }
+        input[type="submit"] {
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <h1>TANK WARS</h1>
+    <canvas id="gameCanvas" width="800" height="400" class="hidden"></canvas>
+    <form id="gameForm" action="tankwars.html" method="GET" class="visible">
+        <label for="players">Number of Players:</label>
+        <br>
+        <input type="number" name="players" id="players" min="2" max="8" value="4">
+        <br>
+        <label for="width">Game Width:</label>
+        <br>
+        <input type="number" name="width" id="width" value="1200">
+        <br>
+        <label for="height">Game Height:</label>
+        <br>
+        <input type="number" name="height" id="height" value="600">
+        <br>
+        <label for="ai">AI Players (comma-separated, no spaces):</label>
+        <br>
+        <input type="text" name="ai" id="ai" value="2,3,4">
+        <br>
+        <br>
+        <input type="submit" value="START GAME">
+    </form>
+    <script>
+        const form = document.getElementById('gameForm');
+        const canvasHi = document.getElementById('gameCanvas');
+        const urlParamsHi = getUrlParamsHi();
+        const numPlayersHi = parseInt(urlParamsHi.players) || 0;
+        if (numPlayersHi > 0) {
+            form.classList.add('hidden');
+            canvasHi.classList.remove('hidden');
+        } else {
+            form.classList.remove('hidden');
+            canvasHi.classList.add('hidden');
+        }
+        function getUrlParamsHi() {
+            const queryString = window.location.search.slice(1);
+        return queryString.split('&').reduce((acc, param) => {
+            const [key, value] = param.split('=');
+            acc[key] = decodeURIComponent(value);
+            return acc;
+        }, {});
+    }
+</script>
     <script src="tankwars.js"></script>
+
 </body>
 </html>
