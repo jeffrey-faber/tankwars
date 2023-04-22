@@ -10,6 +10,7 @@ const urlParams = getUrlParams();
 const numPlayers = parseInt(urlParams.players) || 2;
 const canvasWidth = parseInt(urlParams.width) || 800;
 const canvasHeight = parseInt(urlParams.height) || 400;
+let projectileFlying = false;
 
 canvas.width = canvasWidth;
 canvas.height = canvasHeight;
@@ -53,30 +54,30 @@ class Terrain {
         }
     }
 
-removeTerrain(x, y, radius) {
-    let newPoints = [];
+	removeTerrain(x, y, radius) {
+		let newPoints = [];
 
-	radius = radius * 2;
-    for (let i = 0; i < this.points.length; i++) {
-        let point = this.points[i];
-        let distance = Math.sqrt((point.x - x) * (point.x - x) + (point.y - y) * (point.y - y));
+		radius = radius * 2;
+		for (let i = 0; i < this.points.length; i++) {
+			let point = this.points[i];
+			let distance = Math.sqrt((point.x - x) * (point.x - x) + (point.y - y) * (point.y - y));
 
-        if (distance > radius) {
-            newPoints.push(point);
-        } else {
-            // Calculate the depth of terrain removal
-            let depth = Math.max(0, radius - distance);
+			if (distance > radius) {
+				newPoints.push(point);
+			} else {
+				// Calculate the depth of terrain removal
+				let depth = Math.max(0, radius - distance);
 
-            // Remove a larger portion of the terrain based on the depth
-            newPoints.push({
-                x: point.x,
-                y: point.y + depth * 1.5
-            });
-        }
-    }
+				// Remove a larger portion of the terrain based on the depth
+				newPoints.push({
+					x: point.x,
+					y: point.y + depth * 1.5
+				});
+			}
+		}
 
-    this.points = newPoints;
-}
+		this.points = newPoints;
+	}
 
 
    draw() {
@@ -134,6 +135,7 @@ function createExplosion(x, y, radius) {
 
 function draw() {
     if (!isGameOver) {
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         terrain.draw();
         tanks.forEach(tank => tank.draw());
@@ -145,26 +147,29 @@ function draw() {
             ctx.fillStyle = 'black';
             ctx.fill();
         }
+		
+		if (tanks[currentPlayer].isAI && !projectileFlying) {
+            aiFire(tanks[currentPlayer]);
+        }
 
+		
         requestAnimationFrame(draw);
     }
 
 }
 
 function gameLoop() {
-    if (!isGameOver) {
-		console.log('Loop');
+         console.log('Loop');
         draw();
 
         // Check if the current player is AI, and if so, make the AI fire
-        
-            setInterval(() => {
-				console.log('aiFire');
-				if (tanks[currentPlayer].isAI) {
-					aiFire(tanks[currentPlayer]);
-            }
-		}, 1000);
-    }
+     /*   if (tanks[currentPlayer].isAI) {
+            setTimeout(() => {
+                console.log('aiFire');
+                aiFire(tanks[currentPlayer]);
+                gameLoop(); // Call gameLoop recursively after AI fires
+            }, 1000);
+        }*/
 }
 
 function drawHUD() {
@@ -179,6 +184,9 @@ function drawHUD() {
 
 
 function fire() {
+	if(projectileFlying)
+		return;
+	projectileFlying = true;
     let tank = tanks[currentPlayer];
     let angle = tank.angle;
     let power = tank.power;
@@ -224,7 +232,7 @@ function fire() {
 				y <= otherTank.y
 			) {
 				hit = true;
-				createExplosion(x, y, 30);
+				createExplosion(x, y, 50);
 				tanks.splice(index, 1); // Remove the hit tank
 				if (tanks.length === 1) {
 					isGameOver = true;
@@ -250,6 +258,7 @@ function fire() {
             currentPlayer = (currentPlayer + 1) % tanks.length;
 			projectile.x = x;
 			projectile.y = y;
+			projectileFlying = false;
         }
     };
 
