@@ -25,7 +25,7 @@ canvas.width = canvasWidth;
 canvas.height = canvasHeight;
 
 class Tank {
-    constructor(x, y, isAI = false, aiLevel = 0) {
+    constructor(x, y, isAI = false, aiLevel = 0, name = '') {
         this.x = x;
         this.y = y;
         this.width = 20;
@@ -35,6 +35,7 @@ class Tank {
         this.color = getRandomColor();
         this.isAI = isAI;
         this.aiLevel = aiLevel;
+		this.name = name;
     }
 
     draw() {
@@ -84,7 +85,7 @@ class Tank {
             }
 
             if (!hit) {
-                requestAnimationFrame(moveProjectile);
+                  setTimeout(() => requestAnimationFrame(moveProjectile), 5);
             } else {
                 if (y >= 0 && y <= canvas.height) {
                     terrain.removeTerrain(x, y, 15);
@@ -106,16 +107,16 @@ class Tank {
 		const playerAtFireStart = currentPlayer;
 
 		const forceEndTurn = () => {
-			console.log('Current Player : Player At Start',currentPlayer, playerAtFireStart);
+			//console.log('Current Player : Player At Start',currentPlayer, playerAtFireStart);
 			if (currentPlayer !== playerAtFireStart) {
-				console.log('Not forcing end turn:', turnCounter !== currentTurn, currentPlayer !== playerAtFireStart, !this.isAI);
+				//console.log('Not forcing end turn:', turnCounter !== currentTurn, currentPlayer !== playerAtFireStart, !this.isAI);
 				return;
 			}
 
 			projectileFlying = false;
 			needsRedraw = true;
 			currentPlayer = (currentPlayer + 1) % tanks.length;
-			console.log('forced end turn');
+			//console.log('forced end turn');
 		};
 
 		if (this.isAI) {
@@ -141,7 +142,7 @@ class Tank {
         }
 
         // Check for collision with other tanks
-        hit = this.checkTankCollision(x, y, tanks) || hit;
+        hit = this.checkTankCollision(x, y, tanks, 20) || hit;
 
         // Check for out of bounds
         if (x < 0 || x > canvas.width || y > canvas.height) {
@@ -151,29 +152,29 @@ class Tank {
         return hit;
     }
 
-    checkTankCollision(x, y, tanks) {
-        let hit = false;
-        tanks.forEach((otherTank, index) => {
-            if (
-                index !== currentPlayer &&
-                x >= otherTank.x &&
-                x <= otherTank.x + otherTank.width &&
-                y >= otherTank.y - otherTank.height &&
-                y <= otherTank.y
-            ) {
-                hit = true;
-                createExplosion(x, y, 50);
-                tanks.splice(index, 1); // Remove the hit tank
-                if (tanks.length === 1) {
-                    isGameOver = true;
-                    setTimeout(() => {
-                        alert('Player ' + (currentPlayer + 1) + ' wins!');
-                    }, 1000);
-                }
-            }
-        });
-        return hit;
-    }
+	checkTankCollision(x, y, tanks, radius) {
+		let hit = false;
+		tanks.forEach((otherTank, index) => {
+			const tankCenterX = otherTank.x + otherTank.width / 2;
+			const tankCenterY = otherTank.y - otherTank.height / 2;
+			const dx = x - tankCenterX;
+			const dy = y - tankCenterY;
+			const distance = Math.sqrt(dx * dx + dy * dy);
+
+			if (index !== currentPlayer && distance <= radius + otherTank.width / 2) {
+				hit = true;
+				createExplosion(x, y, 50);
+				tanks.splice(index, 1); // Remove the hit tank
+				if (tanks.length === 1) {
+					isGameOver = true;
+					setTimeout(() => {
+						alert('Player ' + (currentPlayer + 1) + ' wins!');
+					}, 1000);
+				}
+			}
+		});
+		return hit;
+	}
 
     aiFire(tanks) {
         if (!aiReadyToFire) {
@@ -200,6 +201,10 @@ class Tank {
             case 4:
                 this.aiLevel4(targetTank);
                 break;
+            case 8:
+                this.aiLevel8(targetTank, terrain);
+                this.aiLevel8(targetTank, terrain);
+                break;
             case 9:
                 this.aiLevel9(targetTank, terrain);
                 break;
@@ -214,19 +219,11 @@ class Tank {
     }
 	
 	aiCalculations(targetTank) {
-		const targetX = targetTank.x + targetTank.width / 2;
-		const targetY =targetTank.y - targetTank.height;
-		const dx = targetX - this.x;
-		const dy = targetY - (this.y - this.height);
+    const dx = targetTank.x + targetTank.width / 2 - (this.x + this.width / 2);
+    const dy = targetTank.y - this.y - this.height + 5; // Add a small vertical offset (5 in this case)
+    return { dx, dy };
+}
 
-		return {
-			targetX: targetX,
-			targetY: targetY,
-			dx: dx,
-			dy: dy,
-			distance: Math.sqrt(dx * dx + dy * dy)
-		}	
-	}
 	
 	getMaxTerrainHeight(terrain, x1, x2) {
 		let maxHeight = 0;
@@ -297,6 +294,7 @@ class Tank {
     }
 
     aiLevel3() {
+		//random lobber
 		const angleMin = Math.PI / 3; // 60 degrees
 		const angleMax = (2 * Math.PI) / 3; // 120 degrees
 		const angleRange = angleMax - angleMin;
@@ -346,8 +344,57 @@ class Tank {
 		this.power = bestPower + powerError;
 	}
 	
+	aiLevel8(targetTank) {
+		const g = gravity; // gravity
+		const windFactor = wind*5.5;
+		const calc = this.aiCalculations(targetTank);
+
+		let bestAngle;
+		let bestPower;
+		let minError = Infinity;
+
+		const angleMin = 30 * (Math.PI / 180); // 60 degrees
+		const angleMax = 150 * (Math.PI / 180); // 120 degrees
+
+		for (let power = 10; power <= 100; power += 1) {
+			for (let angle = angleMin; angle <= angleMax; angle += (Math.PI / 180)) {
+				// Calculate the initial velocities
+				const vx = power * Math.cos(angle) - windFactor * wind;
+				const vy = -power * Math.sin(angle);
+
+				// Calculate the time of flight
+				const t = calc.dx / vx;
+
+				if (t > 0) {
+					// Calculate the landing point
+					const landingX = vx * t;
+					const landingY = vy * t - 0.5 * g * t * t;
+
+					// Calculate the error
+					const error = Math.sqrt((landingX - calc.dx) ** 2 + (landingY - calc.dy) ** 2);
+
+					if (error < minError) {
+						minError = error;
+						bestAngle = angle;
+						bestPower = power;
+					}
+				}
+			}
+		}
+
+		// Add a small random error to make the AI not too perfect
+		const angleError = (Math.random() * 2 - 1) * (Math.PI / 180);
+		const powerError = Math.random() * 2 - 1;
+
+		this.angle = bestAngle + angleError;
+		this.power = bestPower/2.96 + powerError;
+		console.log(`Aiming at ${targetTank.name}. Angle ${this.angle} Power ${this.power}`);
+	}
+
+
+	
 	aiLevel9(targetTank, terrain) {
-		const g = gravity;
+		const g = gravity; // gravity
 		const windFactor = wind;
 		const calc = this.aiCalculations(targetTank);
 
@@ -355,24 +402,28 @@ class Tank {
 		let bestPower;
 		let minError = Infinity;
 
-		for (let power = 10; power <= 100; power += 1) {
-			const angle = 0.5 * Math.asin(calc.dx * g / (power * power));
+			for (let power = 10; power <= 100; power += 0.5) {
+				for (let angleDegrees = 5; angleDegrees <= 175; angleDegrees += 0.5) {
+				const angle = angleDegrees * (Math.PI / 180);
 
-			if (!isNaN(angle) && angle >= 0 && angle < Math.PI) {
+				// Calculate the initial velocities
 				const vx = power * Math.cos(angle) - windFactor * wind;
 				const vy = -power * Math.sin(angle);
 
+				// Calculate the time of flight
 				const t = calc.dx / (power * Math.cos(angle) - windFactor * wind);
 
 				if (t > 0) {
+					// Check if the projectile clears the terrain
 					const startX = this.x + this.width / 2;
 					const startY = this.y - this.height;
 					const targetX = startX + calc.dx;
 					const targetY = startY + calc.dy;
-					const projectileRadius = 2;
+					const projectileRadius = 2; // Assuming a radius of 2 for the projectile
 					const clearsTerrain = this.clearsTerrain(terrain, startX, startY, targetX, targetY, projectileRadius);
 
 					if (clearsTerrain) {
+						// Calculate the error
 						const error = Math.abs(vx * t - calc.dx);
 
 						if (error < minError) {
@@ -381,16 +432,17 @@ class Tank {
 							bestPower = power;
 						}
 					}
+							if (minError === Infinity || !bestAngle || !bestPower) {
+								console.log("No valid shot found.");
+								console.log("calc.dx:", calc.dx);
+								console.log("calc.dy:", calc.dy);
+								console.log("gravity:", g);
+								console.log("windFactor:", windFactor);
+							}
+
+
 				}
 			}
-		}
-
-		if (minError === Infinity || !bestAngle || !bestPower) {
-			console.log("No valid shot found.");
-			console.log("calc.dx:", calc.dx);
-			console.log("calc.dy:", calc.dy);
-			console.log("gravity:", g);
-			console.log("windFactor:", windFactor);
 		}
 
 		// Add a small random error to make the AI not too perfect
@@ -428,7 +480,7 @@ class Terrain {
 	{variance: 400, smoothness: 50, baseHeight:200, desc: 'Middle'},
 	{variance: 500, smoothness: 20, baseHeight:20, desc: 'High'},
 	{variance: 200, smoothness: 40, baseHeight:20, desc: 'Hight Flat'},
-	{variance: 200, smoothness: 40, baseHeight:440, desc: 'Low Flat'},
+	{variance: 200, smoothness: 40, baseHeight:380, desc: 'Low Flat'},
 	];
 	
     pickRandomMap() {
@@ -455,7 +507,7 @@ class Terrain {
 	removeTerrain(x, y, radius) {
 		let newPoints = [];
 
-		radius = radius * 2;
+		radius = radius * 3.5;
 		for (let i = 0; i < this.points.length; i++) {
 			let point = this.points[i];
 			let distance = Math.sqrt((point.x - x) * (point.x - x) + (point.y - y) * (point.y - y));
@@ -477,8 +529,6 @@ class Terrain {
 		this.points = newPoints;
 	}
 	
-	
-
 
    draw() {
         ctx.fillStyle = 'green';
@@ -505,8 +555,8 @@ const aiPlayers = urlParams.ai ? urlParams.ai.split(',').map(p => parseInt(p)) :
 const tanks = [];
 for (let i = 0; i < numPlayers; i++) {
     const isAI = aiPlayers.includes(i + 1);
-    const aiLevel = isAI ? 3 : 0; // For now, just set AI level to 1
-    tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel));
+    const aiLevel = isAI ? 8 : 0; // For now, just set AI level to 1
+    tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, `Player ${i+1}`));
 }
 
 let currentPlayer = 0;
@@ -570,7 +620,7 @@ function drawHUD() {
 		return;
     ctx.font = '16px Arial';
     ctx.fillStyle = 'black';
-    ctx.fillText('Player ' + (currentPlayer + 1), 10, 20);
+    ctx.fillText(tank.name, 10, 20);
     ctx.fillText('Angle: ' + (tank.angle * (180 / Math.PI)).toFixed(1) + '°', 10, 40);
     ctx.fillText('Power: ' + tank.power.toFixed(1), 10, 60);
     ctx.fillText('Wind: ' + (wind * 100).toFixed(1), 10, 80);
@@ -636,6 +686,16 @@ function gameLoop() {
 
 document.addEventListener('keydown', (event) => {
     let tank = tanks[currentPlayer];
+	
+	
+	if (event.key === '/') {
+			console.log('force Skip');
+			projectileFlying = false;
+			needsRedraw = true;
+			currentPlayer = (currentPlayer + 1) % tanks.length;
+			aiReadyToFire = true;
+        }
+
 
     if (!tank.isAI) {
 		needsRedraw = true;
@@ -652,9 +712,6 @@ document.addEventListener('keydown', (event) => {
             tank.fire(tanks, terrain, projectile, wind, canvas);
         }
     }
-	if (event.key === 'Esc') {
-           tank.fire(tanks, terrain, projectile, wind, canvas);
-        }
 });
 
 
