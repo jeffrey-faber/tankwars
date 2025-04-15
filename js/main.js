@@ -11,7 +11,7 @@ canvas.height = canvasHeight;
 let wind = (Math.random() * 2 - 1) / 10;
 const gravity = 0.1;
 
-let projectile = { x: null, y: null, flying: false };
+let projectile = { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 15 };
 let isGameOver = false;
 let needsRedraw = true;
 let aiReadyToFire = true;
@@ -28,6 +28,15 @@ for (let i = 0; i < numPlayers; i++) {
     tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, `Player ${i + 1}`));
 }
 
+// Initialize Store
+const store = new Store();
+document.addEventListener('DOMContentLoaded', () => {
+    // Delay store initialization slightly to ensure DOM is ready
+    setTimeout(() => {
+        store.init(tanks);
+    }, 100);
+});
+
 function drawHUD() {
     const tank = tanks[currentPlayer];
     if (!tank) return;
@@ -39,8 +48,11 @@ function drawHUD() {
     ctx.fillText('Wind: ' + (wind * 100).toFixed(1), 10, 80);
     ctx.fillText('Score: ' + tank.score, 10, 100);
     ctx.fillText('Currency: ' + tank.currency, 10, 120);
+    ctx.fillText('Health: ' + tank.health, 10, 140);
+    
+    // Display current weapon
+    ctx.fillText('Weapon: ' + tank.selectedWeapon, 10, 160);
 }
-
 
 // Main draw function
 function draw() {
@@ -56,19 +68,32 @@ function draw() {
         if (projectile.x !== null && projectile.y !== null) {
             ctx.beginPath();
             ctx.arc(projectile.x, projectile.y, 3, 0, 2 * Math.PI);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = projectile.color || 'black';
             ctx.fill();
         }
+        
+        // Update weapon selector if it exists
+        if (store && !projectile.flying) {
+            store.updateWeaponSelector(tanks[currentPlayer]);
+        }
+        
         // Handle AI turns
         if (tanks[currentPlayer]?.isAI && !projectile.flying) {
             let targetTank;
             do {
                 targetTank = tanks[Math.floor(Math.random() * tanks.length)];
-            } while (targetTank === tanks[currentPlayer]);
+            } while (targetTank === tanks[currentPlayer] || !targetTank.alive);
+            
+            // Let AI purchase items
+            if (store) {
+                store.aiPurchase(tanks[currentPlayer]);
+            }
+            
             tanks[currentPlayer].aiFire(tanks, terrain, projectile, wind, canvas);
         }
     }
 }
+
 function showGameOverOverlay(message) {
     const overlay = document.getElementById('gameOverOverlay');
     const messageElement = document.getElementById('gameOverMessage');
@@ -88,10 +113,9 @@ function getNextAliveTankIndex(startIndex) {
     return startIndex; // fallback (shouldn't happen if at least one is alive)
 }
 
-
 function resetRound() {
     isGameOver = false;
-    projectile = { x: null, y: null, flying: false };
+    projectile = { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 15 };
     needsRedraw = true;
     currentPlayer = 0;
     wind = (Math.random() * 2 - 1) / 10;
@@ -108,50 +132,72 @@ function resetRound() {
         tank.angle = Math.PI / 4;
         tank.power = 50;
         tank.alive = true; // Revive the tank
+        tank.health = tank.maxHealth; // Reset health
+        tank.shielded = false; // Remove shields
+        tank.selectedWeapon = 'default'; // Reset weapon
     });
+    
+    // Apply gravity to tanks to make sure they're properly positioned
+    setTimeout(() => {
+        tanks.forEach(tank => tank.applyGravity(terrain));
+    }, 100);
 }
-
 
 function newGame() {
     window.location.href = "index.html"; // Or simply use window.location.reload();
 }
 
-
-function showGameOverOverlay(message) {
-    const overlay = document.getElementById('gameOverOverlay');
-    const messageElement = document.getElementById('gameOverMessage');
-    messageElement.textContent = message;
-    overlay.classList.remove('hidden');
-}
-
-
 function gameLoop() {
     // If the current tank is dead, skip to the next alive tank
-    if (!tanks[currentPlayer].alive) {
+    if (!tanks[currentPlayer]?.alive) {
         currentPlayer = getNextAliveTankIndex(currentPlayer);
     }
 
     if (!isGameOver) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         terrain.draw(ctx, canvas);
+        
+        // Apply gravity to tanks if terrain has been modified
+        if (!projectile.flying) {
+            tanks.forEach(tank => {
+                if (tank.alive) {
+                    tank.applyGravity(terrain);
+                }
+            });
+        }
+        
         tanks.forEach(tank => {
             if (tank.alive) {
                 tank.draw(ctx);
             }
         });
+        
         drawHUD();
+        
         if (projectile.x !== null && projectile.y !== null) {
             ctx.beginPath();
             ctx.arc(projectile.x, projectile.y, 3, 0, 2 * Math.PI);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = projectile.color || 'black';
             ctx.fill();
         }
+        
+        // Update weapon selector
+        if (store && !projectile.flying) {
+            store.updateWeaponSelector(tanks[currentPlayer]);
+        }
+        
         // For AI turns, check alive status before firing
-        if (tanks[currentPlayer].isAI && !projectile.flying && tanks[currentPlayer].alive) {
+        if (tanks[currentPlayer]?.isAI && !projectile.flying && tanks[currentPlayer].alive) {
             let targetTank;
             do {
                 targetTank = tanks[Math.floor(Math.random() * tanks.length)];
             } while (targetTank === tanks[currentPlayer] || !targetTank.alive);
+            
+            // Let AI purchase items
+            if (store) {
+                store.aiPurchase(tanks[currentPlayer]);
+            }
+            
             tanks[currentPlayer].aiFire(tanks, terrain, projectile, wind, canvas);
         }
     }
@@ -163,7 +209,7 @@ gameLoop();
 document.addEventListener('keydown', (event) => {
     let tank = tanks[currentPlayer];
     // If current tank is not alive, update currentPlayer and return early
-    if (!tank.alive) {
+    if (!tank?.alive) {
         currentPlayer = getNextAliveTankIndex(currentPlayer);
         return;
     }
@@ -174,7 +220,7 @@ document.addEventListener('keydown', (event) => {
         currentPlayer = getNextAliveTankIndex(currentPlayer);
     }
 
-    if (!tank.isAI) {
+    if (!tank.isAI && store && !store.isOpen) {
         needsRedraw = true;
         if (event.key === 'ArrowLeft') {
             tank.angle += Math.PI / 180;
@@ -184,13 +230,29 @@ document.addEventListener('keydown', (event) => {
             tank.power += 1;
         } else if (event.key === 'ArrowDown') {
             tank.power -= 1;
-        } else if (event.key === ' ') {
+        } else if (event.key === ' ' && !projectile.flying) {
             event.preventDefault();
             tank.fire(tanks, terrain, projectile, wind, canvas);
+        } else if (event.key === 's') { 
+            // Open the store with 's' key
+            if (store && !projectile.flying) {
+                store.open(tank);
+            }
+        } else if (event.key >= '1' && event.key <= '9') {
+            // Quick select weapons by number keys
+            const index = parseInt(event.key) - 1;
+            if (tank.inventory && index < tank.inventory.length) {
+                const item = tank.inventory[index];
+                if (item.effect.type === 'weapon' || item.effect.type === 'defense') {
+                    tank.useItem(item.id);
+                    if (store) {
+                        store.updateWeaponSelector(tank);
+                    }
+                }
+            }
         }
     }
 });
-
 
 document.getElementById('continueButton').addEventListener('click', () => {
     document.getElementById('gameOverOverlay').classList.add('hidden');

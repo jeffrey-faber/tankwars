@@ -38,14 +38,25 @@ class Terrain {
     }
 
     removeTerrain(x, y, radius) {
+        // Handle special case for nukes - ensure they create a bigger crater
+        const isNuke = radius >= 40;
+        
         let newPoints = [];
-        const baseRemovalFactor = .5;
-        // Scale radius for effect
-        radius = radius * 3.5;
+        // Reduced removal factor to make terrain changes less extreme
+        const baseRemovalFactor = isNuke ? 0.8 : 0.6; 
+        
+        // Scale radius for effect, lowered scaling for more controlled explosions
+        radius = radius * (isNuke ? 3.0 : 2.5);
+
+        // Calculate center of crater with smaller offset for more controlled explosions
+        const offsetX = Math.random() * 6 - 3;
+        const offsetY = 3; 
+        const craterX = x + offsetX;
+        const craterY = y + offsetY;
 
         for (let i = 0; i < this.points.length; i++) {
             const point = this.points[i];
-            const distance = Math.sqrt((point.x - x) ** 2 + (point.y - y) ** 2);
+            const distance = Math.sqrt((point.x - craterX) ** 2 + (point.y - craterY) ** 2);
 
             if (distance > radius) {
                 newPoints.push(point);
@@ -61,14 +72,30 @@ class Terrain {
                     slope = Math.max(slope, Math.abs(point.y - this.points[i + 1].y));
                 }
 
-                // If the slope is steep, assume it's a skinny spike and increase removal depth
-                if (slope > 20) { // Threshold value; adjust as needed
-                    depth *= 2.0;
+                // Better handling for thin spikes with more moderate multiplier
+                if (slope > 20) {
+                    depth *= 2.5; 
                 }
 
+                // More moderate extra depth in the center of the explosion
+                const centerFactor = 1.0 - (distance / radius);
+                depth += centerFactor * 5;
+
+                // More moderate minimum effect
+                depth = Math.max(depth, isNuke ? 15 : 8); 
+
+                // Apply depth with less randomization
+                const jitter = Math.random() * 3;
+                
+                // Calculate new y position
+                let newY = point.y + depth * baseRemovalFactor + jitter;
+                
+                // Ensure terrain doesn't go below canvas height - 10 (leave some margin)
+                newY = Math.min(newY, canvas.height - 10);
+                
                 newPoints.push({
                     x: point.x,
-                    y: point.y + depth * baseRemovalFactor
+                    y: newY
                 });
             }
         }
