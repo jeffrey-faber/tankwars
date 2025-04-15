@@ -14,6 +14,19 @@ class Tank {
         this.score = 0;
         this.currency = 0;
         this.alive = true;
+        this.aiParams = {
+            // Initial half–range for search (in radians and power units)
+            angleRange: 5 * Math.PI / 180,  // ±5° by default
+            powerRange: 2.5,               // ±2.5 power units by default
+            // Increments for iterating candidate values
+            angleIncrement: 1 * Math.PI / 180, // 1° steps
+            powerIncrement: 0.5,
+            // Minimum and maximum allowed search ranges (so they don’t shrink or grow too far)
+            minAngleRange: 2 * Math.PI / 180,
+            maxAngleRange: 15 * Math.PI / 180,
+            minPowerRange: 1,
+            maxPowerRange: 10
+        };
     }
 
     draw(ctx) {
@@ -129,7 +142,7 @@ class Tank {
         } while (targetTank === this);
         // Example: using aiLevel8 for this AI
         if (this.aiLevel === 8) {
-            this.aiLevel8(targetTank, terrain);
+            this.aiLevelMaxLob(targetTank, terrain);
         }
         setTimeout(() => {
             this.fire(tanks, terrain, projectile, wind, canvas);
@@ -167,5 +180,145 @@ class Tank {
         const powerError = Math.random() * 2 - 1;
         this.angle = bestAngle + angleError;
         this.power = bestPower / 2.96 + powerError;
+    }
+
+    aiLevelMax(targetTank, terrain) {
+        const g = gravity;
+        const physicsScale = 0.2; // same scaling as in fire()
+        const calc = this.aiCalculations(targetTank);
+        let bestAngle = null;
+        let bestPower = null;
+        let minError = Infinity;
+
+        // Try many power and angle combinations using fine increments
+        for (let power = 10; power <= 100; power += 0.1) {
+            for (
+                let angle = 5 * Math.PI / 180;
+                angle <= 175 * Math.PI / 180;
+                angle += (0.1 * Math.PI / 180)
+            ) {
+                // Compute initial velocities using the same scaling
+                const vx = power * Math.cos(angle) * physicsScale + wind; // wind is added as in fire()
+                const vy = -power * Math.sin(angle) * physicsScale;
+                if (vx <= 0) continue;
+                const t = calc.dx / vx;
+                if (t > 0) {
+                    // Predict landing Y position, accounting for gravity
+                    const predictedY = vy * t + 0.5 * g * t * t;
+                    const error = Math.abs(vx * t - calc.dx) + Math.abs(predictedY - calc.dy);
+                    if (error < minError) {
+                        minError = error;
+                        bestAngle = angle;
+                        bestPower = power;
+                    }
+                }
+            }
+        }
+
+        // Fallback if no valid shot was found
+        if (bestAngle === null || bestPower === null) {
+            return this.aiLevel8(targetTank, terrain);
+        }
+
+        // Apply a very small error to avoid 100% perfection
+        const angleError = 0;
+        const powerError = 0;
+        this.angle = bestAngle + angleError;
+        this.power = bestPower + powerError;
+    }
+
+    aiLevelMaxLob(targetTank, terrain) {
+        const dt = 0.05;
+        const maxSimTime = 10;
+        const g = gravity;
+        const physicsScale = 0.2;
+
+        // Use the same starting offset as in fire()
+        const startX = this.x + this.width / 2 + 15 * Math.cos(this.angle);
+        const startY = this.y - this.height - 15 * Math.sin(this.angle);
+
+        // Desired displacement from start position
+        const calc = {
+            dx: targetTank.x + targetTank.width / 2 - startX,
+            dy: targetTank.y - startY
+        };
+
+        let bestAngle = null;
+        let bestPower = null;
+        let minError = Infinity;
+
+        // Use stored AI parameters (if we have a last shot, narrow the search range around it)
+        let angleMin, angleMax, powerMin, powerMax;
+        if (this.lastBestAngle !== undefined && this.lastBestPower !== undefined) {
+            angleMin = this.lastBestAngle - this.aiParams.angleRange;
+            angleMax = this.lastBestAngle + this.aiParams.angleRange;
+            powerMin = Math.max(10, this.lastBestPower - this.aiParams.powerRange);
+            powerMax = Math.min(100, this.lastBestPower + this.aiParams.powerRange);
+        } else {
+            // Otherwise, use default high-arc search range (60°–120°)
+            angleMin = Math.PI / 3;
+            angleMax = 2 * Math.PI / 3;
+            powerMin = 10;
+            powerMax = 100;
+        }
+
+        // Iterate over candidate values using the aiParams increments
+        for (let power = powerMin; power <= powerMax; power += this.aiParams.powerIncrement) {
+            for (let angle = angleMin; angle <= angleMax; angle += this.aiParams.angleIncrement) {
+                let x = startX, y = startY;
+                let vx = power * Math.cos(angle) * physicsScale;
+                let vy = -power * Math.sin(angle) * physicsScale;
+                let t = 0;
+
+                // Simulate the projectile's flight
+                while (t < maxSimTime && y < canvas.height) {
+                    x += vx * dt;
+                    y += vy * dt;
+                    vy += g * dt;
+                    vx += wind * dt;
+                    t += dt;
+                }
+
+                // Compute an error metric: difference between simulated landing point and target displacement
+                const error = Math.abs(x - (startX + calc.dx)) + Math.abs(y - (startY + calc.dy));
+
+                if (error < minError) {
+                    minError = error;
+                    bestAngle = angle;
+                    bestPower = power;
+                }
+            }
+        }
+
+        // If no candidate shot was found, fall back to a lower-level AI method.
+        if (bestAngle === null || bestPower === null) {
+            return this.aiLevel8(targetTank, terrain);
+        }
+
+        // Store these values so the next shot can narrow around them
+        this.lastBestAngle = bestAngle;
+        this.lastBestPower = bestPower;
+
+        // Adjust the search range more quickly:
+        // If the error is small, narrow the range; if it’s high, widen it a bit.
+        const errorThreshold = 10; // adjust this threshold as needed
+        if (minError < errorThreshold) {
+            this.aiParams.angleRange = Math.max(this.aiParams.minAngleRange, this.aiParams.angleRange * 0.8);
+            this.aiParams.powerRange = Math.max(this.aiParams.minPowerRange, this.aiParams.powerRange * 0.8);
+        } else {
+            this.aiParams.angleRange = Math.min(this.aiParams.maxAngleRange, this.aiParams.angleRange * 1.1);
+            this.aiParams.powerRange = Math.min(this.aiParams.maxPowerRange, this.aiParams.powerRange * 1.1);
+        }
+
+        // Set the shot parameters (you can add a minimal random error if you want)
+        this.angle = bestAngle;
+        this.power = bestPower;
+    }
+
+
+    aiCalculations(targetTank) {
+        const dx = targetTank.x + targetTank.width / 2 - (this.x + this.width / 2);
+        const dy = targetTank.y - this.y - this.height + 5; // adjust the offset as needed
+        return { dx, dy };
     }
 }
