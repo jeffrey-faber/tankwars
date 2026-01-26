@@ -24,7 +24,7 @@ let aiReadyToFire = true;
 let currentPlayer = 0;
 
 // Initialize Terrain and Tanks
-const oldTerrain = new Terrain(); // Used for heightmap generation
+const oldTerrain = new Terrain(canvas.width, canvas.height); // Used for heightmap generation
 const terrain = new BitmaskTerrain(canvas.width, canvas.height);
 terrain.bakeHeightmap(oldTerrain.points);
 
@@ -132,7 +132,7 @@ function resetRound() {
     window.currentPlayer = 0;
     wind = (Math.random() * 2 - 1) / 10;
 
-    const newOldTerrain = new Terrain();
+    const newOldTerrain = new Terrain(canvas.width, canvas.height);
     terrain.bakeHeightmap(newOldTerrain.points);
 
     const newTankPositions = getRandomTankPositions(numPlayers, newOldTerrain);

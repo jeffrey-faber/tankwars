@@ -1,11 +1,14 @@
 export class Terrain {
-    constructor(mapProps = this.pickRandomMap()) {
+    constructor(width, height, mapProps = null) {
+        if (!mapProps) mapProps = this.pickRandomMap();
         console.log(mapProps);
+        this.width = width;
+        this.height = height;
         this.points = [];
         const detail = mapProps.detail || mapProps.smoothness || 10;
         let previousY = Math.floor(Math.random() * mapProps.variance + mapProps.baseHeight);
 
-        for (let i = 0; i <= canvas.width; i += detail) {
+        for (let i = 0; i <= this.width; i += detail) {
             let y = Math.floor(Math.random() * mapProps.variance + mapProps.baseHeight);
             y = (previousY + y) / 2; // Smooth interpolation between previous and current value.
             this.points.push({ x: i, y });
@@ -91,7 +94,7 @@ export class Terrain {
                 let newY = point.y + depth * baseRemovalFactor + jitter;
                 
                 // Ensure terrain doesn't go below canvas height - 10 (leave some margin)
-                newY = Math.min(newY, canvas.height - 10);
+                newY = Math.min(newY, this.height - 10);
                 
                 newPoints.push({
                     x: point.x,
