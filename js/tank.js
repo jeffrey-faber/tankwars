@@ -361,6 +361,7 @@ export class Tank {
                 }
             }
         });
+    }
     
     useItem(itemId) {
         const index = this.inventory.findIndex(item => item.id === itemId);
