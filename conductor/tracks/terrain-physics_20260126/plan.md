@@ -1,15 +1,15 @@
 # Implementation Plan - Enhanced Terrain Physics & Destruction
 
 ## Phase 1: Core Terrain Engine Refactor
-- [ ] Task: Create new `BitmaskTerrain` class structure (TDD)
-  - [ ] Sub-task: Write tests for initializing a 2D grid/canvas-based terrain
-  - [ ] Sub-task: Implement `BitmaskTerrain` class with `init(width, height)`
-- [ ] Task: Implement basic rendering for 2D terrain
-  - [ ] Sub-task: Write tests for drawing the terrain state to a canvas context
-  - [ ] Sub-task: Implement `draw(ctx)` to render the pixel data
-- [ ] Task: Implement `checkCollision(x, y)`
-  - [ ] Sub-task: Write tests verifying collision against solid pixels vs air
-  - [ ] Sub-task: Implement collision lookup
+- [x] Task: Create new `BitmaskTerrain` class structure (TDD) [712698b]
+  - [x] Sub-task: Write tests for initializing a 2D grid/canvas-based terrain
+  - [x] Sub-task: Implement `BitmaskTerrain` class with `init(width, height)`
+- [x] Task: Implement basic rendering for 2D terrain [712698b]
+  - [x] Sub-task: Write tests for drawing the terrain state to a canvas context
+  - [x] Sub-task: Implement `draw(ctx)` to render the pixel data
+- [x] Task: Implement `checkCollision(x, y)` [712698b]
+  - [x] Sub-task: Write tests verifying collision against solid pixels vs air
+  - [x] Sub-task: Implement collision lookup
 - [ ] Task: Conductor - User Manual Verification 'Core Terrain Engine Refactor' (Protocol in workflow.md)
 
 ## Phase 2: Destructive Deformations
