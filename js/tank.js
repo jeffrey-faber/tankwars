@@ -197,8 +197,15 @@ export class Tank {
                     // During immunity, only check for terrain and out of bounds
                     hit = this.checkTerrainAndBounds(x, y, terrain, canvas);
                 } else {
-                    // After immunity period, check for all collisions
-                    hit = this.checkCollisions(x, y, terrain, tanks, canvas, projectile, excludeSourcePlayer);
+                    // Check for DIRECT HIT on tanks or terrain
+                    const directHitTank = this.checkDirectHit(x, y, tanks, excludeSourcePlayer);
+                    if (directHitTank) {
+                        hit = true;
+                        // Store the directly hit tank to apply bonus damage later
+                        this.directHitTank = directHitTank;
+                    } else {
+                        hit = this.checkTerrainAndBounds(x, y, terrain, canvas);
+                    }
                 }
                 
                 // End turn if max time elapsed
@@ -207,6 +214,7 @@ export class Tank {
                 if (!hit) {
                     requestAnimationFrame(moveProjectile);
                 } else {
+                    // Projectile has hit something or timed out. NOW explode.
                     if (y >= 0 && y <= (window.canvas?.height || 400)) {
                         // Create appropriate explosion based on weapon type
                         if (terrain.explode) {
@@ -218,7 +226,14 @@ export class Tank {
                         if (window.ctx && window.canvas && window.draw) {
                             createExplosion(x, y, projectile.explosionRadius, window.ctx, window.canvas, window.draw);
                         }
+                        
+                        // Apply splash damage to all tanks in radius
+                        this.applyExplosionDamage(x, y, tanks, projectile.explosionRadius, projectile.damage, projectile.sourcePlayerId, this.directHitTank);
+                        
+                        // Clear temp storage
+                        this.directHitTank = null;
                     }
+                    
                     if (window.getNextAliveTankIndex && window.currentPlayer !== undefined) {
                         window.currentPlayer = window.getNextAliveTankIndex(window.currentPlayer);
                     }
@@ -267,35 +282,40 @@ export class Tank {
     }
 
     checkCollisions(x, y, terrain, tanks, canvas, projectile, excludeSourcePlayer = false) {
-        let hit = false;
-        // Check collision with terrain
-        if (terrain.checkCollision) {
-            if (terrain.checkCollision(x, y)) hit = true;
-        } else {
-            for (let i = 1; i < terrain.points.length; i++) {
-                let p1 = terrain.points[i - 1];
-                let p2 = terrain.points[i];
-                if (x >= p1.x && x <= p2.x) {
-                    let groundY = p1.y + ((x - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
-                    if (y >= groundY) hit = true;
-                    break;
-                }
-            }
-        }
-        // Check collision with tanks
-        hit = this.checkTankCollision(x, y, tanks, projectile.explosionRadius, projectile.damage, excludeSourcePlayer, projectile.sourcePlayerId) || hit;
-        // Check out-of-bounds
-        if (x < 0 || x > canvas.width || y > canvas.height) hit = true;
-        return hit;
+        // This method is now effectively replaced by separate checks in the loop
+        // keeping it if needed for reference, but the loop logic handles it now.
+        return this.checkTerrainAndBounds(x, y, terrain, canvas) || 
+               (this.checkDirectHit(x, y, tanks, excludeSourcePlayer) !== null);
     }
 
-    checkTankCollision(x, y, tanks, radius, damage, excludeSourcePlayer = false, sourcePlayerId = -1) {
-        let hit = false;
-        tanks.forEach((otherTank, tankIndex) => {
-            if (!otherTank.alive) return; // Skip already destroyed tanks
+    // Check if projectile PHYSICALLY hits a tank body
+    checkDirectHit(x, y, tanks, excludeSourcePlayer = false) {
+        // Source player ID needs to be known, but we can't easily get it here without passing it.
+        // Assuming 'this' is the firing tank (which it is).
+        const sourceTank = this;
+        
+        for (let i = 0; i < tanks.length; i++) {
+            const otherTank = tanks[i];
+            if (!otherTank.alive) continue;
             
-            // Skip source player if excludeSourcePlayer is true
-            if (excludeSourcePlayer && tankIndex === sourcePlayerId) return;
+            if (excludeSourcePlayer && otherTank === sourceTank) continue;
+            
+            // Simple AABB collision or point-in-rect
+            // Tank origin is (x, y-height) because it draws UP from y
+            // Wait, draw() says: ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
+            // So rect is: x: [this.x, this.x+width], y: [this.y-height, this.y]
+            
+            if (x >= otherTank.x && x <= otherTank.x + otherTank.width &&
+                y >= otherTank.y - otherTank.height && y <= otherTank.y) {
+                return otherTank; // Return the tank that was hit
+            }
+        }
+        return null; // Miss
+    }
+
+    applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, directHitTank = null) {
+        tanks.forEach((otherTank, tankIndex) => {
+            if (!otherTank.alive) return;
             
             const tankCenterX = otherTank.x + otherTank.width / 2;
             const tankCenterY = otherTank.y - otherTank.height / 2;
@@ -305,38 +325,34 @@ export class Tank {
             
             // Check if within explosion radius
             // Strict hitbox: The center of the tank must be INSIDE the explosion circle
-            if (distance < radius) {
-                hit = true;
+            // OR if it was a direct hit (force inclusion)
+            const isDirectHit = (otherTank === directHitTank);
+            
+            if (distance < radius || isDirectHit) {
+                // Calculate damage based on distance
+                let distanceFactor = 1 - (distance / radius);
+                if (distanceFactor < 0) distanceFactor = 0; // Should happen only if direct hit outside radius (unlikely)
                 
-                // Calculate damage based on distance (more damage if closer)
-                // Since distance < radius, factor is always between 0 and 1
-                const distanceFactor = 1 - (distance / radius);
-                const effectiveDamage = Math.floor(damage * distanceFactor);
+                let effectiveDamage = Math.floor(damage * distanceFactor);
                 
-                // Create explosion effect
-                if (window.ctx && window.canvas && window.draw) {
-                    createExplosion(x, y, radius, window.ctx, window.canvas, window.draw);
+                // Bonus damage for direct hit
+                if (isDirectHit) {
+                    effectiveDamage = Math.max(effectiveDamage, damage); // Ensure at least 100% base damage
+                    effectiveDamage += 25; // Flat bonus for direct impact
                 }
                 
                 // Apply damage
                 if (otherTank.shielded) {
-                    // Shield blocks the hit
                     otherTank.shielded = false;
-                    // Award partial points
                     if (otherTank !== this) {
                         this.score += 0.5;
                         this.currency += 5;
                     }
                 } else {
-                    // Apply damage directly to health
                     otherTank.health -= effectiveDamage;
-                    
-                    // If health drops to 0, mark as dead
                     if (otherTank.health <= 0) {
                         otherTank.health = 0;
                         otherTank.alive = false;
-                        
-                        // Award shooter points and currency for a kill
                         if (otherTank !== this) {
                             this.score += 1;
                             this.currency += 20;
@@ -345,17 +361,6 @@ export class Tank {
                 }
             }
         });
-
-        // Check game-over: if only one tank is alive, end the game
-        const aliveTanks = tanks.filter(tank => tank.alive);
-        if (aliveTanks.length === 1) {
-            if (window.showGameOverOverlay) {
-                window.showGameOverOverlay(aliveTanks[0].name + ' wins!');
-            }
-        }
-
-        return hit;
-    }
     
     useItem(itemId) {
         const index = this.inventory.findIndex(item => item.id === itemId);
