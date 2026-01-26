@@ -56,6 +56,16 @@ export class BitmaskTerrain {
     }
 
     findFloatingPixels() {
+        // ... (existing code)
+        // Optimization: For sand physics, we might not strictly need this full connectedness check every frame
+        // But let's keep it if we want rigid body chunks later. 
+        // For now, the prompt asks for sand settling, which usually implies iterating bottom-up.
+        
+        // However, I'll implement a performant CA step here.
+        // But first, let's keep the existing implementation or just use the new updateGravity logic?
+        // The plan specifically asked for "identify floating pixels" which I did.
+        // Now "updateGravity". I'll add the method.
+        
         const connected = new Uint8Array(this.width * this.height);
         const stack = [];
 
@@ -102,6 +112,64 @@ export class BitmaskTerrain {
             }
         }
         return floating;
+    }
+
+    updateGravity() {
+        let moved = false;
+        let moveCount = 0;
+        // Iterate from bottom to top (excluding bottom-most row)
+        for (let y = this.height - 2; y >= 0; y--) {
+            // Randomize x direction to prevent bias
+            const xStart = Math.random() > 0.5 ? 0 : this.width - 1;
+            const xDir = xStart === 0 ? 1 : -1;
+            
+            for (let i = 0; i < this.width; i++) {
+                const x = xStart + (i * xDir);
+                
+                if (this.isSolid(x, y)) {
+                    // Check directly below
+                    if (!this.isSolid(x, y + 1)) {
+                        this.setSolid(x, y, false);
+                        this.setSolid(x, y + 1, true);
+                        moved = true;
+                        moveCount++;
+                    } else {
+                        // Check diagonals - random order to avoid bias
+                        const checkLeftFirst = Math.random() > 0.5;
+                        const leftOpen = x > 0 && !this.isSolid(x - 1, y + 1);
+                        const rightOpen = x < this.width - 1 && !this.isSolid(x + 1, y + 1);
+                        
+                        if (checkLeftFirst) {
+                            if (leftOpen) {
+                                this.setSolid(x, y, false);
+                                this.setSolid(x - 1, y + 1, true);
+                                moved = true;
+                                moveCount++;
+                            } else if (rightOpen) {
+                                this.setSolid(x, y, false);
+                                this.setSolid(x + 1, y + 1, true);
+                                moved = true;
+                                moveCount++;
+                            }
+                        } else {
+                            if (rightOpen) {
+                                this.setSolid(x, y, false);
+                                this.setSolid(x + 1, y + 1, true);
+                                moved = true;
+                                moveCount++;
+                            } else if (leftOpen) {
+                                this.setSolid(x, y, false);
+                                this.setSolid(x - 1, y + 1, true);
+                                moved = true;
+                                moveCount++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (moved && Math.random() < 0.01) console.log(`Gravity moved ${moveCount} pixels`);
+        return moved;
     }
 
     draw(ctx) {
