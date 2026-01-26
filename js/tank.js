@@ -95,14 +95,14 @@ export class Tank {
         if (projectile.flying) return;
         
         // Set projectile properties based on selected weapon
-        let explosionRadius = 15;
+        let explosionRadius = 30; // Increased from 15
         let damage = 100; // Default damage for a direct hit
         let projectileColor = 'black';
         let extraDistance = 0;
         
         // Apply weapon effects
         if (this.selectedWeapon === 'nuke') {
-            explosionRadius = 50;
+            explosionRadius = 80; // Increased from 50
             damage = 150;
             projectileColor = 'red';
             extraDistance = 10; // Extra distance for nukes

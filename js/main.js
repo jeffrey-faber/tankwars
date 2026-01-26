@@ -126,7 +126,7 @@ window.showGameOverOverlay = showGameOverOverlay;
 
 function resetRound() {
     isGameOver = false;
-    projectile = { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 15 };
+    projectile = { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 30 };
     needsRedraw = true;
     currentPlayer = 0;
     window.currentPlayer = 0;
@@ -160,6 +160,13 @@ function gameLoop() {
 
     if (!isGameOver) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Update terrain physics (sand effect)
+        // We run this every frame to animate falling pixels
+        if (terrain.updateGravity) {
+            terrain.updateGravity();
+        }
+
         terrain.draw(ctx);
         
         if (!projectile.flying) {
