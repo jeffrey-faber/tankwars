@@ -12,11 +12,14 @@
   - [x] Sub-task: Implement collision lookup
 - [x] Task: Conductor - User Manual Verification 'Core Terrain Engine Refactor' (Protocol in workflow.md) [75a0ee0]
 
-## Phase 2: Destructive Deformations
-- [ ] Task: Implement `explode(x, y, radius)`
-  - [ ] Sub-task: Write tests ensuring pixels within radius are cleared
-  - [ ] Sub-task: Implement circle subtraction logic on the bitmask/grid
-- [ ] Task: Integrate new terrain with `main.js`
+## Phase 2: Destructive Deformations [checkpoint: 7fe2cd4]
+- [x] Task: Implement `explode(x, y, radius)` [e012b70]
+  - [x] Sub-task: Write tests ensuring pixels within radius are cleared
+  - [x] Sub-task: Implement circle subtraction logic on the bitmask/grid
+- [x] Task: Integrate new terrain with `main.js` [7049ff8]
+  - [x] Sub-task: Replace old `Terrain` instance with `BitmaskTerrain`
+  - [x] Sub-task: Update game loop to render the new terrain
+- [x] Task: Conductor - User Manual Verification 'Destructive Deformations' (Protocol in workflow.md) [7fe2cd4]
   - [ ] Sub-task: Replace old `Terrain` instance with `BitmaskTerrain`
   - [ ] Sub-task: Update game loop to render the new terrain
 - [ ] Task: Conductor - User Manual Verification 'Destructive Deformations' (Protocol in workflow.md)
