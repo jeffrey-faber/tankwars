@@ -4,12 +4,14 @@ This document outlines the core technologies and architectural patterns used in 
 
 ## Core Technologies
 - **JavaScript (ES6+):** The primary programming language for game logic, physics, and state management.
+- **Bitmask Terrain Engine:** A pixel-perfect 2D grid system for high-fidelity destructible environments and "sand" gravity physics.
 - **HTML5 Canvas:** Utilized for all high-performance 2D rendering and visual effects.
 - **CSS3:** Handles the layout, styling of UI overlays, and game menus.
 
 ## Architecture
 - **Client-Side Only:** A static web application that runs entirely in the user's browser without the need for a dedicated backend.
-- **Modular OOP:** The game is structured into discrete, object-oriented modules (e.g., `Tank`, `Terrain`, `Store`) to promote maintainability and scalability.
+- **Offscreen Canvas Caching:** Optimized rendering pipeline that caches terrain state to an offscreen buffer, ensuring 60 FPS performance during complex physics simulations.
+- **Modular OOP:** The game is structured into discrete, object-oriented modules (e.g., `Tank`, `BitmaskTerrain`, `Store`) to promote maintainability and scalability.
 - **Global Game Orchestrator:** `main.js` serves as the central hub for the game loop, event handling, and cross-module communication.
 
 ## Development Environment

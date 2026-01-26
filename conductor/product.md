@@ -23,7 +23,7 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 ## Development Goals
 - **High Replayability:** Ensuring every match feels unique through random terrain and variable conditions.
 - **AI Excellence:** Developing AI that isn't just difficult, but "smart" in its tactical choices.
-- **Fluid Mechanics:** Refining terrain destruction and tank physics for a visceral, satisfying feel.
+- **Advanced Physics Engine:** Featuring pixel-perfect destructible terrain with simulated "sand" gravity and tank burial mechanics.
 
 ## Success Metrics
 - **Player Satisfaction:** Positive feedback on game balance and the "fun factor."
