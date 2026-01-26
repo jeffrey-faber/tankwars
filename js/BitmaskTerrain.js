@@ -3,6 +3,19 @@ export class BitmaskTerrain {
         this.width = width;
         this.height = height;
         this.data = new Uint8Array(width * height);
+        
+        // Create an offscreen canvas to cache the visual state
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Initialize as fully transparent
+        this.ctx.clearRect(0, 0, width, height);
+        
+        // Keep a reference to the ImageData for fast pixel manipulation
+        this.imageData = this.ctx.createImageData(width, height);
+        this.pixels = this.imageData.data;
     }
 
     isSolid(x, y) {
@@ -16,12 +29,30 @@ export class BitmaskTerrain {
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
             return;
         }
-        this.data[y * this.width + x] = solid ? 1 : 0;
+        const idx = y * this.width + x;
+        const current = this.data[idx];
+        const newValue = solid ? 1 : 0;
+        
+        if (current !== newValue) {
+            this.data[idx] = newValue;
+            
+            // Update visual pixel immediately
+            const pIdx = idx * 4;
+            if (solid) {
+                this.pixels[pIdx] = 57;     // R
+                this.pixels[pIdx + 1] = 255; // G
+                this.pixels[pIdx + 2] = 20;  // B
+                this.pixels[pIdx + 3] = 255; // A
+            } else {
+                this.pixels[pIdx + 3] = 0;   // Transparent
+            }
+        }
     }
 
     bakeHeightmap(points) {
         // Clear terrain first
         this.data.fill(0);
+        this.pixels.fill(0);
 
         for (let i = 1; i < points.length; i++) {
             const p1 = points[i - 1];
@@ -45,6 +76,8 @@ export class BitmaskTerrain {
                 }
             }
         }
+        // Force update of the offscreen canvas
+        this.ctx.putImageData(this.imageData, 0, 0);
     }
 
     checkCollision(x, y) {
@@ -52,20 +85,31 @@ export class BitmaskTerrain {
     }
 
     explode(centerX, centerY, radius) {
-        // ... (previous code)
+        const r2 = radius * radius;
+        const xMin = Math.max(0, Math.floor(centerX - radius));
+        const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
+        const yMin = Math.max(0, Math.floor(centerY - radius));
+        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+
+        let changed = false;
+        for (let y = yMin; y <= yMax; y++) {
+            for (let x = xMin; x <= xMax; x++) {
+                const dx = x - centerX;
+                const dy = y - centerY;
+                if (dx * dx + dy * dy <= r2) {
+                    if (this.isSolid(x, y)) {
+                        this.setSolid(x, y, false);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        if (changed) {
+            this.ctx.putImageData(this.imageData, 0, 0);
+        }
     }
 
     findFloatingPixels() {
-        // ... (existing code)
-        // Optimization: For sand physics, we might not strictly need this full connectedness check every frame
-        // But let's keep it if we want rigid body chunks later. 
-        // For now, the prompt asks for sand settling, which usually implies iterating bottom-up.
-        
-        // However, I'll implement a performant CA step here.
-        // But first, let's keep the existing implementation or just use the new updateGravity logic?
-        // The plan specifically asked for "identify floating pixels" which I did.
-        // Now "updateGravity". I'll add the method.
-        
         const connected = new Uint8Array(this.width * this.height);
         const stack = [];
 
@@ -168,28 +212,16 @@ export class BitmaskTerrain {
                 }
             }
         }
-        if (moved && Math.random() < 0.01) console.log(`Gravity moved ${moveCount} pixels`);
+        if (moved) {
+            // Only upload texture to GPU if something changed
+            this.ctx.putImageData(this.imageData, 0, 0);
+            if (Math.random() < 0.01) console.log(`Gravity moved ${moveCount} pixels`);
+        }
         return moved;
     }
 
     draw(ctx) {
-        const imageData = ctx.createImageData(this.width, this.height);
-        const data = imageData.data;
-
-        for (let i = 0; i < this.data.length; i++) {
-            const isSolid = this.data[i] === 1;
-            const idx = i * 4;
-            if (isSolid) {
-                // Neon green color
-                data[idx] = 57;     // R
-                data[idx + 1] = 255; // G
-                data[idx + 2] = 20;  // B
-                data[idx + 3] = 255; // A
-            } else {
-                // Transparent
-                data[idx + 3] = 0;
-            }
-        }
-        ctx.putImageData(imageData, 0, 0);
+        // Blit the cached canvas
+        ctx.drawImage(this.canvas, 0, 0);
     }
 }
