@@ -41,68 +41,20 @@ export class Terrain {
     }
 
     removeTerrain(x, y, radius) {
-        // Handle special case for nukes - ensure they create a bigger crater
-        const isNuke = radius >= 40;
-        
-        let newPoints = [];
-        // Reduced removal factor to make terrain changes less extreme
-        const baseRemovalFactor = isNuke ? 0.8 : 0.6; 
-        
-        // Scale radius for effect, lowered scaling for more controlled explosions
-        radius = radius * (isNuke ? 3.0 : 2.5);
+        const leftIndex = this.points.findIndex(p => p.x >= x - radius);
+        const rightIndex = this.points.findIndex(p => p.x >= x + radius);
 
-        // Calculate center of crater with smaller offset for more controlled explosions
-        const offsetX = Math.random() * 6 - 3;
-        const offsetY = 3; 
-        const craterX = x + offsetX;
-        const craterY = y + offsetY;
+        if (leftIndex === -1 || rightIndex === -1) return;
 
-        for (let i = 0; i < this.points.length; i++) {
+        const craterPoints = [];
+        for (let i = leftIndex; i < rightIndex; i++) {
             const point = this.points[i];
-            const distance = Math.sqrt((point.x - craterX) ** 2 + (point.y - craterY) ** 2);
-
-            if (distance > radius) {
-                newPoints.push(point);
-            } else {
-                let depth = Math.max(0, radius - distance);
-
-                // Calculate slope by comparing with neighbors
-                let slope = 0;
-                if (i > 0) {
-                    slope = Math.max(slope, Math.abs(point.y - this.points[i - 1].y));
-                }
-                if (i < this.points.length - 1) {
-                    slope = Math.max(slope, Math.abs(point.y - this.points[i + 1].y));
-                }
-
-                // Better handling for thin spikes with more moderate multiplier
-                if (slope > 20) {
-                    depth *= 2.5; 
-                }
-
-                // More moderate extra depth in the center of the explosion
-                const centerFactor = 1.0 - (distance / radius);
-                depth += centerFactor * 5;
-
-                // More moderate minimum effect
-                depth = Math.max(depth, isNuke ? 15 : 8); 
-
-                // Apply depth with less randomization
-                const jitter = Math.random() * 3;
-                
-                // Calculate new y position
-                let newY = point.y + depth * baseRemovalFactor + jitter;
-                
-                // Ensure terrain doesn't go below canvas height - 10 (leave some margin)
-                newY = Math.min(newY, this.height - 10);
-                
-                newPoints.push({
-                    x: point.x,
-                    y: newY
-                });
-            }
+            const distance = Math.abs(point.x - x);
+            const depth = Math.sqrt(radius * radius - distance * distance);
+            craterPoints.push({ x: point.x, y: Math.min(this.height, point.y + depth) });
         }
-        this.points = newPoints;
+
+        this.points.splice(leftIndex, rightIndex - leftIndex, ...craterPoints);
     }
 
 

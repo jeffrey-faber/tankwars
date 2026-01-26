@@ -7,7 +7,7 @@
 - [x] Task: Implement Lobby State in `gameContext.js`
   - [x] Sub-task: Add `gameState` ('LOBBY', 'PLAYING') to state management
   - [x] Sub-task: Write tests for state transitions
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Persistence & Game State Refactor' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Persistence & Game State Refactor' (Protocol in workflow.md)
 
 ## Phase 2: Lobby Store UI
 - [ ] Task: Move Store UI to Lobby Phase
