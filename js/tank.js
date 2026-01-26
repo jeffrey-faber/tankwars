@@ -299,11 +299,13 @@ export class Tank {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             // Check if within explosion radius
-            if (distance <= radius + otherTank.width / 2) {
+            // Use a tighter hitbox: intersection of explosion circle and tank box
+            // For simplicity, just reduce the buffer to ensure explosion covers more of the tank
+            if (distance <= radius + otherTank.width / 4) {
                 hit = true;
                 
                 // Calculate damage based on distance (more damage if closer)
-                const distanceFactor = 1 - (distance / (radius + otherTank.width / 2));
+                const distanceFactor = 1 - (distance / (radius + otherTank.width / 4));
                 const effectiveDamage = Math.floor(damage * distanceFactor);
                 
                 // Create explosion effect
