@@ -1,5 +1,5 @@
 // Parse URL parameters
-function getUrlParams() {
+export function getUrlParams() {
     const queryString = window.location.search.slice(1);
     return queryString.split('&').reduce((acc, param) => {
         const [key, value] = param.split('=');
@@ -9,14 +9,19 @@ function getUrlParams() {
 }
 
 // Generate random tank positions based on the terrain
-function getRandomTankPositions(numPlayers, terrain) {
+export function getRandomTankPositions(numPlayers, terrain) {
     const minDistance = 100;
     const positions = [];
     while (positions.length < numPlayers) {
-        const pointIndex = Math.floor(Math.random() * (terrain.points.length - 2)) + 1;
+        // Handle both old Terrain (points array) and new BitmaskTerrain
+        const points = terrain.points || []; 
+        // If it's BitmaskTerrain, we might need a different way to find positions.
+        // For now, let's assume BitmaskTerrain has a points property if we baked it.
+        
+        const pointIndex = Math.floor(Math.random() * (points.length - 2)) + 1;
         const newPosition = {
-            x: terrain.points[pointIndex].x,
-            y: terrain.points[pointIndex].y
+            x: points[pointIndex].x,
+            y: points[pointIndex].y
         };
         let isValid = true;
         for (let pos of positions) {
@@ -31,7 +36,7 @@ function getRandomTankPositions(numPlayers, terrain) {
 }
 
 // Generate a random hex color
-function getRandomColor() {
+export function getRandomColor() {
     const letters = '0123456789ABCDEF';
     let color = '#';
     for (let i = 0; i < 6; i++) {
@@ -41,7 +46,7 @@ function getRandomColor() {
 }
 
 // Create an explosion effect (requires a draw callback to re-render the game)
-function createExplosion(x, y, radius, ctx, canvas, drawCallback) {
+export function createExplosion(x, y, radius, ctx, canvas, drawCallback) {
     const drawExplosion = (currentRadius) => {
         ctx.beginPath();
         ctx.arc(x, y, currentRadius, 0, 2 * Math.PI);

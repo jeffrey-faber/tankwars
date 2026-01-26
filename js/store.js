@@ -1,4 +1,4 @@
-class Store {
+export class Store {
     constructor() {
         this.items = [
             {
@@ -111,8 +111,8 @@ class Store {
         // Add event listener
         storeButton.addEventListener('click', () => {
             // Only open store for current player if they're not AI
-            if (!tanks[currentPlayer].isAI) {
-                this.open(tanks[currentPlayer]);
+            if (!window.tanks[window.currentPlayer].isAI) {
+                this.open(window.tanks[window.currentPlayer]);
             }
         });
     }

@@ -1,4 +1,6 @@
-class Tank {
+import { getRandomColor, createExplosion } from './utils.js';
+
+export class Tank {
     constructor(x, y, isAI = false, aiLevel = 0, name = '') {
         this.x = x;
         this.y = y;
@@ -200,12 +202,21 @@ class Tank {
                 if (!hit) {
                     setTimeout(() => requestAnimationFrame(moveProjectile), 5);
                 } else {
-                    if (y >= 0 && y <= canvas.height) {
+                    if (y >= 0 && y <= (window.canvas?.height || 400)) {
                         // Create appropriate explosion based on weapon type
-                        terrain.removeTerrain(x, y, projectile.explosionRadius);
-                        createExplosion(x, y, projectile.explosionRadius, ctx, canvas, draw);
+                        if (terrain.explode) {
+                            terrain.explode(x, y, projectile.explosionRadius);
+                        } else if (terrain.removeTerrain) {
+                            terrain.removeTerrain(x, y, projectile.explosionRadius);
+                        }
+                        
+                        if (window.ctx && window.canvas && window.draw) {
+                            createExplosion(x, y, projectile.explosionRadius, window.ctx, window.canvas, window.draw);
+                        }
                     }
-                    currentPlayer = getNextAliveTankIndex(currentPlayer);
+                    if (window.getNextAliveTankIndex && window.currentPlayer !== undefined) {
+                        window.currentPlayer = window.getNextAliveTankIndex(window.currentPlayer);
+                    }
                     projectile.flying = false;
                     
                     // Reset selected weapon to default after use (except for default)
@@ -228,14 +239,19 @@ class Tank {
     checkTerrainAndBounds(x, y, terrain, canvas) {
         let hit = false;
         
-        // Check collision with terrain
-        for (let i = 1; i < terrain.points.length; i++) {
-            let p1 = terrain.points[i - 1];
-            let p2 = terrain.points[i];
-            if (x >= p1.x && x <= p2.x) {
-                let groundY = p1.y + ((x - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
-                if (y >= groundY) hit = true;
-                break;
+        // Check collision with terrain using BitmaskTerrain if available
+        if (terrain.checkCollision) {
+            if (terrain.checkCollision(x, y)) hit = true;
+        } else {
+            // Fallback for old Terrain
+            for (let i = 1; i < terrain.points.length; i++) {
+                let p1 = terrain.points[i - 1];
+                let p2 = terrain.points[i];
+                if (x >= p1.x && x <= p2.x) {
+                    let groundY = p1.y + ((x - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
+                    if (y >= groundY) hit = true;
+                    break;
+                }
             }
         }
         
@@ -248,13 +264,17 @@ class Tank {
     checkCollisions(x, y, terrain, tanks, canvas, projectile, excludeSourcePlayer = false) {
         let hit = false;
         // Check collision with terrain
-        for (let i = 1; i < terrain.points.length; i++) {
-            let p1 = terrain.points[i - 1];
-            let p2 = terrain.points[i];
-            if (x >= p1.x && x <= p2.x) {
-                let groundY = p1.y + ((x - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
-                if (y >= groundY) hit = true;
-                break;
+        if (terrain.checkCollision) {
+            if (terrain.checkCollision(x, y)) hit = true;
+        } else {
+            for (let i = 1; i < terrain.points.length; i++) {
+                let p1 = terrain.points[i - 1];
+                let p2 = terrain.points[i];
+                if (x >= p1.x && x <= p2.x) {
+                    let groundY = p1.y + ((x - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
+                    if (y >= groundY) hit = true;
+                    break;
+                }
             }
         }
         // Check collision with tanks
@@ -287,7 +307,9 @@ class Tank {
                 const effectiveDamage = Math.floor(damage * distanceFactor);
                 
                 // Create explosion effect
-                createExplosion(x, y, radius, ctx, canvas, draw);
+                if (window.ctx && window.canvas && window.draw) {
+                    createExplosion(x, y, radius, window.ctx, window.canvas, window.draw);
+                }
                 
                 // Apply damage
                 if (otherTank.shielded) {
@@ -320,8 +342,9 @@ class Tank {
         // Check game-over: if only one tank is alive, end the game
         const aliveTanks = tanks.filter(tank => tank.alive);
         if (aliveTanks.length === 1) {
-            isGameOver = true;
-            showGameOverOverlay(aliveTanks[0].name + ' wins!');
+            if (window.showGameOverOverlay) {
+                window.showGameOverOverlay(aliveTanks[0].name + ' wins!');
+            }
         }
 
         return hit;
@@ -351,23 +374,33 @@ class Tank {
     // Fall damage when tank position is updated
     applyGravity(terrain) {
         // Get terrain height at current position
-        const tankCenterX = this.x + this.width / 2;
+        const tankCenterX = Math.floor(this.x + this.width / 2);
         let groundHeight = null;
         
-        // Find ground height at tank position
-        for (let i = 1; i < terrain.points.length; i++) {
-            let p1 = terrain.points[i - 1];
-            let p2 = terrain.points[i];
-            if (tankCenterX >= p1.x && tankCenterX <= p2.x) {
-                groundHeight = p1.y + ((tankCenterX - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
-                break;
+        if (terrain.isSolid) {
+            // Find first solid pixel from top
+            for (let y = 0; y < (window.canvas?.height || 600); y++) {
+                if (terrain.isSolid(tankCenterX, y)) {
+                    groundHeight = y;
+                    break;
+                }
+            }
+        } else {
+            // Find ground height at tank position for old Terrain
+            for (let i = 1; i < terrain.points.length; i++) {
+                let p1 = terrain.points[i - 1];
+                let p2 = terrain.points[i];
+                if (tankCenterX >= p1.x && tankCenterX <= p2.x) {
+                    groundHeight = p1.y + ((tankCenterX - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
+                    break;
+                }
             }
         }
         
         // If ground height found, check if tank is above it
         if (groundHeight !== null) {
             // Ensure ground height doesn't exceed canvas height
-            groundHeight = Math.min(groundHeight, canvas.height - this.height - 5);
+            groundHeight = Math.min(groundHeight, (window.canvas?.height || 600) - this.height - 5);
             
             const fallDistance = groundHeight - this.y;
             
@@ -390,14 +423,14 @@ class Tank {
             }
         } else {
             // Handle edge case - if tank is off the terrain edges, place it at the bottom boundary
-            if (this.x < 0 || this.x > canvas.width) {
-                this.y = Math.min(this.y, canvas.height - this.height - 5);
+            if (this.x < 0 || this.x > (window.canvas?.width || 800)) {
+                this.y = Math.min(this.y, (window.canvas?.height || 600) - this.height - 5);
             }
         }
         
         // Absolute bottom boundary check
-        if (this.y > canvas.height - this.height) {
-            this.y = canvas.height - this.height - 5;
+        if (this.y > (window.canvas?.height || 600) - this.height) {
+            this.y = (window.canvas?.height || 600) - this.height - 5;
         }
     }
 

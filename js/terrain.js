@@ -1,4 +1,4 @@
-class Terrain {
+export class Terrain {
     constructor(mapProps = this.pickRandomMap()) {
         console.log(mapProps);
         this.points = [];
