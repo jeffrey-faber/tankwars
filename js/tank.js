@@ -200,7 +200,7 @@ export class Tank {
                 if (elapsedTime >= maxTurnTime) hit = true;
                 
                 if (!hit) {
-                    setTimeout(() => requestAnimationFrame(moveProjectile), 5);
+                    requestAnimationFrame(moveProjectile);
                 } else {
                     if (y >= 0 && y <= (window.canvas?.height || 400)) {
                         // Create appropriate explosion based on weapon type
