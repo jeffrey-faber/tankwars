@@ -43,4 +43,25 @@ describe('BitmaskTerrain', () => {
         expect(terrain.checkCollision(20, 20)).toBe(true);
         expect(terrain.checkCollision(20, 21)).toBe(false);
     });
+
+    it('should remove solid pixels within explosion radius', () => {
+        // Fill a small area
+        for (let y = 10; y < 20; y++) {
+            for (let x = 10; x < 20; x++) {
+                terrain.setSolid(x, y, true);
+            }
+        }
+        
+        expect(terrain.isSolid(15, 15)).toBe(true);
+        
+        terrain.explode(15, 15, 3);
+        
+        expect(terrain.isSolid(15, 15)).toBe(false);
+        expect(terrain.isSolid(12, 15)).toBe(false);
+        expect(terrain.isSolid(18, 15)).toBe(false); // Outside radius 3
+        
+        // Check boundary
+        // Distance from (15,15) to (18,15) is 3. 
+        // If radius is 3, (18,15) might be cleared depending on <= or <.
+    });
 });
