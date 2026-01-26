@@ -89,6 +89,11 @@ export class Tank {
         ctx.font = '8px Arial';
         ctx.fillStyle = 'white';
         ctx.fillText(this.selectedWeapon, this.x, this.y - this.height - 10);
+        
+        if (this.isBuried) {
+            ctx.fillStyle = 'red';
+            ctx.fillText('BURIED!', this.x, this.y - this.height - 20);
+        }
     }
 
     fire(tanks, terrain, projectile, wind, canvas) {
@@ -378,10 +383,11 @@ export class Tank {
         // Get terrain height at current position
         const tankCenterX = Math.floor(this.x + this.width / 2);
         let groundHeight = null;
+        const canvasHeight = window.canvas?.height || 600;
         
         if (terrain.isSolid) {
             // Find first solid pixel from top
-            for (let y = 0; y < (window.canvas?.height || 600); y++) {
+            for (let y = 0; y < canvasHeight; y++) {
                 if (terrain.isSolid(tankCenterX, y)) {
                     groundHeight = y;
                     break;
@@ -399,40 +405,58 @@ export class Tank {
             }
         }
         
-        // If ground height found, check if tank is above it
-        if (groundHeight !== null) {
-            // Ensure ground height doesn't exceed canvas height
-            groundHeight = Math.min(groundHeight, (window.canvas?.height || 600) - this.height - 5);
+        // If no ground found (hole to infinity), fall to bottom
+        if (groundHeight === null) {
+            groundHeight = canvasHeight;
+        }
+        
+        // Ensure ground height doesn't exceed canvas height
+        groundHeight = Math.min(groundHeight, canvasHeight - this.height - 5);
+        
+        const fallDistance = groundHeight - this.y;
+        
+        // Only fall if above ground
+        if (fallDistance > 0) {
+            // Calculate fall damage based on distance
+            const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
             
-            const fallDistance = groundHeight - this.y;
-            
-            // Only fall if above ground
-            if (fallDistance > 0) {
-                // Calculate fall damage based on distance
-                const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
-                
-                // Apply fall damage
-                if (fallDamage > 0 && !this.shielded) {
-                    this.health -= fallDamage;
-                    if (this.health <= 0) {
-                        this.health = 0;
-                        this.alive = false;
-                    }
+            // Apply fall damage
+            if (fallDamage > 0 && !this.shielded) {
+                this.health -= fallDamage;
+                if (this.health <= 0) {
+                    this.health = 0;
+                    this.alive = false;
                 }
-                
-                // Update position to ground level
-                this.y = groundHeight;
             }
-        } else {
-            // Handle edge case - if tank is off the terrain edges, place it at the bottom boundary
-            if (this.x < 0 || this.x > (window.canvas?.width || 800)) {
-                this.y = Math.min(this.y, (window.canvas?.height || 600) - this.height - 5);
-            }
+            
+            // Update position to ground level
+            this.y = groundHeight;
         }
         
         // Absolute bottom boundary check
-        if (this.y > (window.canvas?.height || 600) - this.height) {
-            this.y = (window.canvas?.height || 600) - this.height - 5;
+        if (this.y > canvasHeight - this.height) {
+            this.y = canvasHeight - this.height - 5;
+        }
+        
+        // Check if buried after moving
+        this.checkBuried(terrain);
+    }
+
+    checkBuried(terrain) {
+        this.isBuried = false;
+        
+        if (terrain.isSolid) {
+            const tankCenterX = Math.floor(this.x + this.width / 2);
+            const tankTopY = Math.floor(this.y - this.height);
+            
+            // Check pixels directly above the tank center
+            // We check a few pixels up
+            for (let y = tankTopY; y >= Math.max(0, tankTopY - 10); y--) {
+                if (terrain.isSolid(tankCenterX, y)) {
+                    this.isBuried = true;
+                    break;
+                }
+            }
         }
     }
 
