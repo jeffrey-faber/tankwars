@@ -25,21 +25,21 @@
 - [ ] Task: Conductor - User Manual Verification 'Destructive Deformations' (Protocol in workflow.md)
 
 ## Phase 3: Gravity & "Crumble" Physics
-- [ ] Task: Implement floating chunk detection
-  - [ ] Sub-task: Write tests for identifying unconnected pixels/blobs
-  - [ ] Sub-task: Implement Connected Component Labeling or similar algorithm
-- [ ] Task: Implement `updateGravity()` for terrain
-  - [ ] Sub-task: Write tests verifying floating pixels move down
-  - [ ] Sub-task: Implement falling logic (move pixels down Y axis until collision)
-- [ ] Task: Visual Polish - "Sand" settling behavior
-  - [ ] Sub-task: Implement simple logic where pixels slide diagonally if blocked directly below
+- [x] Task: Implement floating chunk detection [086091a]
+  - [x] Sub-task: Write tests for identifying unconnected pixels/blobs
+  - [x] Sub-task: Implement Connected Component Labeling or similar algorithm
+- [x] Task: Implement `updateGravity()` for terrain [086091a]
+  - [x] Sub-task: Write tests verifying floating pixels move down
+  - [x] Sub-task: Implement falling logic (move pixels down Y axis until collision)
+- [x] Task: Visual Polish - "Sand" settling behavior [086091a]
+  - [x] Sub-task: Implement simple logic where pixels slide diagonally if blocked directly below
 - [ ] Task: Conductor - User Manual Verification 'Gravity & "Crumble" Physics' (Protocol in workflow.md)
 
-## Phase 4: Tank Interaction (Burial)
-- [ ] Task: Update Tank positioning logic
-  - [ ] Sub-task: Write tests for Tank responding to new terrain collisions
-  - [ ] Sub-task: Refactor Tank gravity to work with pixel lookups
-- [ ] Task: Implement "Buried" state
-  - [ ] Sub-task: Write tests for detecting when pixels are "above" the tank
-  - [ ] Sub-task: Add `isBuried` flag and restrict movement
-- [ ] Task: Conductor - User Manual Verification 'Tank Interaction (Burial)' (Protocol in workflow.md)
+## Phase 4: Tank Interaction (Burial) [checkpoint: fc446aa]
+- [x] Task: Update Tank positioning logic [fc446aa]
+  - [x] Sub-task: Write tests for Tank responding to new terrain collisions
+  - [x] Sub-task: Refactor Tank gravity to work with pixel lookups
+- [x] Task: Implement "Buried" state [fc446aa]
+  - [x] Sub-task: Write tests for detecting when pixels are "above" the tank
+  - [x] Sub-task: Add `isBuried` flag and restrict movement
+- [x] Task: Conductor - User Manual Verification 'Tank Interaction (Burial)' (Protocol in workflow.md) [fc446aa]
