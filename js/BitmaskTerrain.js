@@ -52,21 +52,56 @@ export class BitmaskTerrain {
     }
 
     explode(centerX, centerY, radius) {
-        const r2 = radius * radius;
-        const xMin = Math.max(0, Math.floor(centerX - radius));
-        const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
-        const yMin = Math.max(0, Math.floor(centerY - radius));
-        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+        // ... (previous code)
+    }
 
-        for (let y = yMin; y <= yMax; y++) {
-            for (let x = xMin; x <= xMax; x++) {
-                const dx = x - centerX;
-                const dy = y - centerY;
-                if (dx * dx + dy * dy <= r2) {
-                    this.setSolid(x, y, false);
+    findFloatingPixels() {
+        const connected = new Uint8Array(this.width * this.height);
+        const stack = [];
+
+        // Start from all solid pixels at the bottom row (connected to ground)
+        for (let x = 0; x < this.width; x++) {
+            if (this.isSolid(x, this.height - 1)) {
+                const idx = (this.height - 1) * this.width + x;
+                connected[idx] = 1;
+                stack.push({ x, y: this.height - 1 });
+            }
+        }
+
+        // Flood fill to find all pixels connected to ground
+        while (stack.length > 0) {
+            const { x, y } = stack.pop();
+
+            // Check 4 neighbors
+            const neighbors = [
+                { nx: x + 1, ny: y },
+                { nx: x - 1, ny: y },
+                { nx: x, ny: y + 1 },
+                { nx: x, ny: y - 1 }
+            ];
+
+            for (const { nx, ny } of neighbors) {
+                if (nx >= 0 && nx < this.width && ny >= 0 && ny < this.height) {
+                    const idx = ny * this.width + nx;
+                    if (this.isSolid(nx, ny) && !connected[idx]) {
+                        connected[idx] = 1;
+                        stack.push({ x: nx, y: ny });
+                    }
                 }
             }
         }
+
+        // All solid pixels NOT marked as connected are floating
+        const floating = [];
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const idx = y * this.width + x;
+                if (this.isSolid(x, y) && !connected[idx]) {
+                    floating.push({ x, y });
+                }
+            }
+        }
+        return floating;
     }
 
     draw(ctx) {

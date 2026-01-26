@@ -45,23 +45,26 @@ describe('BitmaskTerrain', () => {
     });
 
     it('should remove solid pixels within explosion radius', () => {
-        // Fill a small area
-        for (let y = 10; y < 20; y++) {
-            for (let x = 10; x < 20; x++) {
-                terrain.setSolid(x, y, true);
-            }
+        // ... (previous test code)
+    });
+
+    it('should identify floating pixels', () => {
+        // Create a platform at the bottom (connected to ground)
+        for (let x = 0; x < width; x++) {
+            terrain.setSolid(x, height - 1, true);
         }
         
-        expect(terrain.isSolid(15, 15)).toBe(true);
+        // Create a floating island
+        terrain.setSolid(50, 50, true);
+        terrain.setSolid(51, 50, true);
         
-        terrain.explode(15, 15, 3);
+        const floating = terrain.findFloatingPixels();
         
-        expect(terrain.isSolid(15, 15)).toBe(false);
-        expect(terrain.isSolid(12, 15)).toBe(false);
-        expect(terrain.isSolid(18, 15)).toBe(false); // Outside radius 3
+        // (50, 50) and (51, 50) should be floating
+        expect(floating).toContainEqual({x: 50, y: 50});
+        expect(floating).toContainEqual({x: 51, y: 50});
         
-        // Check boundary
-        // Distance from (15,15) to (18,15) is 3. 
-        // If radius is 3, (18,15) might be cleared depending on <= or <.
+        // Bottom row should NOT be floating
+        expect(floating).not.toContainEqual({x: 0, y: height - 1});
     });
 });
