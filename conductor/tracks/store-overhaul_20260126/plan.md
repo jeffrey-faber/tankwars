@@ -18,7 +18,7 @@
   - [x] Sub-task: Update UI to show quantity owned in the store
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Lobby Store UI' (Protocol in workflow.md)
 
-## Phase 3: Icon-Based Selection & HUD [checkpoint: pending]
+## Phase 3: Icon-Based Selection & HUD [checkpoint: ffa12e5]
 - [x] Task: Implement Grid-Based Weapon Selection UI
   - [x] Sub-task: Create CSS for neon grid icons
   - [x] Sub-task: Update `draw` logic or DOM overlay to show weapon icons instead of text list
@@ -30,11 +30,11 @@
   - [x] Sub-task: Display current weapon counts prominently on the screen
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Icon-Based Selection & HUD' (Protocol in workflow.md)
 
-## Phase 4: Hotkeys & Final Polish
+## Phase 4: Hotkeys & Final Polish [checkpoint: 69cafd6]
 - [x] Task: Implement Numeric Hotkeys (1-9)
   - [x] Sub-task: Write tests for keydown events triggering weapon selection
   - [x] Sub-task: Ensure hotkeys only work during active player turn
 - [x] Task: Visual Polish & Transitions
   - [x] Sub-task: Add "Snappy" transitions between Lobby and Game states
   - [x] Sub-task: Final pass on Neon aesthetic for all new UI components
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Hotkeys & Final Polish' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Hotkeys & Final Polish' (Protocol in workflow.md)
