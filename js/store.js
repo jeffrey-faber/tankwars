@@ -63,8 +63,56 @@ export class Store {
         // Add store button to HUD
         this.addStoreButton();
         
+        // Add Start Match button
+        this.addStartMatchButton();
+        
         // Add weapon selector UI
         this.createWeaponSelector();
+
+        // Initial visibility check
+        this.updateVisibility();
+    }
+
+    addStartMatchButton() {
+        const startButton = document.createElement('button');
+        startButton.id = 'startMatchButton';
+        startButton.textContent = 'START MATCH';
+        startButton.style.position = 'absolute';
+        startButton.style.top = '50%';
+        startButton.style.left = '50%';
+        startButton.style.transform = 'translate(-50%, -50%)';
+        startButton.style.backgroundColor = '#ff00ff';
+        startButton.style.color = 'white';
+        startButton.style.border = 'none';
+        startButton.style.padding = '20px 40px';
+        startButton.style.cursor = 'pointer';
+        startButton.style.fontFamily = "'Press Start 2P', cursive";
+        startButton.style.fontSize = '20px';
+        startButton.style.zIndex = '100';
+        startButton.style.boxShadow = '0 0 20px #ff00ff';
+        
+        document.body.appendChild(startButton);
+        
+        startButton.addEventListener('click', () => {
+            state.gameState = 'PLAYING';
+            this.updateVisibility();
+        });
+    }
+
+    updateVisibility() {
+        const storeButton = document.getElementById('storeButton');
+        const startMatchButton = document.getElementById('startMatchButton');
+        const weaponSelector = document.getElementById('weaponSelector');
+        
+        if (state.gameState === 'LOBBY') {
+            if (storeButton) storeButton.style.display = 'block';
+            if (startMatchButton) startMatchButton.style.display = 'block';
+            if (weaponSelector) weaponSelector.style.display = 'none';
+        } else {
+            if (storeButton) storeButton.style.display = 'none';
+            if (startMatchButton) startMatchButton.style.display = 'none';
+            if (weaponSelector) weaponSelector.style.display = 'block';
+        }
     }
     
     createStoreUI() {
@@ -257,10 +305,11 @@ export class Store {
         container.style.padding = '10px';
         
         this.items.forEach(item => {
+            const count = (this.currentTank.inventory || []).filter(i => i.id === item.id).length;
             const itemElement = document.createElement('div');
             itemElement.className = 'store-item';
             itemElement.innerHTML = `
-                <h3>${item.name}</h3>
+                <h3>${item.name} ${count > 0 ? `(${count} owned)` : ''}</h3>
                 <p class="item-description">${item.description}</p>
                 <p class="item-price">${item.price} Coins</p>
                 <button class="buy-button ${this.currentTank.currency < item.price ? 'disabled' : ''}" 

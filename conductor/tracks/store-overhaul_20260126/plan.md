@@ -10,13 +10,13 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Persistence & Game State Refactor' (Protocol in workflow.md)
 
 ## Phase 2: Lobby Store UI
-- [ ] Task: Move Store UI to Lobby Phase
-  - [ ] Sub-task: Update `main.js` to render the store only during 'LOBBY' state
-  - [ ] Sub-task: Implement "Start Match" button to transition from Lobby to Game
-- [ ] Task: Refactor Store buying logic for multiple quantities
-  - [ ] Sub-task: Write tests for buying multiple items of the same type
-  - [ ] Sub-task: Update UI to show quantity owned in the store
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Lobby Store UI' (Protocol in workflow.md)
+- [x] Task: Move Store UI to Lobby Phase
+  - [x] Sub-task: Update `main.js` to render the store only during 'LOBBY' state
+  - [x] Sub-task: Implement "Start Match" button to transition from Lobby to Game
+- [x] Task: Refactor Store buying logic for multiple quantities
+  - [x] Sub-task: Write tests for buying multiple items of the same type
+  - [x] Sub-task: Update UI to show quantity owned in the store
+- [~] Task: Conductor - User Manual Verification 'Phase 2: Lobby Store UI' (Protocol in workflow.md)
 
 ## Phase 3: Icon-Based Selection & HUD
 - [ ] Task: Implement Grid-Based Weapon Selection UI

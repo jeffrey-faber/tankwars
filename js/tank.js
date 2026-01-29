@@ -1,6 +1,5 @@
 import { getRandomColor, createExplosion } from './utils.js';
-import { state, getNextAliveTankIndex } from './gameContext.js';
-import { draw } from './main.js';
+import { state, getNextAliveTankIndex, draw } from './gameContext.js';
 
 export class Tank {
     constructor(x, y, isAI = false, aiLevel = 0, name = '') {
@@ -302,7 +301,7 @@ export class Tank {
             groundHeight = canvasHeight;
         }
         
-        groundHeight = Math.min(groundHeight, canvasHeight - this.height);
+        groundHeight = Math.min(groundHeight, canvasHeight - this.height - 5);
         
         const fallDistance = groundHeight - this.y;
         
@@ -320,8 +319,8 @@ export class Tank {
             this.y = groundHeight;
         }
         
-        if (this.y > canvasHeight - this.height) {
-            this.y = canvasHeight - this.height;
+        if (this.y > canvasHeight - this.height - 5) {
+            this.y = canvasHeight - this.height - 5;
         }
         
         this.checkBuried(terrain);

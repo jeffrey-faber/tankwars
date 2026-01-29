@@ -1,12 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Tank } from './tank.js';
 import { BitmaskTerrain } from './BitmaskTerrain.js';
+import { state } from './gameContext.js';
 
 describe('Tank', () => {
     let tank;
     let terrain;
 
     beforeEach(() => {
+        // Reset state
+        state.canvas = { width: 800, height: 600 };
+        
         // Mock canvas context
         const mockCtx = {
             clearRect: vi.fn(),

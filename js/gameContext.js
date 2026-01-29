@@ -33,3 +33,37 @@ export function showGameOverOverlay(message) {
     if (messageElement) messageElement.textContent = message;
     if (overlay) overlay.classList.remove('hidden');
 }
+
+export function drawHUD() {
+    const tank = state.tanks[state.currentPlayer];
+    if (!tank) return;
+    state.ctx.font = '16px Arial';
+    state.ctx.fillStyle = 'black';
+    state.ctx.fillText(tank.name, 10, 20);
+    state.ctx.fillText('Angle: ' + (tank.angle * (180 / Math.PI)).toFixed(1) + '°', 10, 40);
+    state.ctx.fillText('Power: ' + tank.power.toFixed(1), 10, 60);
+    state.ctx.fillText('Wind: ' + (state.wind * 100).toFixed(1), 10, 80);
+    state.ctx.fillText('Score: ' + tank.score, 10, 100);
+    state.ctx.fillText('Currency: ' + tank.currency, 10, 120);
+    state.ctx.fillText('Health: ' + tank.health, 10, 140);
+    state.ctx.fillText('Weapon: ' + tank.selectedWeapon, 10, 160);
+}
+
+export function draw() {
+    if (!state.isGameOver) {
+        state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+        state.terrain.draw(state.ctx);
+        state.tanks.forEach(tank => {
+            if (tank.alive) {
+                tank.draw(state.ctx);
+            }
+        });
+        drawHUD();
+        if (state.projectile.x !== null && state.projectile.y !== null) {
+            state.ctx.beginPath();
+            state.ctx.arc(state.projectile.x, state.projectile.y, 3, 0, 2 * Math.PI);
+            state.ctx.fillStyle = state.projectile.color || 'black';
+            state.ctx.fill();
+        }
+    }
+}

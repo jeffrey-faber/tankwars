@@ -3,7 +3,7 @@ import { Tank } from './tank.js';
 import { Terrain } from './terrain.js';
 import { BitmaskTerrain } from './BitmaskTerrain.js';
 import { Store } from './store.js';
-import { state, getNextAliveTankIndex, showGameOverOverlay } from './gameContext.js';
+import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD } from './gameContext.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
@@ -41,54 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
-export function draw() {
-    if (!state.isGameOver) {
-        state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
-        state.terrain.draw(state.ctx);
-        state.tanks.forEach(tank => {
-            if (tank.alive) {
-                tank.draw(state.ctx);
-            }
-        });
-        drawHUD();
-        if (state.projectile.x !== null && state.projectile.y !== null) {
-            state.ctx.beginPath();
-            state.ctx.arc(state.projectile.x, state.projectile.y, 3, 0, 2 * Math.PI);
-            state.ctx.fillStyle = state.projectile.color || 'black';
-            state.ctx.fill();
-        }
-        
-        if (state.tanks[state.currentPlayer]?.isAI && !state.projectile.flying && state.tanks[state.currentPlayer].alive) {
-            let targetTank;
-            do {
-                targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
-            } while (targetTank === state.tanks[state.currentPlayer] || !targetTank.alive);
-            
-            if (state.store) {
-                state.store.aiPurchase(state.tanks[state.currentPlayer]);
-            }
-            
-            state.tanks[state.currentPlayer].aiFire(state.tanks, state.terrain, state.projectile, state.wind, state.canvas);
-        }
-    }
-}
-
-function drawHUD() {
-    const tank = state.tanks[state.currentPlayer];
-    if (!tank) return;
-    state.ctx.font = '16px Arial';
-    state.ctx.fillStyle = 'black';
-    state.ctx.fillText(tank.name, 10, 20);
-    state.ctx.fillText('Angle: ' + (tank.angle * (180 / Math.PI)).toFixed(1) + '°', 10, 40);
-    state.ctx.fillText('Power: ' + tank.power.toFixed(1), 10, 60);
-    state.ctx.fillText('Wind: ' + (state.wind * 100).toFixed(1), 10, 80);
-    state.ctx.fillText('Score: ' + tank.score, 10, 100);
-    state.ctx.fillText('Currency: ' + tank.currency, 10, 120);
-    state.ctx.fillText('Health: ' + tank.health, 10, 140);
-    state.ctx.fillText('Weapon: ' + tank.selectedWeapon, 10, 160);
-}
-
 function resetRound() {
+    state.gameState = 'LOBBY';
     state.isGameOver = false;
     state.projectile = { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 30 };
     state.needsRedraw = true;
@@ -114,19 +68,20 @@ function resetRound() {
         state.tanks.forEach(tank => tank.applyGravity(state.terrain));
         if (state.store) {
             state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
+            state.store.updateVisibility();
         }
     }, 100);
 }
 
 function gameLoop() {
     const aliveTanks = state.tanks.filter(tank => tank.alive);
-    if (aliveTanks.length <= 1 && !state.isGameOver) {
+    if (aliveTanks.length <= 1 && !state.isGameOver && state.gameState === 'PLAYING') {
         state.isGameOver = true;
         const winner = aliveTanks.length > 0 ? aliveTanks[0].name : "No one";
         showGameOverOverlay(`${winner} wins!`);
     }
 
-    if (!state.tanks[state.currentPlayer]?.alive) {
+    if (!state.tanks[state.currentPlayer]?.alive && state.gameState === 'PLAYING') {
         state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
         if (state.store) {
             state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
@@ -134,38 +89,13 @@ function gameLoop() {
     }
 
     if (!state.isGameOver) {
-        state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
-        
         if (state.terrain.updateGravity) {
             state.terrain.updateGravity();
         }
 
-        state.terrain.draw(state.ctx);
+        draw();
         
-        if (!state.projectile.flying) {
-            state.tanks.forEach(tank => {
-                if (tank.alive) {
-                    tank.applyGravity(state.terrain);
-                }
-            });
-        }
-        
-        state.tanks.forEach(tank => {
-            if (tank.alive) {
-                tank.draw(state.ctx);
-            }
-        });
-        
-        drawHUD();
-        
-        if (state.projectile.x !== null && state.projectile.y !== null) {
-            state.ctx.beginPath();
-            state.ctx.arc(state.projectile.x, state.projectile.y, 3, 0, 2 * Math.PI);
-            state.ctx.fillStyle = state.projectile.color || 'black';
-            state.ctx.fill();
-        }
-        
-        if (state.tanks[state.currentPlayer]?.isAI && !state.projectile.flying && state.tanks[state.currentPlayer].alive) {
+        if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && !state.projectile.flying && state.tanks[state.currentPlayer].alive) {
             let targetTank;
             do {
                 targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
@@ -175,7 +105,7 @@ function gameLoop() {
                 state.store.aiPurchase(state.tanks[state.currentPlayer]);
             }
             
-            state.tanks[state.currentPlayer].aiFire(state.tanks, state.terrain, state.projectile, state.wind, state.canvas);
+            state.tanks[state.currentPlayer].aiFire();
         }
     }
     requestAnimationFrame(gameLoop);
@@ -199,7 +129,7 @@ document.addEventListener('keydown', (event) => {
         }
     }
 
-    if (!tank.isAI && state.store && !state.store.isOpen) {
+    if (!tank.isAI && state.store && !state.store.isOpen && state.gameState === 'PLAYING') {
         state.needsRedraw = true;
         if (event.key === 'ArrowLeft') {
             tank.angle += Math.PI / 180;
