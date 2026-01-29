@@ -62,6 +62,11 @@ function resetRound() {
         tank.health = tank.maxHealth;
         tank.shielded = false;
         tank.selectedWeapon = 'default';
+        
+        // AI Shopping Phase
+        if (tank.isAI && state.store) {
+            state.store.aiPurchase(tank);
+        }
     });
     
     setTimeout(() => {
@@ -100,10 +105,6 @@ function gameLoop() {
             do {
                 targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
             } while (targetTank === state.tanks[state.currentPlayer] || !targetTank.alive);
-            
-            if (state.store) {
-                state.store.aiPurchase(state.tanks[state.currentPlayer]);
-            }
             
             state.tanks[state.currentPlayer].aiFire();
         }
@@ -155,10 +156,14 @@ document.addEventListener('keydown', (event) => {
             const index = parseInt(event.key) - 1;
             if (tank.inventory && index < tank.inventory.length) {
                 const item = tank.inventory[index];
-                if (item.effect.type === 'weapon' || item.effect.type === 'defense') {
-                    tank.useItem(item.id);
-                    if (state.store) {
-                        state.store.updateWeaponSelector(tank);
+                if (item && (item.effect.type === 'weapon' || item.effect.type === 'defense')) {
+                    if (typeof tank.useItem === 'function') {
+                        tank.useItem(item.id);
+                        if (state.store) {
+                            state.store.updateWeaponSelector(tank);
+                        }
+                    } else {
+                        console.error('tank.useItem is not a function', tank);
                     }
                 }
             }

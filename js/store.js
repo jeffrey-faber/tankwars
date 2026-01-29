@@ -111,7 +111,7 @@ export class Store {
         } else {
             if (storeButton) storeButton.style.display = 'none';
             if (startMatchButton) startMatchButton.style.display = 'none';
-            if (weaponSelector) weaponSelector.style.display = 'block';
+            if (weaponSelector) weaponSelector.style.display = 'flex';
         }
     }
     
@@ -172,16 +172,22 @@ export class Store {
         const weaponSelector = document.createElement('div');
         weaponSelector.id = 'weaponSelector';
         weaponSelector.className = 'weapon-selector';
-        weaponSelector.style.position = 'absolute';
-        weaponSelector.style.bottom = '10px';
-        weaponSelector.style.left = '50%';
-        weaponSelector.style.transform = 'translateX(-50%)';
-        weaponSelector.style.zIndex = '50';
         weaponSelector.style.display = 'none'; // Hidden by default
         
         document.body.appendChild(weaponSelector);
     }
     
+    getWeaponIcon(id) {
+        switch(id) {
+            case 'default': return '💣';
+            case 'nuke': return '☢️';
+            case 'laser': return '⚡';
+            case 'shield': return '🛡️';
+            case 'health': return '❤️';
+            default: return '❓';
+        }
+    }
+
     updateWeaponSelector(tank) {
         const selector = document.getElementById('weaponSelector');
         if (!selector) return;
@@ -193,58 +199,69 @@ export class Store {
         }
         
         // Show weapon selector
-        selector.style.display = 'block';
+        selector.style.display = 'flex';
         
         // Clear previous buttons
         selector.innerHTML = '';
         
-        // Add default weapon
-        const defaultBtn = document.createElement('button');
-        defaultBtn.className = 'weapon-button';
-        defaultBtn.textContent = 'Default';
-        defaultBtn.addEventListener('click', () => {
-            tank.selectedWeapon = 'default';
-            this.updateWeaponSelector(tank); // Refresh buttons
-        });
-        
-        if (tank.selectedWeapon === 'default') {
-            defaultBtn.style.border = '2px solid white';
-        }
-        
-        selector.appendChild(defaultBtn);
+        // Helper to create icon
+        const createIcon = (id, name, count, isSelected, key, description) => {
+            const icon = document.createElement('div');
+            icon.className = `weapon-icon ${isSelected ? 'selected' : ''}`;
+            icon.innerHTML = `
+                <span class="weapon-key">${key}</span>
+                ${this.getWeaponIcon(id)}
+                ${count > 0 ? `<span class="weapon-count">${count}</span>` : ''}
+                <div class="weapon-tooltip">
+                    <span class="weapon-tooltip-title">${name}</span>
+                    ${description}
+                </div>
+            `;
+            icon.addEventListener('click', () => {
+                if (id === 'default') {
+                    tank.selectedWeapon = 'default';
+                } else {
+                    tank.useItem(id);
+                }
+                this.updateWeaponSelector(tank);
+            });
+            return icon;
+        };
+
+        // Add default weapon (Key: 0)
+        selector.appendChild(createIcon(
+            'default', 
+            'Standard Shell', 
+            0, 
+            tank.selectedWeapon === 'default', 
+            '0', 
+            'Basic projectile.'
+        ));
         
         // Add weapons from inventory
-        if (tank.inventory && tank.inventory.length > 0) {
-            const weaponItems = tank.inventory.filter(item => 
-                item.effect.type === 'weapon' || item.effect.type === 'defense'
-            );
-            
+        if (tank.inventory) {
+            // Group inventory by ID
             const uniqueItems = {};
-            weaponItems.forEach(item => {
+            tank.inventory.forEach(item => {
                 if (!uniqueItems[item.id]) {
-                    uniqueItems[item.id] = {
-                        item: item,
-                        count: 1
-                    };
-                } else {
-                    uniqueItems[item.id].count++;
+                    uniqueItems[item.id] = { ...item, count: 0 };
                 }
+                uniqueItems[item.id].count++;
             });
-            
-            Object.values(uniqueItems).forEach(entry => {
-                const btn = document.createElement('button');
-                btn.className = 'weapon-button';
-                btn.textContent = `${entry.item.name} (${entry.count})`;
-                btn.addEventListener('click', () => {
-                    tank.useItem(entry.item.id);
-                    this.updateWeaponSelector(tank); // Refresh buttons
-                });
-                
-                if (tank.selectedWeapon === entry.item.id) {
-                    btn.style.border = '2px solid white';
+
+            // We want fixed slots for hotkeys 1-9 potentially, or just dynamic
+            // For now, dynamic list based on unique items held
+            Object.values(uniqueItems).forEach((item, index) => {
+                if (index < 9) { // keys 1-9
+                    selector.appendChild(createIcon(
+                        item.id,
+                        item.name,
+                        item.count,
+                        tank.selectedWeapon === item.id,
+                        index + 1,
+                        item.description
+                    ));
                 }
-                
-                selector.appendChild(btn);
             });
         }
     }

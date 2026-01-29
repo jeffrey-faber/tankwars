@@ -1,6 +1,69 @@
 import { getRandomColor, createExplosion } from './utils.js';
 import { state, getNextAliveTankIndex, draw } from './gameContext.js';
 
+function checkTerrainAndBounds(x, y, terrain, canvas) {
+    if (x < 0 || x > canvas.width || y > canvas.height) return true;
+    if (terrain.checkCollision(x, y)) return true;
+    return false;
+}
+
+function checkDirectHit(x, y, tanks, sourceTank, excludeSourcePlayer = false) {
+    for (let i = 0; i < tanks.length; i++) {
+        const otherTank = tanks[i];
+        if (!otherTank.alive) continue;
+        if (excludeSourcePlayer && otherTank === sourceTank) continue;
+        
+        if (x >= otherTank.x && x <= otherTank.x + otherTank.width &&
+            y >= otherTank.y - otherTank.height && y <= otherTank.y) {
+            return otherTank;
+        }
+    }
+    return null;
+}
+
+function applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, directHitTank = null) {
+    tanks.forEach((otherTank, tankIndex) => {
+        if (!otherTank.alive) return;
+        
+        const tankCenterX = otherTank.x + otherTank.width / 2;
+        const tankCenterY = otherTank.y - otherTank.height / 2;
+        const dx = x - tankCenterX;
+        const dy = y - tankCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const isDirectHit = (otherTank === directHitTank);
+        
+        if (distance < radius || isDirectHit) {
+            let distanceFactor = 1 - (distance / radius);
+            if (distanceFactor < 0) distanceFactor = 0;
+            
+            let effectiveDamage = Math.floor(damage * distanceFactor);
+            
+            if (isDirectHit) {
+                effectiveDamage = Math.max(effectiveDamage, damage);
+                effectiveDamage += 25;
+            }
+            
+            if (otherTank.shielded) {
+                otherTank.shielded = false;
+                if (tankIndex !== sourcePlayerId) {
+                    tanks[sourcePlayerId].score += 0.5;
+                    tanks[sourcePlayerId].currency += 5;
+                }
+            } else {
+                otherTank.health -= effectiveDamage;
+                if (otherTank.health <= 0) {
+                    otherTank.health = 0;
+                    otherTank.alive = false;
+                    if (tankIndex !== sourcePlayerId) {
+                        tanks[sourcePlayerId].score += 1;
+                        tanks[sourcePlayerId].currency += 20;
+                    }
+                }
+            }
+        }
+    });
+}
+
 export class Tank {
     constructor(x, y, isAI = false, aiLevel = 0, name = '') {
         this.x = x;
@@ -142,32 +205,46 @@ export class Tank {
         
         setTimeout(() => {
             const moveProjectile = () => {
-                x += vx;
-                y += vy;
+                // Apply gravity to velocity first
                 vy += state.gravity;
                 vx += state.wind;
+
+                // Sub-stepping to prevent tunneling
+                const speed = Math.sqrt(vx*vx + vy*vy);
+                const steps = Math.ceil(speed / 2); // Check every 2 pixels roughly
+                const stepX = vx / steps;
+                const stepY = vy / steps;
+                
+                let hit = false;
+
+                for (let s = 0; s < steps; s++) {
+                    x += stepX;
+                    y += stepY;
+                    
+                    const elapsedTime = Date.now() - turnStartTime;
+                    const excludeSourcePlayer = elapsedTime < immunityTime;
+                    
+                    if (elapsedTime < immunityTime) {
+                        hit = checkTerrainAndBounds(x, y, state.terrain, state.canvas);
+                    } else {
+                        const directHitTank = checkDirectHit(x, y, state.tanks, this, excludeSourcePlayer);
+                        if (directHitTank) {
+                            hit = true;
+                            this.directHitTank = directHitTank;
+                        } else {
+                            hit = checkTerrainAndBounds(x, y, state.terrain, state.canvas);
+                        }
+                    }
+                    
+                    if (hit) break; // Stop stepping if hit
+                }
+                
                 state.projectile.x = x;
                 state.projectile.y = y;
                 
                 draw();
                 
                 const elapsedTime = Date.now() - turnStartTime;
-                const excludeSourcePlayer = elapsedTime < immunityTime;
-                
-                let hit = false;
-                
-                if (elapsedTime < immunityTime) {
-                    hit = this.checkTerrainAndBounds(x, y, state.terrain, state.canvas);
-                } else {
-                    const directHitTank = this.checkDirectHit(x, y, state.tanks, excludeSourcePlayer);
-                    if (directHitTank) {
-                        hit = true;
-                        this.directHitTank = directHitTank;
-                    } else {
-                        hit = this.checkTerrainAndBounds(x, y, state.terrain, state.canvas);
-                    }
-                }
-                
                 if (elapsedTime >= maxTurnTime) hit = true;
                 
                 if (!hit) {
@@ -182,7 +259,7 @@ export class Tank {
                             createExplosion(x, y, state.projectile.explosionRadius, state.ctx, state.canvas, draw);
                         }
                         
-                        this.applyExplosionDamage(x, y, state.tanks, state.projectile.explosionRadius, state.projectile.damage, state.projectile.sourcePlayerId, this.directHitTank);
+                        applyExplosionDamage(x, y, state.tanks, state.projectile.explosionRadius, state.projectile.damage, state.projectile.sourcePlayerId, this.directHitTank);
                         this.directHitTank = null;
                     }
                     
@@ -203,70 +280,6 @@ export class Tank {
         }, 10);
     }
     
-    checkTerrainAndBounds(x, y, terrain, canvas) {
-        if (x < 0 || x > canvas.width || y > canvas.height) return true;
-        if (terrain.checkCollision(x, y)) return true;
-        return false;
-    }
-
-    checkDirectHit(x, y, tanks, excludeSourcePlayer = false) {
-        const sourceTank = this;
-        for (let i = 0; i < tanks.length; i++) {
-            const otherTank = tanks[i];
-            if (!otherTank.alive) continue;
-            if (excludeSourcePlayer && otherTank === sourceTank) continue;
-            
-            if (x >= otherTank.x && x <= otherTank.x + otherTank.width &&
-                y >= otherTank.y - otherTank.height && y <= otherTank.y) {
-                return otherTank;
-            }
-        }
-        return null;
-    }
-
-    applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, directHitTank = null) {
-        tanks.forEach((otherTank, tankIndex) => {
-            if (!otherTank.alive) return;
-            
-            const tankCenterX = otherTank.x + otherTank.width / 2;
-            const tankCenterY = otherTank.y - otherTank.height / 2;
-            const dx = x - tankCenterX;
-            const dy = y - tankCenterY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const isDirectHit = (otherTank === directHitTank);
-            
-            if (distance < radius || isDirectHit) {
-                let distanceFactor = 1 - (distance / radius);
-                if (distanceFactor < 0) distanceFactor = 0;
-                
-                let effectiveDamage = Math.floor(damage * distanceFactor);
-                
-                if (isDirectHit) {
-                    effectiveDamage = Math.max(effectiveDamage, damage);
-                    effectiveDamage += 25;
-                }
-                
-                if (otherTank.shielded) {
-                    otherTank.shielded = false;
-                    if (tankIndex !== sourcePlayerId) {
-                        tanks[sourcePlayerId].score += 0.5;
-                        tanks[sourcePlayerId].currency += 5;
-                    }
-                } else {
-                    otherTank.health -= effectiveDamage;
-                    if (otherTank.health <= 0) {
-                        otherTank.health = 0;
-                        otherTank.alive = false;
-                        if (tankIndex !== sourcePlayerId) {
-                            tanks[sourcePlayerId].score += 1;
-                            tanks[sourcePlayerId].currency += 20;
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
     useItem(itemId) {
         const index = this.inventory.findIndex(item => item.id === itemId);
         if (index === -1) return false;
@@ -274,10 +287,13 @@ export class Tank {
         const item = this.inventory[index];
         
         if (item.effect.type === 'weapon') {
+            // Select the weapon
             this.selectedWeapon = item.id;
             return true;
         } else if (item.effect.type === 'defense' && item.id === 'shield') {
+            // Activate shield
             this.shielded = true;
+            // Remove from inventory after use
             this.inventory.splice(index, 1);
             return true;
         }
@@ -290,7 +306,10 @@ export class Tank {
         let groundHeight = null;
         const canvasHeight = state.canvas?.height || 400;
         
-        for (let y = 0; y < canvasHeight; y++) {
+        // Start searching from the tank's current position (bottom of tank)
+        const startY = Math.max(0, Math.floor(this.y));
+        
+        for (let y = startY; y < canvasHeight; y++) {
             if (terrain.isSolid(tankCenterX, y)) {
                 groundHeight = y;
                 break;
@@ -301,11 +320,14 @@ export class Tank {
             groundHeight = canvasHeight;
         }
         
-        groundHeight = Math.min(groundHeight, canvasHeight - this.height - 5);
+        // Clamp to bottom
+        const bottomLimit = canvasHeight - this.height - 5;
+        groundHeight = Math.min(groundHeight, bottomLimit);
         
         const fallDistance = groundHeight - this.y;
         
         if (fallDistance > 0) {
+            console.log(`Gravity: Tank ${this.name} at ${this.y} falling to ${groundHeight} (dist: ${fallDistance})`);
             const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
             
             if (fallDamage > 0 && !this.shielded) {
@@ -317,10 +339,16 @@ export class Tank {
             }
             
             this.y = groundHeight;
+        } else if (fallDistance < 0) {
+             // Tank is below ground? Move up?
+             // Only if buried?
+             if (this.isBuried) {
+                 // Slowly rise?
+             }
         }
         
-        if (this.y > canvasHeight - this.height - 5) {
-            this.y = canvasHeight - this.height - 5;
+        if (this.y > bottomLimit) {
+            this.y = bottomLimit;
         }
         
         this.checkBuried(terrain);
