@@ -41,9 +41,8 @@ describe('Tank', () => {
         tank.y = 100;
         tank.applyGravity(terrain);
         
-        // Should start falling (velocity increases)
-        expect(tank.vy).toBeGreaterThan(0);
-        expect(tank.y).toBeGreaterThan(100);
+        // Should fall to bottom (minus height)
+        expect(tank.y).toBe(600 - tank.height - 5);
     });
 
     it('should stop falling when hitting terrain', () => {
@@ -52,23 +51,11 @@ describe('Tank', () => {
             terrain.setSolid(x, 200, true);
         }
         
-        // Drop from slightly above
-        tank.y = 199;
-        tank.vy = 2; // Moving down
-        
+        tank.y = 100;
         tank.applyGravity(terrain);
         
-        // Should land near 200 (199 is empty, 200 is solid).
-        // checkY = 199 + 2 + gravity = ~201.
-        // isSolid(201) -> true.
-        // Moves up to empty space. 199.
-        
-        // Wait, if it lands, vy should be 0.
-        // And y should be <= 199.
-        // vy will be 0.1 because gravity is added at start of frame
-        
-        expect(tank.vy).toBeLessThan(0.2);
-        expect(tank.y).toBeLessThanOrEqual(200);
+        // Should land on 200
+        expect(tank.y).toBe(200);
     });
 
     it('should detect when buried', () => {

@@ -303,49 +303,50 @@ export class Tank {
     }
     
     applyGravity(terrain) {
-        // Apply gravity acceleration
-        this.vy += state.gravity;
-        
-        // Apply velocity
-        this.y += this.vy;
-        
         const tankCenterX = Math.floor(this.x + this.width / 2);
+        let groundHeight = null;
         const canvasHeight = state.canvas?.height || 400;
-        const bottomLimit = canvasHeight - this.height - 5;
         
-        // Check for collision with terrain
-        // We check the pixel at the bottom center of the tank
-        const checkY = Math.floor(this.y);
-        
-        if (checkY >= bottomLimit) {
-            this.y = bottomLimit;
-            this.vy = 0;
-        } else if (terrain.isSolid(tankCenterX, checkY)) {
-            // Collision! Move up until free
-            // This handles landing on ground
-            let surfaceY = checkY;
-            while (terrain.isSolid(tankCenterX, surfaceY) && surfaceY > 0) {
-                surfaceY--;
+        // Scan from top to find the first solid pixel (ground surface)
+        for (let y = 0; y < canvasHeight; y++) {
+            if (terrain.isSolid(tankCenterX, y)) {
+                groundHeight = y;
+                break;
             }
-            // surfaceY is now the first empty pixel above ground
-            // The tank bottom should be at surfaceY + 1 (the solid pixel)? 
-            // No, tank bottom is this.y. If this.y is inside solid, we move up.
-            // We want this.y to be the top of the solid surface?
-            // Actually, if isSolid(x, y) is true, y is occupied.
-            // We want tank to sit ON TOP.
-            // So tank bottom (this.y) should be at surfaceY (empty).
-            // Wait, if surfaceY is empty, and surfaceY+1 is solid.
-            // Tank at surfaceY is valid.
+        }
+        
+        if (groundHeight === null) {
+            groundHeight = canvasHeight;
+        }
+        
+        // Ensure tank sits on top of ground (groundHeight is the solid pixel)
+        // We want the tank bottom (this.y) to be at groundHeight?
+        // If groundHeight is 300 (solid). Tank y=300 (bottom).
+        // Draw 290-300. Sits on top. Correct.
+        // Clamp to screen bottom
+        groundHeight = Math.min(groundHeight, canvasHeight - this.height - 5);
+        
+        const fallDistance = groundHeight - this.y;
+        
+        if (fallDistance > 0) {
+            // Apply fall damage
+            const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
             
-            this.y = surfaceY; // Snap to top of ground
-            this.vy = 0;
+            if (fallDamage > 0 && !this.shielded) {
+                this.health -= fallDamage;
+                if (this.health <= 0) {
+                    this.health = 0;
+                    this.alive = false;
+                }
+            }
             
-            // Check falling damage logic if needed (based on previous velocity?)
-            // For now, simple physics.
-        } else {
-            // In air. 
-            // Check if we fell too fast/far? 
-            // The vy handles speed.
+            // Snap to ground
+            this.y = groundHeight;
+        }
+        
+        // Ensure we don't go below the screen
+        if (this.y > canvasHeight - this.height - 5) {
+            this.y = canvasHeight - this.height - 5;
         }
         
         this.checkBuried(terrain);

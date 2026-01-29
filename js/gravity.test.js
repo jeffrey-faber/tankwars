@@ -27,24 +27,20 @@ describe('Gravity Integration', () => {
         const points = [{x: 0, y: 300}, {x: 800, y: 300}];
         terrain.bakeHeightmap(points);
         
-        // Simulate falling
-        for (let i = 0; i < 100; i++) {
-            tank.applyGravity(terrain);
-        }
+        // Tank at y=0. Ground at 300.
+        tank.applyGravity(terrain);
         
-        // Tank should be near 300 (e.g. 299 or 300)
-        expect(Math.abs(tank.y - 299)).toBeLessThan(2);
-        expect(tank.vy).toBeLessThan(0.5);
+        // Tank should be at 300
+        expect(tank.y).toBe(300);
     });
 
     it('should stay on ground if placed on ground', () => {
         const points = [{x: 0, y: 300}, {x: 800, y: 300}];
         terrain.bakeHeightmap(points);
         
-        tank.y = 299; // Sit on top
+        tank.y = 300; // Sit on top
         tank.applyGravity(terrain);
         
-        expect(Math.abs(tank.y - 299)).toBeLessThan(1);
-        expect(tank.vy).toBeLessThan(0.5);
+        expect(tank.y).toBe(300);
     });
 });
