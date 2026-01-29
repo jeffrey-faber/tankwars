@@ -17,6 +17,20 @@ canvas.height = canvasHeight;
 
 // Initialize game state from context
 state.wind = (Math.random() * 2 - 1) / 10;
+window.state = state; // Debugging
+
+// Initialize Terrain and Tanks
+const oldTerrain = new Terrain(canvasWidth, canvasHeight); // Used for heightmap generation
+state.terrain = new BitmaskTerrain(canvasWidth, canvasHeight);
+state.terrain.bakeHeightmap(oldTerrain.points);
+
+const tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain); // Use oldTerrain for positions
+const aiPlayers = urlParams.ai ? urlParams.ai.split(',').map(p => parseInt(p)) : [];
+for (let i = 0; i < state.numPlayers; i++) {
+    const isAI = aiPlayers.includes(i + 1);
+    const aiLevel = isAI ? 8 : 0;
+    state.tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, `Player ${i + 1}`));
+}
 
 // Initialize Store
 state.store = new Store();
@@ -74,6 +88,11 @@ function resetRound() {
 }
 
 function gameLoop() {
+    if (!state.ctx || !state.terrain) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
     const aliveTanks = state.tanks.filter(tank => tank.alive);
     if (aliveTanks.length <= 1 && !state.isGameOver && state.gameState === 'PLAYING') {
         state.isGameOver = true;
@@ -142,6 +161,9 @@ document.addEventListener('keydown', (event) => {
             if (state.store && !state.projectile.flying && state.gameState === 'LOBBY') {
                 state.store.open(tank);
             }
+        } else if (event.key === 'g') {
+            console.log("Forcing Gravity Check");
+            state.tanks.forEach(t => t.applyGravity(state.terrain));
         } else if (event.key === '0') {
             tank.selectedWeapon = 'default';
             if (state.store) {
