@@ -114,6 +114,12 @@ function gameLoop() {
 
         draw();
         
+        if (!state.projectile.flying) {
+            state.tanks.forEach(tank => {
+                tank.applyGravity(state.terrain);
+            });
+        }
+        
         if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && !state.projectile.flying && state.tanks[state.currentPlayer].alive) {
             let targetTank;
             do {
