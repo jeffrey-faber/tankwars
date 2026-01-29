@@ -9,7 +9,7 @@
   - [x] Sub-task: Write tests for state transitions
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Persistence & Game State Refactor' (Protocol in workflow.md)
 
-## Phase 2: Lobby Store UI
+## Phase 2: Lobby Store UI [checkpoint: 62059a4]
 - [x] Task: Move Store UI to Lobby Phase
   - [x] Sub-task: Update `main.js` to render the store only during 'LOBBY' state
   - [x] Sub-task: Implement "Start Match" button to transition from Lobby to Game
