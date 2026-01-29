@@ -5,6 +5,7 @@ import './main.js';
 
 describe('Lobby Store UI', () => {
     let store;
+    let spyUpdate;
 
     beforeEach(() => {
         // Reset state
@@ -15,8 +16,14 @@ describe('Lobby Store UI', () => {
         // Mock DOM
         document.body.innerHTML = '<div id="gameCanvas"></div>';
         
+        spyUpdate = vi.spyOn(Store.prototype, 'updateWeaponSelector');
+        
         store = new Store();
         store.init(state.tanks);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('should show the store button in LOBBY state', () => {
@@ -53,7 +60,7 @@ describe('Lobby Store UI', () => {
         state.gameState = 'PLAYING';
         state.store = store; // main.js uses state.store
         
-        const event = { key: '1' };
+        const event = { type: 'keydown', key: '1' };
         document.dispatchEvent(event);
         
         expect(tank.useItem).toHaveBeenCalledWith('nuke');
@@ -65,7 +72,7 @@ describe('Lobby Store UI', () => {
         state.gameState = 'PLAYING';
         state.store = store;
         
-        const event = { key: '0' };
+        const event = { type: 'keydown', key: '0' };
         document.dispatchEvent(event);
         
         expect(tank.selectedWeapon).toBe('default');
@@ -78,7 +85,7 @@ describe('Lobby Store UI', () => {
         state.gameState = 'LOBBY';
         state.store = store;
         
-        const event = { key: '1' };
+        const event = { type: 'keydown', key: '1' };
         document.dispatchEvent(event);
         
         expect(tank.useItem).not.toHaveBeenCalled();
@@ -86,7 +93,6 @@ describe('Lobby Store UI', () => {
 
     it('should refresh weapon selector when starting match', () => {
         const tank = state.tanks[0];
-        store.updateWeaponSelector = vi.fn();
         
         // Find start button (created in init)
         // We need to query document body because it's appended there
@@ -97,6 +103,6 @@ describe('Lobby Store UI', () => {
         startButton.click();
         
         expect(state.gameState).toBe('PLAYING');
-        expect(store.updateWeaponSelector).toHaveBeenCalledWith(tank);
+        expect(spyUpdate).toHaveBeenCalledWith(tank);
     });
 });

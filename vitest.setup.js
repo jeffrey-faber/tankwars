@@ -10,6 +10,7 @@ class MockElement {
         this.innerHTML = '';
         this.style = {};
         this.children = [];
+        this.listeners = new Map();
         this.classList = {
             add: vi.fn((cls) => {
                 if (!this.className.includes(cls)) {
@@ -37,7 +38,20 @@ class MockElement {
     }
 
     addEventListener(event, handler) {
-        // Simple mock
+        if (!this.listeners.has(event)) this.listeners.set(event, []);
+        this.listeners.get(event).push(handler);
+    }
+
+    dispatchEvent(event) {
+        const type = event.type || event;
+        if (this.listeners.has(type)) {
+            this.listeners.get(type).forEach(cb => cb(event));
+        }
+        return true;
+    }
+
+    click() {
+        this.dispatchEvent({ type: 'click' });
     }
 
     cloneNode() {
@@ -136,5 +150,8 @@ global.window = {
     requestAnimationFrame: vi.fn(),
     cancelAnimationFrame: vi.fn(),
 };
+
+global.requestAnimationFrame = global.window.requestAnimationFrame;
+global.cancelAnimationFrame = global.window.cancelAnimationFrame;
 
 
