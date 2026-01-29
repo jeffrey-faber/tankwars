@@ -105,13 +105,20 @@ export class Store {
         const weaponSelector = document.getElementById('weaponSelector');
         
         if (state.gameState === 'LOBBY') {
-            if (storeButton) storeButton.style.display = 'block';
-            if (startMatchButton) startMatchButton.style.display = 'block';
+            // Hide lobby buttons if store is open to prevent overlap
+            if (storeButton) storeButton.style.display = this.isOpen ? 'none' : 'block';
+            if (startMatchButton) startMatchButton.style.display = this.isOpen ? 'none' : 'block';
             if (weaponSelector) weaponSelector.style.display = 'none';
         } else {
             if (storeButton) storeButton.style.display = 'none';
             if (startMatchButton) startMatchButton.style.display = 'none';
-            if (weaponSelector) weaponSelector.style.display = 'flex';
+            if (weaponSelector) {
+                // Only show if we have items or if we explicitly want to see default
+                // User said "When there are no items, I see a small blue selector box and nothing inside"
+                // So if inventory is empty, hide it.
+                const hasItems = this.currentTank && this.currentTank.inventory && this.currentTank.inventory.length > 0;
+                weaponSelector.style.display = hasItems ? 'flex' : 'none';
+            }
         }
     }
     
@@ -189,17 +196,15 @@ export class Store {
     }
 
     updateWeaponSelector(tank) {
+        this.currentTank = tank; // Ensure we track current tank
         const selector = document.getElementById('weaponSelector');
         if (!selector) return;
         
-        // Only show weapon selector for human players
-        if (tank.isAI || !tank.alive) {
-            selector.style.display = 'none';
-            return;
-        }
+        // Update visibility logic based on new rules
+        this.updateVisibility();
         
-        // Show weapon selector
-        selector.style.display = 'flex';
+        // If hidden by updateVisibility, stop
+        if (selector.style.display === 'none') return;
         
         // Clear previous buttons
         selector.innerHTML = '';
@@ -271,6 +276,7 @@ export class Store {
         
         this.currentTank = tank;
         this.isOpen = true;
+        this.updateVisibility(); // Hide lobby buttons
         
         const overlay = document.getElementById('storeOverlay');
         if (overlay) {
@@ -303,6 +309,7 @@ export class Store {
     
     close() {
         this.isOpen = false;
+        this.updateVisibility(); // Show lobby buttons
         const overlay = document.getElementById('storeOverlay');
         if (overlay) {
             overlay.classList.add('hidden');

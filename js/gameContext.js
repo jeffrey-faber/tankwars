@@ -46,7 +46,13 @@ export function drawHUD() {
     state.ctx.fillText('Score: ' + tank.score, 10, 100);
     state.ctx.fillText('Currency: ' + tank.currency, 10, 120);
     state.ctx.fillText('Health: ' + tank.health, 10, 140);
-    state.ctx.fillText('Weapon: ' + tank.selectedWeapon, 10, 160);
+    
+    let weaponText = 'Weapon: ' + tank.selectedWeapon;
+    if (tank.selectedWeapon !== 'default') {
+        const count = tank.inventory.filter(i => i.id === tank.selectedWeapon).length;
+        weaponText += ` (${count})`;
+    }
+    state.ctx.fillText(weaponText, 10, 160);
 }
 
 export function draw() {

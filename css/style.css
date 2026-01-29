@@ -119,21 +119,109 @@ input[type="submit"] {
 }
 
 .weapon-selector {
-    margin: 10px 0;
-    padding: 5px;
-    background-color: #333;
-    border-radius: 5px;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #00f7ff;
+    border-radius: 10px;
+    z-index: 50;
+    box-shadow: 0 0 10px #00f7ff, inset 0 0 10px rgba(0, 247, 255, 0.2);
 }
 
-.weapon-button {
-    background-color: #f44336;
-    border: none;
-    padding: 5px 10px;
-    margin: 0 5px;
-    color: white;
-    font-family: 'Press Start 2P', cursive;
+.weapon-icon {
+    width: 50px;
+    height: 50px;
+    background-color: #333;
+    border: 2px solid #555;
+    border-radius: 5px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.2s ease;
+    font-size: 24px; /* Icon/Emoji size */
+    color: white;
+    text-shadow: 0 0 5px currentColor;
+}
+
+.weapon-icon:hover {
+    border-color: #ff00ff;
+    box-shadow: 0 0 10px #ff00ff;
+    transform: scale(1.1);
+}
+
+.weapon-icon.selected {
+    border-color: #00ff00;
+    background-color: #222;
+    box-shadow: 0 0 15px #00ff00, inset 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.weapon-count {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: #ff0000;
+    color: white;
     font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 50%;
+    border: 1px solid white;
+}
+
+.weapon-key {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 8px;
+    color: #aaa;
+}
+
+/* Tooltip */
+.weapon-tooltip {
+    visibility: hidden;
+    width: 150px;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Position above the icon */
+    left: 50%;
+    margin-left: -75px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    border: 1px solid #00f7ff;
+    box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
+    font-size: 10px;
+    pointer-events: none;
+}
+
+.weapon-icon:hover .weapon-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.weapon-tooltip-title {
+    color: #00f7ff;
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+    text-transform: uppercase;
+}
+
+.weapon-tooltip-stats {
+    color: #aaa;
+    font-size: 9px;
+    margin-top: 5px;
+    display: block;
 }
 
 .shield-indicator {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { state } from './gameContext.js';
 import { Store } from './store.js';
+import './main.js';
 
 describe('Lobby Store UI', () => {
     let store;
@@ -43,5 +44,43 @@ describe('Lobby Store UI', () => {
         const nukes = tank.inventory.filter(i => i.id === 'nuke');
         expect(nukes.length).toBe(2);
         expect(tank.currency).toBe(200 - (store.items.find(i => i.id === 'nuke').price * 2));
+    });
+
+    it('should trigger useItem on numeric key 1', () => {
+        const tank = state.tanks[0];
+        tank.inventory = [{ id: 'nuke', effect: { type: 'weapon' } }];
+        tank.useItem = vi.fn();
+        state.gameState = 'PLAYING';
+        state.store = store; // main.js uses state.store
+        
+        const event = { key: '1' };
+        document.dispatchEvent(event);
+        
+        expect(tank.useItem).toHaveBeenCalledWith('nuke');
+    });
+
+    it('should select default weapon on key 0', () => {
+        const tank = state.tanks[0];
+        tank.selectedWeapon = 'nuke';
+        state.gameState = 'PLAYING';
+        state.store = store;
+        
+        const event = { key: '0' };
+        document.dispatchEvent(event);
+        
+        expect(tank.selectedWeapon).toBe('default');
+    });
+
+    it('should ignore hotkeys in LOBBY state', () => {
+        const tank = state.tanks[0];
+        tank.inventory = [{ id: 'nuke', effect: { type: 'weapon' } }];
+        tank.useItem = vi.fn();
+        state.gameState = 'LOBBY';
+        state.store = store;
+        
+        const event = { key: '1' };
+        document.dispatchEvent(event);
+        
+        expect(tank.useItem).not.toHaveBeenCalled();
     });
 });

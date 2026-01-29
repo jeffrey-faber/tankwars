@@ -77,6 +77,8 @@ class MockCanvas extends MockElement {
 
 const elements = new Map();
 
+const listeners = new Map();
+
 global.document = {
     createElement: vi.fn((tag) => {
         let el;
@@ -112,6 +114,16 @@ global.document = {
         };
         return findRecursive(global.document.body, selector);
     }),
+    addEventListener: vi.fn((event, cb) => {
+        if (!listeners.has(event)) listeners.set(event, []);
+        listeners.get(event).push(cb);
+    }),
+    dispatchEvent: vi.fn((event) => {
+        const type = event.type || event;
+        if (listeners.has(type)) {
+            listeners.get(type).forEach(cb => cb(event));
+        }
+    }),
 };
 
 global.window = {
@@ -119,12 +131,10 @@ global.window = {
     location: {
         search: '',
     },
-    requestAnimationFrame: (callback) => {
-        setTimeout(callback, 0);
-    },
-    cancelAnimationFrame: (id) => {
-        clearTimeout(id);
-    },
+    addEventListener: global.document.addEventListener,
+    dispatchEvent: global.document.dispatchEvent,
+    requestAnimationFrame: vi.fn(),
+    cancelAnimationFrame: vi.fn(),
 };
 
 
