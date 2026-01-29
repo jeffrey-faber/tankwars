@@ -1,6 +1,6 @@
 # Plan: Store & Weapon Selection Overhaul
 
-## Phase 1: Persistence & Game State Refactor
+## Phase 1: Persistence & Game State Refactor [checkpoint: 6a9e36f]
 - [x] Task: Refactor `store.js` for session persistence
   - [x] Sub-task: Write tests for currency/inventory persisting between match resets
   - [x] Sub-task: Ensure `resetGame` logic does not clear player inventory/money
