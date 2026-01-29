@@ -1,3 +1,5 @@
+import { state } from './gameContext.js';
+
 export class Store {
     constructor() {
         this.items = [
@@ -111,8 +113,8 @@ export class Store {
         // Add event listener
         storeButton.addEventListener('click', () => {
             // Only open store for current player if they're not AI
-            if (!window.tanks[window.currentPlayer].isAI) {
-                this.open(window.tanks[window.currentPlayer]);
+            if (!state.tanks[state.currentPlayer].isAI) {
+                this.open(state.tanks[state.currentPlayer]);
             }
         });
     }

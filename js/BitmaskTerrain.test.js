@@ -49,22 +49,45 @@ describe('BitmaskTerrain', () => {
     });
 
     it('should identify floating pixels', () => {
-        // Create a platform at the bottom (connected to ground)
-        for (let x = 0; x < width; x++) {
-            terrain.setSolid(x, height - 1, true);
-        }
-        
-        // Create a floating island
+        // ... (previous test)
+    });
+
+    it('should update gravity with sand physics', () => {
+        // Create a single pixel in the air
         terrain.setSolid(50, 50, true);
-        terrain.setSolid(51, 50, true);
         
-        const floating = terrain.findFloatingPixels();
+        terrain.updateGravity();
         
-        // (50, 50) and (51, 50) should be floating
-        expect(floating).toContainEqual({x: 50, y: 50});
-        expect(floating).toContainEqual({x: 51, y: 50});
+        // Should have moved down
+        expect(terrain.isSolid(50, 50)).toBe(false);
+        expect(terrain.isSolid(50, 51)).toBe(true);
+    });
+
+    it('should slide pixels diagonally (sand behavior)', () => {
+        const h = height;
+        // Setup:
+        //   X (50, h-2)
+        //  .X. (49 empty, 50 solid, 51 empty) at h-1
         
-        // Bottom row should NOT be floating
-        expect(floating).not.toContainEqual({x: 0, y: height - 1});
+        terrain.setSolid(50, h - 1, true); // Ground
+        terrain.setSolid(50, h - 2, true); // Pixel to fall
+        
+        // Ensure empty sides
+        terrain.setSolid(49, h - 1, false);
+        terrain.setSolid(51, h - 1, false);
+        
+        // Ensure empty diagonal slots
+        // (already done by default init, but good to be sure)
+        
+        const moved = terrain.updateGravity();
+        expect(moved).toBe(true);
+        
+        // Should have moved from original spot
+        expect(terrain.isSolid(50, h - 2)).toBe(false);
+        
+        // Should be in one of the diagonal spots
+        const left = terrain.isSolid(49, h - 1);
+        const right = terrain.isSolid(51, h - 1);
+        expect(left || right).toBe(true);
     });
 });

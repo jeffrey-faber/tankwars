@@ -1,4 +1,6 @@
 import { getRandomColor, createExplosion } from './utils.js';
+import { state, getNextAliveTankIndex } from './gameContext.js';
+import { draw } from './main.js';
 
 export class Tank {
     constructor(x, y, isAI = false, aiLevel = 0, name = '') {
@@ -12,28 +14,19 @@ export class Tank {
         this.isAI = isAI;
         this.aiLevel = aiLevel;
         this.name = name;
-        // New properties for score and currency
         this.score = 0;
-        this.currency = 100; // Starting currency
+        this.currency = 100;
         this.alive = true;
-        
-        // Health system
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.shielded = false;
-        
-        // Inventory and selected weapon
         this.inventory = [];
         this.selectedWeapon = 'default';
-        
         this.aiParams = {
-            // Initial half–range for search (in radians and power units)
-            angleRange: 5 * Math.PI / 180,  // ±5° by default
-            powerRange: 2.5,               // ±2.5 power units by default
-            // Increments for iterating candidate values
-            angleIncrement: 1 * Math.PI / 180, // 1° steps
+            angleRange: 5 * Math.PI / 180,
+            powerRange: 2.5,
+            angleIncrement: 1 * Math.PI / 180,
             powerIncrement: 0.5,
-            // Minimum and maximum allowed search ranges (so they don't shrink or grow too far)
             minAngleRange: 2 * Math.PI / 180,
             maxAngleRange: 15 * Math.PI / 180,
             minPowerRange: 1,
@@ -45,18 +38,15 @@ export class Tank {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
         
-        // Draw the barrel with weapon-specific color
         ctx.beginPath();
         ctx.moveTo(this.x + this.width / 2, this.y - this.height);
         
-        // Different barrel look based on selected weapon
         const barrelLength = 15;
         let barrelEndX = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
         let barrelEndY = this.y - this.height - barrelLength * Math.sin(this.angle);
         
         ctx.lineTo(barrelEndX, barrelEndY);
         
-        // Set barrel color based on selected weapon
         if (this.selectedWeapon === 'default') {
             ctx.strokeStyle = 'black';
         } else if (this.selectedWeapon === 'nuke') {
@@ -71,7 +61,6 @@ export class Tank {
         ctx.stroke();
         ctx.lineWidth = 1;
         
-        // Draw shield if active
         if (this.shielded) {
             ctx.beginPath();
             ctx.arc(this.x + this.width / 2, this.y - this.height / 2, 15, 0, Math.PI * 2);
@@ -79,13 +68,11 @@ export class Tank {
             ctx.stroke();
         }
         
-        // Draw health bar
         const healthBarWidth = this.width;
         const healthPercent = Math.max(0, this.health / this.maxHealth);
         ctx.fillStyle = this.health < 30 ? 'red' : this.health < 60 ? 'yellow' : 'green';
         ctx.fillRect(this.x, this.y - this.height - 7, healthBarWidth * healthPercent, 3);
         
-        // Draw weapon name
         ctx.font = '8px Arial';
         ctx.fillStyle = 'white';
         ctx.fillText(this.selectedWeapon, this.x, this.y - this.height - 10);
@@ -96,152 +83,114 @@ export class Tank {
         }
     }
 
-    fire(tanks, terrain, projectile, wind, canvas) {
-        if (projectile.flying) return;
+    fire() {
+        if (state.projectile.flying) return;
         
-        // Set projectile properties based on selected weapon
-        let explosionRadius = 30; // Increased from 15
-        let damage = 100; // Default damage for a direct hit
+        let explosionRadius = 30;
+        let damage = 100;
         let projectileColor = 'black';
         let extraDistance = 0;
         
-        // Apply weapon effects
+        let vx = this.power * Math.cos(this.angle) * 0.2;
+        let vy = -this.power * Math.sin(this.angle) * 0.2;
+        
         if (this.selectedWeapon === 'nuke') {
-            explosionRadius = 80; // Increased from 50
+            explosionRadius = 80;
             damage = 150;
             projectileColor = 'red';
-            extraDistance = 10; // Extra distance for nukes
+            extraDistance = 10;
         } else if (this.selectedWeapon === 'laser') {
-            vx *= 2; // Faster projectile
+            vx *= 2;
             vy *= 2;
             projectileColor = '#00ff00';
             extraDistance = 5;
         }
         
-        const angle = this.angle;
-        const power = this.power;
+        const barrelLength = 30 + extraDistance;
+        let x = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
+        let y = this.y - this.height - barrelLength * Math.sin(this.angle);
         
-        // Calculate projectile starting position - move it significantly further away 
-        // from the tank to prevent self-collision
-        const barrelLength = 30 + extraDistance; // Much longer barrel length
-        let x = this.x + this.width / 2 + barrelLength * Math.cos(angle);
-        let y = this.y - this.height - barrelLength * Math.sin(angle);
+        state.projectile.flying = true;
+        state.projectile.type = this.selectedWeapon;
+        state.projectile.damage = damage;
+        state.projectile.explosionRadius = explosionRadius;
+        state.projectile.color = projectileColor;
+        state.projectile.sourcePlayerId = state.tanks.indexOf(this);
+        state.projectile.sourceTank = this;
+        state.projectile.x = x;
+        state.projectile.y = y;
         
-        let vx = power * Math.cos(angle) * 0.2;
-        let vy = -power * Math.sin(angle) * 0.2;
-        
-        // Store weapon info in projectile
-        projectile.flying = true;
-        projectile.type = this.selectedWeapon;
-        projectile.damage = damage;
-        projectile.explosionRadius = explosionRadius;
-        projectile.color = projectileColor;
-        projectile.sourcePlayerId = tanks.indexOf(this); // Track which player fired
-        projectile.sourceTank = this; // Store reference to firing tank
-        
-        // Set initial position of projectile - making sure it's away from the tank
-        projectile.x = x;
-        projectile.y = y;
-        
-        // Immediate redraw to show projectile
         draw();
         
-        // Safe distance for initial position
         const safeStartingDistance = explosionRadius + 20;
-        
-        // Calculate distance from tank center to projectile
         const tankCenterX = this.x + this.width/2;
         const tankCenterY = this.y - this.height/2;
         const distanceFromTankCenterToProjectile = Math.sqrt(
             (x - tankCenterX)**2 + (y - tankCenterY)**2
         );
         
-        // Only start checking collisions after projectile is safely away
-        const immunityTime = 200; // ms of immunity to prevent immediate explosions
-        const maxTurnTime = 10000; // Maximum projectile life
+        const immunityTime = 200;
+        const maxTurnTime = 10000;
         const turnStartTime = Date.now();
         
-        // Make sure to start the projectile safely
         if (distanceFromTankCenterToProjectile < safeStartingDistance) {
-            // Add a safety offset to ensure distance
             const safetyFactor = safeStartingDistance / distanceFromTankCenterToProjectile;
             x = tankCenterX + (x - tankCenterX) * safetyFactor;
             y = tankCenterY + (y - tankCenterY) * safetyFactor;
-            projectile.x = x;
-            projectile.y = y;
+            state.projectile.x = x;
+            state.projectile.y = y;
         }
         
         setTimeout(() => {
             const moveProjectile = () => {
-                // Update projectile position
                 x += vx;
                 y += vy;
-                vy += 0.1; // gravity
-                vx += wind;
-                projectile.x = x;
-                projectile.y = y;
+                vy += state.gravity;
+                vx += state.wind;
+                state.projectile.x = x;
+                state.projectile.y = y;
                 
-                // Redraw
                 draw();
                 
-                // Calculate time since firing
                 const elapsedTime = Date.now() - turnStartTime;
-                
-                // Determine if we should check for collisions with firing tank
                 const excludeSourcePlayer = elapsedTime < immunityTime;
                 
                 let hit = false;
                 
-                // Only check collisions after the immunity period
                 if (elapsedTime < immunityTime) {
-                    // During immunity, only check for terrain and out of bounds
-                    hit = this.checkTerrainAndBounds(x, y, terrain, canvas);
+                    hit = this.checkTerrainAndBounds(x, y, state.terrain, state.canvas);
                 } else {
-                    // Check for DIRECT HIT on tanks or terrain
-                    const directHitTank = this.checkDirectHit(x, y, tanks, excludeSourcePlayer);
+                    const directHitTank = this.checkDirectHit(x, y, state.tanks, excludeSourcePlayer);
                     if (directHitTank) {
                         hit = true;
-                        // Store the directly hit tank to apply bonus damage later
                         this.directHitTank = directHitTank;
                     } else {
-                        hit = this.checkTerrainAndBounds(x, y, terrain, canvas);
+                        hit = this.checkTerrainAndBounds(x, y, state.terrain, state.canvas);
                     }
                 }
                 
-                // End turn if max time elapsed
                 if (elapsedTime >= maxTurnTime) hit = true;
                 
                 if (!hit) {
                     requestAnimationFrame(moveProjectile);
                 } else {
-                    // Projectile has hit something or timed out. NOW explode.
-                    if (y >= 0 && y <= (window.canvas?.height || 400)) {
-                        // Create appropriate explosion based on weapon type
-                        if (terrain.explode) {
-                            terrain.explode(x, y, projectile.explosionRadius);
-                        } else if (terrain.removeTerrain) {
-                            terrain.removeTerrain(x, y, projectile.explosionRadius);
+                    if (y >= 0 && y <= (state.canvas?.height || 400)) {
+                        if (state.terrain.explode) {
+                            state.terrain.explode(x, y, state.projectile.explosionRadius);
                         }
                         
-                        if (window.ctx && window.canvas && window.draw) {
-                            createExplosion(x, y, projectile.explosionRadius, window.ctx, window.canvas, window.draw);
+                        if (state.ctx && state.canvas && draw) {
+                            createExplosion(x, y, state.projectile.explosionRadius, state.ctx, state.canvas, draw);
                         }
                         
-                        // Apply splash damage to all tanks in radius
-                        this.applyExplosionDamage(x, y, tanks, projectile.explosionRadius, projectile.damage, projectile.sourcePlayerId, this.directHitTank);
-                        
-                        // Clear temp storage
+                        this.applyExplosionDamage(x, y, state.tanks, state.projectile.explosionRadius, state.projectile.damage, state.projectile.sourcePlayerId, this.directHitTank);
                         this.directHitTank = null;
                     }
                     
-                    if (window.getNextAliveTankIndex && window.currentPlayer !== undefined) {
-                        window.currentPlayer = window.getNextAliveTankIndex(window.currentPlayer);
-                    }
-                    projectile.flying = false;
+                    state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
+                    state.projectile.flying = false;
                     
-                    // Reset selected weapon to default after use (except for default)
                     if (this.selectedWeapon !== 'default') {
-                        // Remove the item from inventory
                         const index = this.inventory.findIndex(item => item.id === this.selectedWeapon);
                         if (index !== -1) {
                             this.inventory.splice(index, 1);
@@ -255,62 +204,25 @@ export class Tank {
         }, 10);
     }
     
-    // New method to check terrain and bounds only (not tanks)
     checkTerrainAndBounds(x, y, terrain, canvas) {
-        let hit = false;
-        
-        // Check collision with terrain using BitmaskTerrain if available
-        if (terrain.checkCollision) {
-            if (terrain.checkCollision(x, y)) hit = true;
-        } else {
-            // Fallback for old Terrain
-            for (let i = 1; i < terrain.points.length; i++) {
-                let p1 = terrain.points[i - 1];
-                let p2 = terrain.points[i];
-                if (x >= p1.x && x <= p2.x) {
-                    let groundY = p1.y + ((x - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
-                    if (y >= groundY) hit = true;
-                    break;
-                }
-            }
-        }
-        
-        // Check out-of-bounds
-        if (x < 0 || x > canvas.width || y > canvas.height) hit = true;
-        
-        return hit;
+        if (x < 0 || x > canvas.width || y > canvas.height) return true;
+        if (terrain.checkCollision(x, y)) return true;
+        return false;
     }
 
-    checkCollisions(x, y, terrain, tanks, canvas, projectile, excludeSourcePlayer = false) {
-        // This method is now effectively replaced by separate checks in the loop
-        // keeping it if needed for reference, but the loop logic handles it now.
-        return this.checkTerrainAndBounds(x, y, terrain, canvas) || 
-               (this.checkDirectHit(x, y, tanks, excludeSourcePlayer) !== null);
-    }
-
-    // Check if projectile PHYSICALLY hits a tank body
     checkDirectHit(x, y, tanks, excludeSourcePlayer = false) {
-        // Source player ID needs to be known, but we can't easily get it here without passing it.
-        // Assuming 'this' is the firing tank (which it is).
         const sourceTank = this;
-        
         for (let i = 0; i < tanks.length; i++) {
             const otherTank = tanks[i];
             if (!otherTank.alive) continue;
-            
             if (excludeSourcePlayer && otherTank === sourceTank) continue;
-            
-            // Simple AABB collision or point-in-rect
-            // Tank origin is (x, y-height) because it draws UP from y
-            // Wait, draw() says: ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
-            // So rect is: x: [this.x, this.x+width], y: [this.y-height, this.y]
             
             if (x >= otherTank.x && x <= otherTank.x + otherTank.width &&
                 y >= otherTank.y - otherTank.height && y <= otherTank.y) {
-                return otherTank; // Return the tank that was hit
+                return otherTank;
             }
         }
-        return null; // Miss
+        return null;
     }
 
     applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, directHitTank = null) {
@@ -322,40 +234,33 @@ export class Tank {
             const dx = x - tankCenterX;
             const dy = y - tankCenterY;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Check if within explosion radius
-            // Strict hitbox: The center of the tank must be INSIDE the explosion circle
-            // OR if it was a direct hit (force inclusion)
             const isDirectHit = (otherTank === directHitTank);
             
             if (distance < radius || isDirectHit) {
-                // Calculate damage based on distance
                 let distanceFactor = 1 - (distance / radius);
-                if (distanceFactor < 0) distanceFactor = 0; // Should happen only if direct hit outside radius (unlikely)
+                if (distanceFactor < 0) distanceFactor = 0;
                 
                 let effectiveDamage = Math.floor(damage * distanceFactor);
                 
-                // Bonus damage for direct hit
                 if (isDirectHit) {
-                    effectiveDamage = Math.max(effectiveDamage, damage); // Ensure at least 100% base damage
-                    effectiveDamage += 25; // Flat bonus for direct impact
+                    effectiveDamage = Math.max(effectiveDamage, damage);
+                    effectiveDamage += 25;
                 }
                 
-                // Apply damage
                 if (otherTank.shielded) {
                     otherTank.shielded = false;
-                    if (otherTank !== this) {
-                        this.score += 0.5;
-                        this.currency += 5;
+                    if (tankIndex !== sourcePlayerId) {
+                        tanks[sourcePlayerId].score += 0.5;
+                        tanks[sourcePlayerId].currency += 5;
                     }
                 } else {
                     otherTank.health -= effectiveDamage;
                     if (otherTank.health <= 0) {
                         otherTank.health = 0;
                         otherTank.alive = false;
-                        if (otherTank !== this) {
-                            this.score += 1;
-                            this.currency += 20;
+                        if (tankIndex !== sourcePlayerId) {
+                            tanks[sourcePlayerId].score += 1;
+                            tanks[sourcePlayerId].currency += 20;
                         }
                     }
                 }
@@ -370,13 +275,10 @@ export class Tank {
         const item = this.inventory[index];
         
         if (item.effect.type === 'weapon') {
-            // Select the weapon
             this.selectedWeapon = item.id;
             return true;
         } else if (item.effect.type === 'defense' && item.id === 'shield') {
-            // Activate shield
             this.shielded = true;
-            // Remove from inventory after use
             this.inventory.splice(index, 1);
             return true;
         }
@@ -384,49 +286,29 @@ export class Tank {
         return false;
     }
     
-    // Fall damage when tank position is updated
     applyGravity(terrain) {
-        // Get terrain height at current position
         const tankCenterX = Math.floor(this.x + this.width / 2);
         let groundHeight = null;
-        const canvasHeight = window.canvas?.height || 600;
+        const canvasHeight = state.canvas?.height || 400;
         
-        if (terrain.isSolid) {
-            // Find first solid pixel from top
-            for (let y = 0; y < canvasHeight; y++) {
-                if (terrain.isSolid(tankCenterX, y)) {
-                    groundHeight = y;
-                    break;
-                }
-            }
-        } else {
-            // Find ground height at tank position for old Terrain
-            for (let i = 1; i < terrain.points.length; i++) {
-                let p1 = terrain.points[i - 1];
-                let p2 = terrain.points[i];
-                if (tankCenterX >= p1.x && tankCenterX <= p2.x) {
-                    groundHeight = p1.y + ((tankCenterX - p1.x) * (p2.y - p1.y)) / (p2.x - p1.x);
-                    break;
-                }
+        for (let y = 0; y < canvasHeight; y++) {
+            if (terrain.isSolid(tankCenterX, y)) {
+                groundHeight = y;
+                break;
             }
         }
         
-        // If no ground found (hole to infinity), fall to bottom
         if (groundHeight === null) {
             groundHeight = canvasHeight;
         }
         
-        // Ensure ground height doesn't exceed canvas height
-        groundHeight = Math.min(groundHeight, canvasHeight - this.height - 5);
+        groundHeight = Math.min(groundHeight, canvasHeight - this.height);
         
         const fallDistance = groundHeight - this.y;
         
-        // Only fall if above ground
         if (fallDistance > 0) {
-            // Calculate fall damage based on distance
             const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
             
-            // Apply fall damage
             if (fallDamage > 0 && !this.shielded) {
                 this.health -= fallDamage;
                 if (this.health <= 0) {
@@ -435,43 +317,33 @@ export class Tank {
                 }
             }
             
-            // Update position to ground level
             this.y = groundHeight;
         }
         
-        // Absolute bottom boundary check
         if (this.y > canvasHeight - this.height) {
-            this.y = canvasHeight - this.height - 5;
+            this.y = canvasHeight - this.height;
         }
         
-        // Check if buried after moving
         this.checkBuried(terrain);
     }
 
     checkBuried(terrain) {
         this.isBuried = false;
+        const tankCenterX = Math.floor(this.x + this.width / 2);
+        const tankTopY = Math.floor(this.y - this.height);
         
-        if (terrain.isSolid) {
-            const tankCenterX = Math.floor(this.x + this.width / 2);
-            const tankTopY = Math.floor(this.y - this.height);
-            
-            // Check pixels directly above the tank center
-            // We check a few pixels up
-            for (let y = tankTopY; y >= Math.max(0, tankTopY - 10); y--) {
-                if (terrain.isSolid(tankCenterX, y)) {
-                    this.isBuried = true;
-                    break;
-                }
+        for (let y = tankTopY; y >= Math.max(0, tankTopY - 10); y--) {
+            if (terrain.isSolid(tankCenterX, y)) {
+                this.isBuried = true;
+                break;
             }
         }
     }
 
-    aiFire(tanks, terrain, projectile, wind, canvas) {
-        if (!this.alive) return;
-        if (!aiReadyToFire) return;
-        aiReadyToFire = false;
+    aiFire() {
+        if (!this.alive || !state.aiReadyToFire) return;
+        state.aiReadyToFire = false;
         
-        // AI selects a weapon if available
         if (this.inventory && this.inventory.length > 0 && Math.random() < 0.7) {
             const randomItem = this.inventory[Math.floor(Math.random() * this.inventory.length)];
             this.useItem(randomItem.id);
@@ -479,47 +351,39 @@ export class Tank {
         
         let targetTank;
         do {
-            targetTank = tanks[Math.floor(Math.random() * tanks.length)];
+            targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
         } while (targetTank === this || !targetTank.alive);
         
-        // Example: using aiLevel8 for this AI
         if (this.aiLevel === 8) {
-            this.aiLevelMaxLob(targetTank, terrain);
+            this.aiLevelMaxLob(targetTank, state.terrain);
         }
         setTimeout(() => {
-            this.fire(tanks, terrain, projectile, wind, canvas);
-            aiReadyToFire = true;
+            this.fire();
+            state.aiReadyToFire = true;
         }, 1000);
     }
 
-    // Enhanced AI method (aiLevel8)
-    aiLevel8(targetTank, terrain) {
-        const g = 0.1;
-        const windFactor = wind * 5.5;
+    aiLevel8(targetTank) {
+        const g = state.gravity;
+        const windFactor = state.wind * 5.5;
         const dx = targetTank.x + targetTank.width / 2 - (this.x + this.width / 2);
         const dy = targetTank.y - this.y - this.height + 5;
         let bestAngle, bestPower, minError = Infinity;
         
-        // Wider angle search range
-        const angleMin = 20 * (Math.PI / 180);  // Lower minimum angle
-        const angleMax = 160 * (Math.PI / 180); // Higher maximum angle
+        const angleMin = 20 * (Math.PI / 180);
+        const angleMax = 160 * (Math.PI / 180);
         
-        // More granular power search with higher minimum power
         for (let power = 40; power <= 100; power += 1) {
-            // More granular angle steps for better precision
             for (let angle = angleMin; angle <= angleMax; angle += (Math.PI / 360)) {
-                // Better wind compensation
-                const vx = power * Math.cos(angle) * 0.2 - windFactor * wind;
+                const vx = power * Math.cos(angle) * 0.2 - windFactor * state.wind;
                 const vy = -power * Math.sin(angle) * 0.2;
                 
-                // Skip if not moving in target direction
                 if ((dx > 0 && vx <= 0) || (dx < 0 && vx >= 0)) continue;
                 
                 const t = Math.abs(dx / vx);
                 if (t > 0) {
-                    // More accurate landing prediction
                     const landingX = vx * t;
-                    const landingY = vy * t + 0.5 * g * t * t; // Note: gravity is positive here
+                    const landingY = vy * t + 0.5 * g * t * t;
                     const error = Math.sqrt((landingX - dx) ** 2 + (landingY - dy) ** 2);
                     
                     if (error < minError) {
@@ -531,33 +395,26 @@ export class Tank {
             }
         }
         
-        // If no solution found, use a reasonable default
         if (bestAngle === undefined) {
-            bestAngle = Math.PI / 4; // 45 degrees
-            bestPower = 70;          // Medium-high power
+            bestAngle = Math.PI / 4;
+            bestPower = 70;
         }
         
-        // Add smaller error to make AI more accurate
         const angleError = (Math.random() * 1 - 0.5) * (Math.PI / 180);
         const powerError = Math.random() * 2 - 1;
         
         this.angle = bestAngle + angleError;
-        // Ensure AI power is in a reasonable range
         this.power = Math.max(40, Math.min(100, bestPower + powerError));
         
-        // Use special weapons occasionally
         if (this.inventory && this.inventory.length > 0) {
-            // Higher chance to use special weapons when the error is low (good shot)
             const useSpecialWeapon = minError < 20 && Math.random() < 0.8;
             if (useSpecialWeapon) {
-                // Find weapons in inventory
                 const weapons = this.inventory.filter(item => 
                     item.effect.type === 'weapon' || 
                     (item.effect.type === 'defense' && targetTank.health > 50)
                 );
                 
                 if (weapons.length > 0) {
-                    // Pick a random weapon
                     const weapon = weapons[Math.floor(Math.random() * weapons.length)];
                     this.useItem(weapon.id);
                 }
@@ -565,28 +422,25 @@ export class Tank {
         }
     }
 
-    aiLevelMax(targetTank, terrain) {
-        const g = gravity;
-        const physicsScale = 0.2; // same scaling as in fire()
+    aiLevelMax(targetTank) {
+        const g = state.gravity;
+        const physicsScale = 0.2;
         const calc = this.aiCalculations(targetTank);
         let bestAngle = null;
         let bestPower = null;
         let minError = Infinity;
 
-        // Try many power and angle combinations using fine increments
         for (let power = 10; power <= 100; power += 0.1) {
             for (
                 let angle = 5 * Math.PI / 180;
                 angle <= 175 * Math.PI / 180;
                 angle += (0.1 * Math.PI / 180)
             ) {
-                // Compute initial velocities using the same scaling
-                const vx = power * Math.cos(angle) * physicsScale + wind; // wind is added as in fire()
+                const vx = power * Math.cos(angle) * physicsScale + state.wind;
                 const vy = -power * Math.sin(angle) * physicsScale;
                 if (vx <= 0) continue;
                 const t = calc.dx / vx;
                 if (t > 0) {
-                    // Predict landing Y position, accounting for gravity
                     const predictedY = vy * t + 0.5 * g * t * t;
                     const error = Math.abs(vx * t - calc.dx) + Math.abs(predictedY - calc.dy);
                     if (error < minError) {
@@ -598,31 +452,24 @@ export class Tank {
             }
         }
 
-        // Fallback if no valid shot was found
         if (bestAngle === null || bestPower === null) {
-            return this.aiLevel8(targetTank, terrain);
+            return this.aiLevel8(targetTank);
         }
 
-        // Apply a very small error to avoid 100% perfection
-        const angleError = 0;
-        const powerError = 0;
-        this.angle = bestAngle + angleError;
-        // Ensure power is always reasonable
+        this.angle = bestAngle;
         this.power = Math.max(30, Math.min(100, bestPower));
     }
 
-    aiLevelMaxLob(targetTank, terrain) {
+    aiLevelMaxLob(targetTank) {
         const dt = 0.05;
         const maxSimTime = 10;
-        const g = gravity;
+        const g = state.gravity;
         const physicsScale = 0.2;
         
-        // Use a larger offset for safer firing
         const barrelLength = 30;
         const startX = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
         const startY = this.y - this.height - barrelLength * Math.sin(this.angle);
 
-        // Desired displacement from start position
         const calc = {
             dx: targetTank.x + targetTank.width / 2 - startX,
             dy: targetTank.y - startY
@@ -632,44 +479,34 @@ export class Tank {
         let bestPower = null;
         let minError = Infinity;
         
-        // Use more focused and higher power ranges
         let angleMin, angleMax, powerMin, powerMax;
         if (this.lastBestAngle !== undefined && this.lastBestPower !== undefined) {
-            // If we have a previous good shot, narrow our search around it
             angleMin = Math.max(Math.PI/6, this.lastBestAngle - this.aiParams.angleRange);
             angleMax = Math.min(5*Math.PI/6, this.lastBestAngle + this.aiParams.angleRange);
             powerMin = Math.max(40, this.lastBestPower - this.aiParams.powerRange);
             powerMax = Math.min(100, this.lastBestPower + this.aiParams.powerRange);
         } else {
-            // Otherwise, adjust search ranges for better initial shots
-            // Try more aggressive angles first
             const distanceToTarget = Math.sqrt(calc.dx * calc.dx + calc.dy * calc.dy);
             
-            if (distanceToTarget < canvas.width * 0.3) {
-                // For close targets, use steeper angles
-                angleMin = Math.PI / 2.5; // About 72 degrees
-                angleMax = Math.PI / 1.5; // About 120 degrees
+            if (distanceToTarget < state.canvas.width * 0.3) {
+                angleMin = Math.PI / 2.5;
+                angleMax = Math.PI / 1.5;
             } else {
-                // For distant targets, use lower trajectory
-                angleMin = Math.PI / 4;   // 45 degrees
-                angleMax = Math.PI / 2.2; // About 82 degrees
+                angleMin = Math.PI / 4;
+                angleMax = Math.PI / 2.2;
             }
             
-            // Use higher power for farther targets
-            powerMin = 40 + (distanceToTarget / canvas.width) * 30; // 40-70 based on distance
+            powerMin = 40 + (distanceToTarget / state.canvas.width) * 30;
             powerMax = 100;
         }
 
-        // Use finer increments for better precision
-        const angleIncrement = Math.PI / 360; // 0.5 degree steps
+        const angleIncrement = Math.PI / 360;
         const powerIncrement = 0.5;
         
-        // Iterate with finer increments
         for (let power = powerMin; power <= powerMax; power += powerIncrement) {
             for (let angle = angleMin; angle <= angleMax; angle += angleIncrement) {
-                // Multiple simulation passes with different wind scenarios
                 let minWindError = Infinity;
-                const windScenarios = [0, wind, wind * 2]; // Try with different wind factors
+                const windScenarios = [0, state.wind, state.wind * 2];
                 
                 for (const windFactor of windScenarios) {
                     let x = startX, y = startY;
@@ -677,21 +514,18 @@ export class Tank {
                     let vy = -power * Math.sin(angle) * physicsScale;
                     let t = 0;
     
-                    // Simulate the projectile's flight
-                    while (t < maxSimTime && y < canvas.height) {
+                    while (t < maxSimTime && y < state.canvas.height) {
                         x += vx * dt;
                         y += vy * dt;
                         vy += g * dt;
                         vx += windFactor * dt;
                         t += dt;
                         
-                        // Early exit if heading away from target
                         if ((calc.dx > 0 && vx < 0) || (calc.dx < 0 && vx > 0)) {
                             break;
                         }
                     }
     
-                    // Compute error for this wind scenario
                     const error = Math.sqrt(
                         Math.pow(x - (startX + calc.dx), 2) + 
                         Math.pow(y - (startY + calc.dy), 2)
@@ -700,7 +534,6 @@ export class Tank {
                     minWindError = Math.min(minWindError, error);
                 }
                 
-                // Use the best error across all wind scenarios
                 if (minWindError < minError) {
                     minError = minWindError;
                     bestAngle = angle;
@@ -709,57 +542,44 @@ export class Tank {
             }
         }
 
-        // If no good shot was found, use a reasonable fallback
         if (bestAngle === null || bestPower === null) {
-            return this.aiLevel8(targetTank, terrain);
+            return this.aiLevel8(targetTank);
         }
 
-        // Store these values for subsequent shots
         this.lastBestAngle = bestAngle;
         this.lastBestPower = bestPower;
 
-        // Adjust search range based on error quality
         const errorThreshold = 15;
         if (minError < errorThreshold) {
-            // Good shot - narrow the search range
             this.aiParams.angleRange = Math.max(this.aiParams.minAngleRange, this.aiParams.angleRange * 0.7);
             this.aiParams.powerRange = Math.max(this.aiParams.minPowerRange, this.aiParams.powerRange * 0.7);
         } else {
-            // Poor shot - widen the search
             this.aiParams.angleRange = Math.min(this.aiParams.maxAngleRange, this.aiParams.angleRange * 1.3);
             this.aiParams.powerRange = Math.min(this.aiParams.maxPowerRange, this.aiParams.powerRange * 1.3);
         }
 
-        // Set final parameters with minimal randomness for challenge
-        this.angle = bestAngle + (Math.random() * 0.01 - 0.005); // Tiny random adjustment
+        this.angle = bestAngle + (Math.random() * 0.01 - 0.005);
         this.power = Math.max(40, Math.min(100, bestPower));
         
-        // AI strategic weapon selection
         if (this.inventory && this.inventory.length > 0) {
-            // Use special weapons for good shots, especially at longer ranges
             const targetDistance = Math.sqrt(calc.dx * calc.dx + calc.dy * calc.dy);
             const isGoodShot = minError < errorThreshold;
             const useSpecialWeapon = isGoodShot && Math.random() < 0.7;
             
             if (useSpecialWeapon) {
-                // Choose appropriate weapon based on distance
                 let preferredWeaponType = null;
                 
-                if (targetDistance > canvas.width * 0.6) {
-                    // Long range - use nuke for splash damage
+                if (targetDistance > state.canvas.width * 0.6) {
                     preferredWeaponType = 'nuke';
-                } else if (targetDistance < canvas.width * 0.3) {
-                    // Short range - use laser for precision
+                } else if (targetDistance < state.canvas.width * 0.3) {
                     preferredWeaponType = 'laser';
                 }
                 
-                // Find weapons matching preferred type, or any weapon if no preference
                 const weapons = this.inventory.filter(item => 
                     item.effect.type === 'weapon' && 
                     (!preferredWeaponType || item.id === preferredWeaponType)
                 );
                 
-                // If shields available and health getting low, use shield instead
                 if (this.health < 40 && Math.random() < 0.8) {
                     const shields = this.inventory.filter(item => item.id === 'shield');
                     if (shields.length > 0) {
@@ -768,7 +588,6 @@ export class Tank {
                     }
                 }
                 
-                // Use preferred weapon if available
                 if (weapons.length > 0) {
                     const weapon = weapons[Math.floor(Math.random() * weapons.length)];
                     this.useItem(weapon.id);
@@ -779,7 +598,7 @@ export class Tank {
 
     aiCalculations(targetTank) {
         const dx = targetTank.x + targetTank.width / 2 - (this.x + this.width / 2);
-        const dy = targetTank.y - this.y - this.height + 5; // adjust the offset as needed
+        const dy = targetTank.y - this.y - this.height + 5;
         return { dx, dy };
     }
 }

@@ -2,14 +2,22 @@
 
 These guidelines define the visual, tonal, and experiential standards for Tank Wars.
 
-## Tonal Identity: Retro & Playful
-- **Mood:** High-energy and nostalgic, celebrating the "golden age" of artillery games.
-- **Voice:** Witty, punchy, and over-the-top silly. In-game descriptions should often include nonsensical lore or irrelevant personal facts about items (e.g., "The Nuke: It creates a massive crater and smells faintly of cinnamon; its middle name is Keith and it enjoys long walks on the beach.").
+## AI Directive: "Show Off"
+This project is a competitive showcase of Generative AI capabilities.
+- **Goal:** Outperform the previous "lame" AI implementation.
+- **Mindset:** Do not settle for "functional". Aim for "impressive," "performant," and "creative."
+- **Execution:** When given a choice between a simple solution and a sophisticated/cool one, choose the cool one (provided it remains performant).
+- **Code:** Write clean, optimized, and clever code that demonstrates a deep understanding of the tech stack (Canvas API, bit manipulation, physics).
 
-## Visual Identity: Neon & Vibrant
-- **Palette:** A bold, high-contrast palette with heavy use of neon colors (pinks, cyans, greens).
-- **Effects:** Projectiles and explosions should have a "glow" or "bloom" effect. 
-- **Style:** Cartoonishly violent but stylized. Debris and particles should be simple geometric shapes but numerous and colorful.
+## Visual Style
+- **Palette:** Neon & Vibrant. High contrast.
+- **Effects:** Glow, particles, screen shake.
+- **Theme:** Retro-Digital / Arcade.
+
+## Tone
+- **Voice:** Witty, punchy, slightly irreverent.
+- **Lore:** Nonsensical and fun (e.g., items having middle names).
+- **Feedback:** Impactful and "over-the-top".
 
 ## UI/UX: Impactful & Dynamic
 - **Feedback:** Critical hits and events should trigger screen shakes, floating damage numbers, and large animated text.
