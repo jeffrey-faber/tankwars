@@ -273,6 +273,11 @@ export class Tank {
                             this.inventory.splice(index, 1);
                         }
                         this.selectedWeapon = 'default';
+                        
+                        // Update UI to reflect consumed item
+                        if (state.store) {
+                            state.store.updateWeaponSelector(this);
+                        }
                     }
                 }
             };

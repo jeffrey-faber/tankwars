@@ -83,4 +83,20 @@ describe('Lobby Store UI', () => {
         
         expect(tank.useItem).not.toHaveBeenCalled();
     });
+
+    it('should refresh weapon selector when starting match', () => {
+        const tank = state.tanks[0];
+        store.updateWeaponSelector = vi.fn();
+        
+        // Find start button (created in init)
+        // We need to query document body because it's appended there
+        const startButton = document.getElementById('startMatchButton');
+        expect(startButton).toBeTruthy();
+        
+        // Click it
+        startButton.click();
+        
+        expect(state.gameState).toBe('PLAYING');
+        expect(store.updateWeaponSelector).toHaveBeenCalledWith(tank);
+    });
 });

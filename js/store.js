@@ -96,6 +96,10 @@ export class Store {
         startButton.addEventListener('click', () => {
             state.gameState = 'PLAYING';
             this.updateVisibility();
+            // Refresh selector to show purchased items
+            if (state.tanks && state.tanks[state.currentPlayer]) {
+                this.updateWeaponSelector(state.tanks[state.currentPlayer]);
+            }
         });
     }
 
