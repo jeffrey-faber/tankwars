@@ -13,11 +13,12 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 ## Key Value Propositions
 - **Physics Mastery:** A high skill ceiling driven by complex projectile trajectories and dynamic wind conditions.
 - **Destructive Dynamics:** High-stakes gameplay where the environment is as much a threat as the enemy.
-- **Economic Strategy:** A robust shop system that rewards tactical spending and inventory management.
+- **Economic Strategy:** A persistent economy and pre-match shop system that rewards tactical spending across multiple battles.
 
 ## Core Features
 - **Sophisticated AI:** Opponents that utilize advanced simulation to provide a human-like challenge.
-- **Arsenal Variety:** A diverse set of weapons, from precision lasers to area-of-effect nukes, each with unique physics.
+- **Arsenal Variety:** A diverse set of weapons and items selectable via a grid-based inventory HUD with numeric hotkeys.
+- **Lobby & Shop:** A pre-match "Lobby" phase for shopping and equipment prep, with currency persisting between matches.
 - **Polished Interface:** A seamless user journey from game configuration to the final victory screen.
 
 ## Development Goals
