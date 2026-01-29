@@ -84,6 +84,7 @@ export class Tank {
         this.shielded = false;
         this.inventory = [];
         this.selectedWeapon = 'default';
+        this.vy = 0; // Vertical velocity for falling
         this.aiParams = {
             angleRange: 5 * Math.PI / 180,
             powerRange: 2.5,
@@ -302,53 +303,49 @@ export class Tank {
     }
     
     applyGravity(terrain) {
+        // Apply gravity acceleration
+        this.vy += state.gravity;
+        
+        // Apply velocity
+        this.y += this.vy;
+        
         const tankCenterX = Math.floor(this.x + this.width / 2);
-        let groundHeight = null;
         const canvasHeight = state.canvas?.height || 400;
-        
-        // Start searching from the tank's current position (bottom of tank)
-        const startY = Math.max(0, Math.floor(this.y));
-        
-        for (let y = startY; y < canvasHeight; y++) {
-            if (terrain.isSolid(tankCenterX, y)) {
-                groundHeight = y;
-                break;
-            }
-        }
-        
-        if (groundHeight === null) {
-            groundHeight = canvasHeight;
-        }
-        
-        // Clamp to bottom
         const bottomLimit = canvasHeight - this.height - 5;
-        groundHeight = Math.min(groundHeight, bottomLimit);
         
-        const fallDistance = groundHeight - this.y;
+        // Check for collision with terrain
+        // We check the pixel at the bottom center of the tank
+        const checkY = Math.floor(this.y);
         
-        if (fallDistance > 0) {
-            console.log(`Gravity: Tank ${this.name} at ${this.y} falling to ${groundHeight} (dist: ${fallDistance})`);
-            const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
-            
-            if (fallDamage > 0 && !this.shielded) {
-                this.health -= fallDamage;
-                if (this.health <= 0) {
-                    this.health = 0;
-                    this.alive = false;
-                }
-            }
-            
-            this.y = groundHeight;
-        } else if (fallDistance < 0) {
-             // Tank is below ground? Move up?
-             // Only if buried?
-             if (this.isBuried) {
-                 // Slowly rise?
-             }
-        }
-        
-        if (this.y > bottomLimit) {
+        if (checkY >= bottomLimit) {
             this.y = bottomLimit;
+            this.vy = 0;
+        } else if (terrain.isSolid(tankCenterX, checkY)) {
+            // Collision! Move up until free
+            // This handles landing on ground
+            let surfaceY = checkY;
+            while (terrain.isSolid(tankCenterX, surfaceY) && surfaceY > 0) {
+                surfaceY--;
+            }
+            // surfaceY is now the first empty pixel above ground
+            // The tank bottom should be at surfaceY + 1 (the solid pixel)? 
+            // No, tank bottom is this.y. If this.y is inside solid, we move up.
+            // We want this.y to be the top of the solid surface?
+            // Actually, if isSolid(x, y) is true, y is occupied.
+            // We want tank to sit ON TOP.
+            // So tank bottom (this.y) should be at surfaceY (empty).
+            // Wait, if surfaceY is empty, and surfaceY+1 is solid.
+            // Tank at surfaceY is valid.
+            
+            this.y = surfaceY; // Snap to top of ground
+            this.vy = 0;
+            
+            // Check falling damage logic if needed (based on previous velocity?)
+            // For now, simple physics.
+        } else {
+            // In air. 
+            // Check if we fell too fast/far? 
+            // The vy handles speed.
         }
         
         this.checkBuried(terrain);
