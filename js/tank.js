@@ -303,35 +303,42 @@ export class Tank {
     }
     
     applyGravity(terrain) {
-        const tankCenterX = Math.floor(this.x + this.width / 2);
-        let groundHeight = null;
-        const canvasHeight = state.canvas?.height || 400;
+        const leftX = Math.floor(this.x);
+        const centerX = Math.floor(this.x + this.width / 2);
+        const rightX = Math.floor(this.x + this.width);
         
-        // Scan from top to find the first solid pixel (ground surface)
-        for (let y = 0; y < canvasHeight; y++) {
-            if (terrain.isSolid(tankCenterX, y)) {
-                groundHeight = y;
-                break;
+        // Use a larger fallback to prevent tanks from floating in mid-air if canvas is missing
+        const canvasHeight = state.canvas?.height || 800;
+        const checkPoints = [leftX, centerX, rightX];
+        
+        // Find the top-most solid pixel at any of our check positions
+        let highestGround = canvasHeight;
+        
+        for (let x of checkPoints) {
+            for (let y = 0; y < canvasHeight; y++) {
+                if (terrain.isSolid(x, y)) {
+                    if (y < highestGround) {
+                        highestGround = y;
+                    }
+                    break; // Move to next check point once ground found for this X
+                }
             }
         }
         
-        if (groundHeight === null) {
-            groundHeight = canvasHeight;
-        }
-        
-        // Ensure tank sits on top of ground (groundHeight is the solid pixel)
-        // We want the tank bottom (this.y) to be at groundHeight?
-        // If groundHeight is 300 (solid). Tank y=300 (bottom).
-        // Draw 290-300. Sits on top. Correct.
         // Clamp to screen bottom
-        groundHeight = Math.min(groundHeight, canvasHeight - this.height - 5);
+        const bottomLimit = canvasHeight - this.height - 5;
+        const finalGroundY = Math.min(highestGround, bottomLimit);
         
-        const fallDistance = groundHeight - this.y;
+        // If the tank bottom (this.y) is above the detected ground, it must fall.
+        // If the tank bottom is below the ground (buried), it should potentially snap UP or stay.
+        // For standard gravity, we only care about falling.
         
-        if (fallDistance > 0) {
-            // Apply fall damage
-            const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
+        if (finalGroundY > this.y) {
+            // Tank is in the air. Fell.
+            const fallDistance = finalGroundY - this.y;
             
+            // Only apply damage for significant falls
+            const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
             if (fallDamage > 0 && !this.shielded) {
                 this.health -= fallDamage;
                 if (this.health <= 0) {
@@ -340,13 +347,15 @@ export class Tank {
                 }
             }
             
-            // Snap to ground
-            this.y = groundHeight;
+            this.y = finalGroundY;
+        } else if (finalGroundY < this.y) {
+            // Tank is buried. Snap to surface.
+            this.y = finalGroundY;
         }
         
-        // Ensure we don't go below the screen
-        if (this.y > canvasHeight - this.height - 5) {
-            this.y = canvasHeight - this.height - 5;
+        // Final screen boundary check
+        if (this.y > bottomLimit) {
+            this.y = bottomLimit;
         }
         
         this.checkBuried(terrain);

@@ -17,25 +17,18 @@ canvas.height = canvasHeight;
 
 // Initialize game state from context
 state.wind = (Math.random() * 2 - 1) / 10;
-state.canvas = canvas;
-state.ctx = ctx;
-
-// Initialize Terrain and Tanks
-const oldTerrain = new Terrain(canvas.width, canvas.height); // Used for heightmap generation
-state.terrain = new BitmaskTerrain(canvas.width, canvas.height);
-state.terrain.bakeHeightmap(oldTerrain.points);
-
-const tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain); // Use oldTerrain for positions
-const aiPlayers = urlParams.ai ? urlParams.ai.split(',').map(p => parseInt(p)) : [];
-for (let i = 0; i < state.numPlayers; i++) {
-    const isAI = aiPlayers.includes(i + 1);
-    const aiLevel = isAI ? 8 : 0;
-    state.tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, `Player ${i + 1}`));
-}
 
 // Initialize Store
 state.store = new Store();
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize canvas ref
+    state.canvas = document.getElementById('gameCanvas');
+    state.ctx = state.canvas.getContext('2d');
+    
+    // Ensure canvas size is set
+    state.canvas.width = canvasWidth;
+    state.canvas.height = canvasHeight;
+
     setTimeout(() => {
         state.store.init(state.tanks);
     }, 100);
@@ -70,11 +63,13 @@ function resetRound() {
     });
     
     setTimeout(() => {
+        console.log("ResetRound: Applying initial gravity");
         state.tanks.forEach(tank => tank.applyGravity(state.terrain));
         if (state.store) {
             state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
             state.store.updateVisibility();
         }
+        draw(); // Force redraw after positioning
     }, 100);
 }
 
@@ -144,7 +139,7 @@ document.addEventListener('keydown', (event) => {
             event.preventDefault();
             tank.fire(state.tanks, state.terrain, state.projectile, state.wind, state.canvas);
         } else if (event.key === 's') { 
-            if (state.store && !state.projectile.flying) {
+            if (state.store && !state.projectile.flying && state.gameState === 'LOBBY') {
                 state.store.open(tank);
             }
         } else if (event.key === '0') {
