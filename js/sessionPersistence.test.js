@@ -1,75 +1,46 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Tank } from './tank.js';
+import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
 
-describe('Session Persistence', () => {
-    let tanks;
-    let canvas;
-
+describe('Session Persistence Utility', () => {
     beforeEach(() => {
-        canvas = { width: 800, height: 600 };
-        tanks = [
-            new Tank(100, 100, false, 0, 'Player 1'),
-            new Tank(200, 100, false, 0, 'Player 2')
-        ];
-        
-        // Mock window properties if needed
-        global.window = {
-            canvas: canvas
-        };
+        // Mock localStorage
+        const localStorageMock = (() => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = value.toString(); },
+                clear: () => { store = {}; }
+            };
+        })();
+        vi.stubGlobal('localStorage', localStorageMock);
     });
 
-    it('should persist currency and inventory after a simulated round reset', () => {
-        const player = tanks[0];
-        
-        // Initial state
-        expect(player.currency).toBe(100);
-        expect(player.inventory.length).toBe(0);
-        
-        // Modify state (simulate buying something)
-        player.currency = 50;
-        player.inventory.push({ id: 'nuke', name: 'Nuke' });
-        
-        // Simulate resetRound logic (simplified from main.js)
-        const resetRound = (tanksToReset) => {
-            const newPositions = [{x: 150, y: 150}, {x: 250, y: 150}];
-            tanksToReset.forEach((tank, i) => {
-                tank.x = newPositions[i].x;
-                tank.y = newPositions[i].y;
-                tank.angle = Math.PI / 4;
-                tank.power = 50;
-                tank.alive = true;
-                tank.health = tank.maxHealth;
-                tank.shielded = false;
-                tank.selectedWeapon = 'default';
-            });
+    it('should save match settings to localStorage', () => {
+        const settings = {
+            totalGames: 10,
+            winCondition: 'wins',
+            startingCash: 500,
+            playerRosterConfig: [{ name: 'Player 1', type: 'human' }]
         };
-        
-        resetRound(tanks);
-        
-        // Verify persistence
-        expect(player.currency).toBe(50);
-        expect(player.inventory.length).toBe(1);
-        expect(player.inventory[0].id).toBe('nuke');
+        saveMatchSettings(settings);
+        const saved = JSON.parse(localStorage.getItem('tankwars_match_settings'));
+        expect(saved).toEqual(settings);
     });
 
-    it('should NOT persist health and position after a simulated round reset', () => {
-        const player = tanks[0];
-        player.health = 10;
-        player.x = 999;
-        
-        const resetRound = (tanksToReset) => {
-            const newPositions = [{x: 150, y: 150}, {x: 250, y: 150}];
-            tanksToReset.forEach((tank, i) => {
-                tank.x = newPositions[i].x;
-                tank.y = newPositions[i].y;
-                tank.alive = true;
-                tank.health = tank.maxHealth;
-            });
+    it('should load match settings from localStorage', () => {
+        const settings = {
+            totalGames: 3,
+            winCondition: 'score',
+            startingCash: 200,
+            playerRosterConfig: [{ name: 'Bot 1', type: 'bot-easy' }]
         };
-        
-        resetRound(tanks);
-        
-        expect(player.health).toBe(100);
-        expect(player.x).toBe(150);
+        localStorage.setItem('tankwars_match_settings', JSON.stringify(settings));
+        const loaded = loadMatchSettings();
+        expect(loaded).toEqual(settings);
+    });
+
+    it('should return null if no settings are found', () => {
+        const loaded = loadMatchSettings();
+        expect(loaded).toBeNull();
     });
 });
