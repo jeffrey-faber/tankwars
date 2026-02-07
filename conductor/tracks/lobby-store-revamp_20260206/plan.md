@@ -8,7 +8,7 @@ This phase focuses on the core logic for the new Lobby state machine and data st
 - [x] Task: Scoreboard Data Calculation. Implement utility functions to calculate "Loadout Value" and ensure total score/wins are correctly aggregated in the `Store` or a new `ScoreManager`.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & State Management' (Protocol in workflow.md)
 
-## Phase 2: UI Infrastructure (Full-Screen Overlay)
+## Phase 2: UI Infrastructure (Full-Screen Overlay) [checkpoint: 70fca7c]
 Creating the HTML/CSS structure and basic show/hide logic for the new full-screen interface.
 
 - [x] Task: Base Full-Screen Overlay. Add a container to `index.html` and styles to `style.css` for a modal-like overlay that covers the canvas.
