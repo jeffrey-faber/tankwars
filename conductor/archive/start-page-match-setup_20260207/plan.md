@@ -1,0 +1,31 @@
+# Implementation Plan: Match Setup & Start Page Revamp
+
+## Phase 1: Foundation & Session Management [checkpoint: 715a85d]
+This phase focuses on updating the game's data model to support multi-game matches and persistence of the new configuration.
+
+- [x] Task: Extend Game State Model. Update `js/gameContext.js` to include properties for match tracking: `totalGames`, `currentGameIndex`, `winCondition`, `startingCash`, and the full player roster config. 6b64c3c
+- [x] Task: Implement Session Persistence. Create a utility to serialize/deserialize the match configuration (e.g., to `localStorage` or URL parameters) to ensure the settings persist across page reloads or round resets. 2f2fb3f
+- [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Session Management' (Protocol in workflow.md)
+
+## Phase 2: Match Setup UI (HTML/CSS) [checkpoint: eb158f1]
+Creating the new interactive setup interface that replaces the legacy start form.
+
+- [x] Task: Setup Page Layout. Update `index.html` and `css/style.css` to create a modern, full-screen setup overlay consistent with the Lobby UI. 715a85d
+- [x] Task: Dynamic Roster UI. Implement the HTML/CSS for the player list rows, including name inputs, type dropdowns, and removal buttons. 715a85d
+- [x] Task: Match Settings Form. Build the interface for configuring match structure (games, win conditions), economy (starting cash), and environmental variables (wind, map). 715a85d
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: Match Setup UI' (Protocol in workflow.md)
+
+## Phase 3: Roster & Configuration Logic [checkpoint: 7b02e12]
+Implementing the JavaScript logic that drives the setup experience and initializes the match.
+
+- [x] Task: Player Roster Controller. Write the JS logic to manage adding/removing players and auto-assigning default names/colors. eb158f1
+- [x] Task: Config Validation & Serialization. Implement logic to validate match settings (e.g., min 2 players) and prepare the data for match start. eb158f1
+- [x] Task: Match Initialization. Update the initialization sequence in `js/main.js` to consume the new roster and settings instead of the legacy URL parameters. eb158f1
+- [ ] Task: Conductor - User Manual Verification 'Phase 3: Roster & Configuration Logic' (Protocol in workflow.md)
+
+## Phase 4: Match Flow & Round Transitions [checkpoint: 4bca617]
+Updating the core game loop to handle multi-round matches and the final return to the setup page.
+
+- [x] Task: Multi-Round State Machine. Update the game loop and `resetRound` logic to track match progress, aggregate scores across rounds, and determine when a match is complete. 7b02e12
+- [x] Task: Match Result & Reset. Create a final "Match Summary" screen that declares the overall winner based on the chosen win condition and provides a button to return to the setup page. 7b02e12
+- [ ] Task: Conductor - User Manual Verification 'Phase 4: Match Flow & Round Transitions' (Protocol in workflow.md)
