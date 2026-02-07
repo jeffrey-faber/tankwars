@@ -123,14 +123,38 @@ function initGameFromConfig(config) {
     // Initialize Tanks
     state.tanks = [];
     const tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain);
+    
     config.players.forEach((p, i) => {
         const isAI = p.type.startsWith('bot');
-        let aiLevel = 0;
-        if (p.type === 'bot-easy') aiLevel = 2;
-        if (p.type === 'bot-medium') aiLevel = 5;
-        if (p.type === 'bot-hard') aiLevel = 8;
+        let type = p.type;
         
-        const tank = new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, p.name);
+        if (type === 'bot-random') {
+            const types = ['bot-easy', 'bot-medium', 'bot-hard', 'bot-stupid', 'bot-lobber', 'bot-sniper', 'bot-mastermind'];
+            type = types[Math.floor(Math.random() * types.length)];
+        }
+
+        let aiLevel = 0;
+        let personality = null;
+        let name = p.name;
+
+        if (isAI) {
+            if (type === 'bot-easy') aiLevel = 2;
+            else if (type === 'bot-medium') aiLevel = 5;
+            else if (type === 'bot-hard') aiLevel = 8;
+            else {
+                // Personality types
+                personality = type.replace('bot-', '');
+                aiLevel = 8; // high simulation for personalities
+            }
+            
+            // Default name if still generic
+            if (name.startsWith('Player ')) {
+                const label = personality ? (personality.charAt(0).toUpperCase() + personality.slice(1)) : type.replace('bot-', '');
+                name = `${label} ${i + 1}`;
+            }
+        }
+        
+        const tank = new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, name, personality);
         tank.color = p.color;
         tank.currency = state.startingCash;
         state.tanks.push(tank);

@@ -67,6 +67,11 @@ export class MatchSetup {
                 <option value="bot-easy" ${player.type === 'bot-easy' ? 'selected' : ''}>Bot (Easy)</option>
                 <option value="bot-medium" ${player.type === 'bot-medium' ? 'selected' : ''}>Bot (Medium)</option>
                 <option value="bot-hard" ${player.type === 'bot-hard' ? 'selected' : ''}>Bot (Hard)</option>
+                <option value="bot-stupid" ${player.type === 'bot-stupid' ? 'selected' : ''}>Bot (Mr. Stupid)</option>
+                <option value="bot-lobber" ${player.type === 'bot-lobber' ? 'selected' : ''}>Bot (Lobber)</option>
+                <option value="bot-sniper" ${player.type === 'bot-sniper' ? 'selected' : ''}>Bot (Sniper)</option>
+                <option value="bot-mastermind" ${player.type === 'bot-mastermind' ? 'selected' : ''}>Bot (Mastermind)</option>
+                <option value="bot-random" ${player.type === 'bot-random' ? 'selected' : ''}>Bot (Random)</option>
             </select>
             <button class="remove-player-btn">×</button>
         `;

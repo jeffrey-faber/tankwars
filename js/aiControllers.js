@@ -67,7 +67,14 @@ export class AIController {
     }
 
     shop(store, tank) {
-        // Default: no shopping
+        // Default: random chance to buy affordable items
+        if (Math.random() > 0.3) return; 
+        
+        const affordable = store.items.filter(i => i.price <= tank.currency);
+        if (affordable.length === 0) return;
+        
+        const item = affordable[Math.floor(Math.random() * affordable.length)];
+        store.buyItem(item.id);
     }
 
     getShotHistory(target) {
@@ -96,6 +103,27 @@ export class StandardAI extends AIController {
         super();
         this.difficulty = difficulty;
         this.lastTarget = null;
+    }
+
+    shop(store, tank) {
+        // Standard AI: 50% chance to shop
+        if (Math.random() > 0.5) return;
+
+        const affordable = store.items.filter(i => i.price <= tank.currency);
+        if (affordable.length === 0) return;
+
+        // Prioritize healing if low health
+        if (tank.health < 50) {
+            const health = affordable.find(i => i.effect.type === 'healing');
+            if (health) {
+                store.buyItem(health.id);
+                return;
+            }
+        }
+
+        // Random otherwise
+        const item = affordable[Math.floor(Math.random() * affordable.length)];
+        store.buyItem(item.id);
     }
 
     chooseTarget(tank, allTanks) {
@@ -131,6 +159,17 @@ export class StandardAI extends AIController {
 }
 
 export class StupidAI extends AIController {
+    shop(store, tank) {
+        // Stupid: Randomly buy things, even if not needed
+        if (Math.random() < 0.5) {
+            const affordable = store.items.filter(i => i.price <= tank.currency);
+            if (affordable.length > 0) {
+                const item = affordable[Math.floor(Math.random() * affordable.length)];
+                store.buyItem(item.id);
+            }
+        }
+    }
+
     calculateShot(tank, target, env) {
         let angle = Math.random() * Math.PI;
         if (Math.random() < 0.1) {
@@ -142,6 +181,19 @@ export class StupidAI extends AIController {
 }
 
 export class LobberAI extends AIController {
+    shop(store, tank) {
+        // Lobber loves Nukes (radius)
+        if (tank.currency >= 50) {
+            store.buyItem('nuke');
+        } else if (Math.random() < 0.3) {
+            // Or save up / buy cheap stuff
+            const affordable = store.items.filter(i => i.price <= tank.currency);
+            if (affordable.length > 0) {
+                store.buyItem(affordable[0].id);
+            }
+        }
+    }
+
     calculateShot(tank, target, env) {
         const dx = target.x - tank.x;
         let minA, maxA;
@@ -164,6 +216,13 @@ export class LobberAI extends AIController {
 }
 
 export class SniperAI extends AIController {
+    shop(store, tank) {
+        // Sniper loves Lasers
+        if (tank.currency >= 40) {
+            store.buyItem('laser');
+        }
+    }
+
     calculateShot(tank, target, env) {
         const dx = target.x - tank.x;
         let minA, maxA;
@@ -185,15 +244,71 @@ export class SniperAI extends AIController {
     }
 }
 
-export class MastermindAI extends AIController {
-    constructor() {
-        super();
-        this.currentTarget = null;
-        this.shotHistoryMap = new Map(); // targetName -> [{power, errorX}]
-        this.pendingPower = 0;
-    }
+    export class MastermindAI extends AIController {
 
-    onShotResult(target, impactX, impactY) {
+        constructor() {
+
+            super();
+
+            this.currentTarget = null;
+
+            this.shotHistoryMap = new Map(); // targetName -> [{power, errorX}]
+
+            this.pendingPower = 0;
+
+        }
+
+
+
+        shop(store, tank) {
+
+            // Priority 1: Survival
+
+            if (tank.health < 40 && tank.currency >= 25) {
+
+                store.buyItem('health');
+
+                return;
+
+            }
+
+
+
+            // Priority 2: Defense if rich
+
+            if (tank.currency >= 100 && !tank.shielded) {
+
+                store.buyItem('shield');
+
+                return;
+
+            }
+
+
+
+            // Priority 3: Offense
+
+            // Buy Nuke for groups (simplified check) or Laser for long range?
+
+            // Mastermind is rich, buy best available
+
+            if (tank.currency >= 50) {
+
+                store.buyItem('nuke');
+
+            } else if (tank.currency >= 40) {
+
+                store.buyItem('laser');
+
+            }
+
+        }
+
+
+
+        onShotResult(target, impactX, impactY) {
+
+
         const tx = target.x + target.width / 2;
         const errorX = impactX - tx;
         let history = this.shotHistoryMap.get(target.name);

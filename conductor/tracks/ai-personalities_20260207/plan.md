@@ -18,21 +18,21 @@ Implementing the specific firing behaviors and the "zeroing in" mechanic.
 - [x] Task: Implement Target Memory. Update `Tank.js` to store the last target and shot result, allowing the AI to reduce error for consecutive shots at the same target.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Combat Logic & Learning' (Protocol in workflow.md)
 
-## Phase 3: Shopping Intelligence
+## Phase 3: Shopping Intelligence [checkpoint: pending]
 customizing store behavior for each personality.
 
-- [ ] Task: Update Store Logic. Modify `js/store.js` or the AI controllers to handle shopping.
-- [ ] Task: Personality Shopping Lists.
+- [x] Task: Update Store Logic. Modify `js/store.js` or the AI controllers to handle shopping.
+- [x] Task: Personality Shopping Lists.
     - **Sniper:** Prioritize 'Laser'.
     - **Lobber:** Prioritize 'Nuke'.
     - **Mastermind:** Balance Health/Shields/Weapons based on current state.
     - **Stupid:** Random purchases.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Shopping Intelligence' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Shopping Intelligence' (Protocol in workflow.md)
 
-## Phase 4: UI Integration
+## Phase 4: UI Integration [checkpoint: pending]
 Connecting the new AI types to the Match Setup screen.
 
 - [x] Task: Update Setup Dropdown. Modify `js/matchSetup.js` to populate the player type dropdown with the new personality options.
 - [x] Task: Default Naming Logic. Update the player adding logic to auto-generate names based on the selected type (e.g., "Sniper 1").
 - [x] Task: "Random" Bot Logic. Implement the logic to resolve "Bot: Random" into a specific personality when the match initializes.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: UI Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: UI Integration' (Protocol in workflow.md)
