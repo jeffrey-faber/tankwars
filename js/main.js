@@ -96,8 +96,13 @@ function gameLoop() {
     const aliveTanks = state.tanks.filter(tank => tank.alive);
     if (aliveTanks.length <= 1 && !state.isGameOver && state.gameState === 'PLAYING') {
         state.isGameOver = true;
-        const winner = aliveTanks.length > 0 ? aliveTanks[0].name : "No one";
-        showGameOverOverlay(`${winner} wins!`);
+        let winnerName = "No one";
+        if (aliveTanks.length > 0) {
+            const winner = aliveTanks[0];
+            winner.wins += 1;
+            winnerName = winner.name;
+        }
+        showGameOverOverlay(`${winnerName} wins!`);
     }
 
     if (!state.tanks[state.currentPlayer]?.alive && state.gameState === 'PLAYING') {

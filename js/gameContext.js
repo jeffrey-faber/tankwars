@@ -1,6 +1,6 @@
 // Shared game state and UI functions
 export const state = {
-    gameState: 'LOBBY', // 'LOBBY' or 'PLAYING'
+    gameState: 'LOBBY', // Options: 'LOBBY', 'LOBBY_SHOPPING', 'PLAYING'
     wind: 0,
     gravity: 0.1,
     projectile: { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 30 },

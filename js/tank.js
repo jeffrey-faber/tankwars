@@ -56,6 +56,7 @@ function applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, 
                     otherTank.alive = false;
                     if (tankIndex !== sourcePlayerId) {
                         tanks[sourcePlayerId].score += 1;
+                        tanks[sourcePlayerId].kills += 1;
                         tanks[sourcePlayerId].currency += 20;
                     }
                 }
@@ -77,6 +78,8 @@ export class Tank {
         this.aiLevel = aiLevel;
         this.name = name;
         this.score = 0;
+        this.wins = 0;
+        this.kills = 0;
         this.currency = 100;
         this.alive = true;
         this.maxHealth = 100;
