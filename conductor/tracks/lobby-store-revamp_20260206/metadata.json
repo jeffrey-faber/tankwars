@@ -1,8 +1,0 @@
-{
-  "track_id": "lobby-store-revamp_20260206",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-02-06T15:00:00Z",
-  "updated_at": "2026-02-06T15:00:00Z",
-  "description": "Revamp the store/lobby to show current score for each player and allow sequential full-screen store access for human players."
-}
