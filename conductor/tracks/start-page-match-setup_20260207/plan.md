@@ -7,7 +7,7 @@ This phase focuses on updating the game's data model to support multi-game match
 - [x] Task: Implement Session Persistence. Create a utility to serialize/deserialize the match configuration (e.g., to `localStorage` or URL parameters) to ensure the settings persist across page reloads or round resets. 2f2fb3f
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Session Management' (Protocol in workflow.md)
 
-## Phase 2: Match Setup UI (HTML/CSS)
+## Phase 2: Match Setup UI (HTML/CSS) [checkpoint: eb158f1]
 Creating the new interactive setup interface that replaces the legacy start form.
 
 - [x] Task: Setup Page Layout. Update `index.html` and `css/style.css` to create a modern, full-screen setup overlay consistent with the Lobby UI. 715a85d
