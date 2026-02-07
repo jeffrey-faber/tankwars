@@ -15,7 +15,7 @@ Creating the new interactive setup interface that replaces the legacy start form
 - [x] Task: Match Settings Form. Build the interface for configuring match structure (games, win conditions), economy (starting cash), and environmental variables (wind, map). 715a85d
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Match Setup UI' (Protocol in workflow.md)
 
-## Phase 3: Roster & Configuration Logic
+## Phase 3: Roster & Configuration Logic [checkpoint: 7b02e12]
 Implementing the JavaScript logic that drives the setup experience and initializes the match.
 
 - [x] Task: Player Roster Controller. Write the JS logic to manage adding/removing players and auto-assigning default names/colors. eb158f1
