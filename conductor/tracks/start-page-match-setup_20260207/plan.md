@@ -1,6 +1,6 @@
 # Implementation Plan: Match Setup & Start Page Revamp
 
-## Phase 1: Foundation & Session Management
+## Phase 1: Foundation & Session Management [checkpoint: 715a85d]
 This phase focuses on updating the game's data model to support multi-game matches and persistence of the new configuration.
 
 - [x] Task: Extend Game State Model. Update `js/gameContext.js` to include properties for match tracking: `totalGames`, `currentGameIndex`, `winCondition`, `startingCash`, and the full player roster config. 6b64c3c
