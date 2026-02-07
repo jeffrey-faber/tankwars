@@ -18,7 +18,7 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 ## Core Features
 - **Sophisticated AI:** Opponents that utilize advanced simulation to provide a human-like challenge.
 - **Arsenal Variety:** A diverse set of weapons and items selectable via a grid-based inventory HUD with numeric hotkeys.
-- **Lobby & Shop:** A pre-match "Lobby" phase for shopping and equipment prep, with currency persisting between matches.
+- **Sequential Lobby & Full-Screen Shop:** A pre-match phase with a competitive scoreboard and a dedicated full-screen, tabbed shopping experience for each human player.
 - **Polished Interface:** A seamless user journey from game configuration to the final victory screen.
 
 ## Development Goals
