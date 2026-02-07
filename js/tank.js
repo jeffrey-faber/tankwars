@@ -266,6 +266,11 @@ export class Tank {
                 if (!hit) {
                     requestAnimationFrame(moveProjectile);
                 } else {
+                    // Inform controller of the result (do this BEFORE next player logic)
+                    if (this.isAI && this.aiController && this.currentTarget) {
+                        this.aiController.onShotResult(this.currentTarget, x, y);
+                    }
+
                     if (y >= 0 && y <= (state.canvas?.height || 400)) {
                         if (state.terrain.explode) {
                             state.terrain.explode(x, y, state.projectile.explosionRadius);
@@ -405,13 +410,18 @@ export class Tank {
         
         // Use controller's target selection logic
         const targetTank = this.aiController.chooseTarget(this, state.tanks);
+        this.currentTarget = targetTank;
         
         if (!targetTank) {
             // No valid targets (game over condition mostly)
             return;
         }
         
-        const env = { wind: state.wind, gravity: state.gravity };
+        const env = { 
+            wind: state.wind, 
+            gravity: state.gravity,
+            checkTerrain: (x, y) => state.terrain.checkCollision(x, y) 
+        };
         const shot = this.aiController.calculateShot(this, targetTank, env);
         
         this.angle = shot.angle;
