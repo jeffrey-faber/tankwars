@@ -1,6 +1,6 @@
 # Implementation Plan: Fall Damage & Earth Shaper Weapons
 
-## Phase 1: Fall Damage System
+## Phase 1: Fall Damage System [checkpoint: 4f05501]
 Implementing physical consequences for tank falls with safety thresholds.
 
 - [x] Task: Define Fall Damage Logic.
@@ -12,7 +12,7 @@ Implementing physical consequences for tank falls with safety thresholds.
     - [x] Add check for `isInitialSpawn` to prevent damage at game start.
 - [x] Task: Visual Impact Effects.
     - [x] Add camera shake or particle effect on high-damage landings.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Fall Damage System' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Fall Damage System' (Protocol in workflow.md)
 
 ## Phase 2: Basic Earth Shaper Weapons & Utility
 Implementing Dirt Ball and Shovel weapons along with store integration.
