@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { MastermindAI, StandardAI } from './aiControllers.js';
+import { MastermindAI, StandardAI, SniperAI, LobberAI } from './aiControllers.js';
 
 // Mock tank for simulation
 const createTank = (x, y) => ({ x, y, width: 20, height: 10, name: 'Shooter', isAI: true, currency: 1000, health: 100 });
@@ -157,5 +157,31 @@ describe('AI Accuracy Benchmark', () => {
         // Must fire a low-power, low-angle shot to stay under the ceiling
         const result = runDuel(MastermindAI, null, tunnelEnv, 5);
         expect(result).toBeGreaterThan(0);
+    });
+
+    it('Sniper: Must fire direct shots even if blocked', () => {
+        const sniper = new SniperAI();
+        const source = createTank(100, 500);
+        const target = createTarget(700, 500);
+        const env = { wind: 0, gravity: 0.1 };
+        
+        const shot = sniper.calculateShot(source, target, env);
+        const angleDeg = shot.angle * 180 / Math.PI;
+        // Should be between 0 and 25
+        expect(angleDeg).toBeGreaterThanOrEqual(0);
+        expect(angleDeg).toBeLessThanOrEqual(25);
+    });
+
+    it('Lobber: Must always lob', () => {
+        const lobber = new LobberAI();
+        const source = createTank(100, 500);
+        const target = createTarget(700, 500);
+        const env = { wind: 0, gravity: 0.1 };
+        
+        const shot = lobber.calculateShot(source, target, env);
+        const angleDeg = shot.angle * 180 / Math.PI;
+        // Should be between 60 and 85
+        expect(angleDeg).toBeGreaterThanOrEqual(60);
+        expect(angleDeg).toBeLessThanOrEqual(85);
     });
 });

@@ -355,40 +355,38 @@ export class SniperAI extends AIController {
 
     calculateShot(tank, target, env) {
         // 1. Calculate Baseline (Best guess)
-        // Try standard range first
+        // Mastermind is allowed to switch between direct and lob
         let baseResult = findBestShot(tank, target, env, 0, Math.PI);
         
-        // If no direct path found, try a pure lobbing strategy (45-90 degrees)
-        if (baseResult.angle === null) {
-            baseResult = findBestShot(tank, target, env, Math.PI/4, 3*Math.PI/4);
-        }
-
         let angle = baseResult.angle || Math.PI/4;
         let idealPower = baseResult.power || 70;
 
         // 2. Interpolate from History
         const history = this.shotHistoryMap.get(target.name) || [];
-        if (history.length >= 2) {
-            // Sort by error magnitude to find closest shots
-            const sorted = [...history].sort((a, b) => Math.abs(a.error) - Math.abs(b.error));
-            const best = sorted[0];
-            const bracket = sorted.find(s => Math.sign(s.error) !== Math.sign(best.error));
+        if (history.length >= 1) {
+            // Determine direction: 1 for right, -1 for left
+            const direction = Math.cos(angle) >= 0 ? 1 : -1;
             
-            if (bracket) {
-                // Linear Interpolation
-                const t = (0 - best.error) / (bracket.error - best.error);
-                idealPower = best.power + (bracket.power - best.power) * t;
+            if (history.length >= 2) {
+                const sorted = [...history].sort((a, b) => Math.abs(a.error) - Math.abs(b.error));
+                const best = sorted[0];
+                const bracket = sorted.find(s => Math.sign(s.error) !== Math.sign(best.error));
+                
+                if (bracket) {
+                    const t = (0 - best.error) / (bracket.error - best.error);
+                    idealPower = best.power + (bracket.power - best.power) * t;
+                } else {
+                    const last = history[history.length - 1];
+                    // Correct sign: if error is in direction of fire, we overshot -> decrease power
+                    // Correction = error * direction * Kp
+                    const Kp = Math.abs(Math.cos(angle)) * 0.2 + 0.1;
+                    idealPower = last.power - (last.error * direction * Kp);
+                }
             } else {
-                // No bracket. Proportional correction based on distance from target center.
-                const last = history[history.length - 1];
-                // Kp should be dynamic based on angle? (Lower power change needed for high arcs)
+                const last = history[0];
                 const Kp = Math.abs(Math.cos(angle)) * 0.2 + 0.1;
-                idealPower = last.power - (last.error * Kp);
+                idealPower = last.power - (last.error * direction * Kp);
             }
-        } else if (history.length === 1) {
-            const last = history[0];
-            const Kp = Math.abs(Math.cos(angle)) * 0.2 + 0.1;
-            idealPower = last.power - (last.error * Kp);
         }
 
         idealPower = Math.max(10, Math.min(100, idealPower));
