@@ -18,7 +18,7 @@ Implementing the specific firing behaviors and the "zeroing in" mechanic.
 - [x] Task: Implement Target Memory. Update `Tank.js` to store the last target and shot result, allowing the AI to reduce error for consecutive shots at the same target.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Combat Logic & Learning' (Protocol in workflow.md)
 
-## Phase 3: Shopping Intelligence [checkpoint: pending]
+## Phase 3: Shopping Intelligence [checkpoint: e6bf0d8]
 customizing store behavior for each personality.
 
 - [x] Task: Update Store Logic. Modify `js/store.js` or the AI controllers to handle shopping.
@@ -29,7 +29,7 @@ customizing store behavior for each personality.
     - **Stupid:** Random purchases.
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Shopping Intelligence' (Protocol in workflow.md)
 
-## Phase 4: UI Integration [checkpoint: pending]
+## Phase 4: UI Integration [checkpoint: e6bf0d8]
 Connecting the new AI types to the Match Setup screen.
 
 - [x] Task: Update Setup Dropdown. Modify `js/matchSetup.js` to populate the player type dropdown with the new personality options.
