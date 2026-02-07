@@ -10,8 +10,8 @@ Implementing physical consequences for tank falls with safety thresholds.
     - [x] Create unit tests for damage thresholds.
     - [x] Implement health reduction in `applyGravity`.
     - [x] Add check for `isInitialSpawn` to prevent damage at game start.
-- [ ] Task: Visual Impact Effects.
-    - [ ] Add camera shake or particle effect on high-damage landings.
+- [x] Task: Visual Impact Effects.
+    - [x] Add camera shake or particle effect on high-damage landings.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Fall Damage System' (Protocol in workflow.md)
 
 ## Phase 2: Basic Earth Shaper Weapons & Utility
