@@ -10,9 +10,9 @@ This phase focuses on updating the game's data model to support multi-game match
 ## Phase 2: Match Setup UI (HTML/CSS)
 Creating the new interactive setup interface that replaces the legacy start form.
 
-- [ ] Task: Setup Page Layout. Update `index.html` and `css/style.css` to create a modern, full-screen setup overlay consistent with the Lobby UI.
-- [ ] Task: Dynamic Roster UI. Implement the HTML/CSS for the player list rows, including name inputs, type dropdowns, and removal buttons.
-- [ ] Task: Match Settings Form. Build the interface for configuring match structure (games, win conditions), economy (starting cash), and environmental variables (wind, map).
+- [x] Task: Setup Page Layout. Update `index.html` and `css/style.css` to create a modern, full-screen setup overlay consistent with the Lobby UI. 715a85d
+- [x] Task: Dynamic Roster UI. Implement the HTML/CSS for the player list rows, including name inputs, type dropdowns, and removal buttons. 715a85d
+- [x] Task: Match Settings Form. Build the interface for configuring match structure (games, win conditions), economy (starting cash), and environmental variables (wind, map). 715a85d
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Match Setup UI' (Protocol in workflow.md)
 
 ## Phase 3: Roster & Configuration Logic
