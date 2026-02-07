@@ -1,6 +1,6 @@
 # Implementation Plan: Lobby & Store Revamp
 
-## Phase 1: Foundation & State Management
+## Phase 1: Foundation & State Management [checkpoint: 7a19d51]
 This phase focuses on the core logic for the new Lobby state machine and data structures for the enhanced scoreboard.
 
 - [x] Task: Extend Game State Machine. Update the main game logic to include a dedicated `LOBBY` state and a sub-state for `LOBBY_SHOPPING`.
