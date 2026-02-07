@@ -1,5 +1,5 @@
 import { getRandomColor, createExplosion } from './utils.js';
-import { state, getNextAliveTankIndex, draw } from './gameContext.js';
+import { state, getNextAliveTankIndex, draw, triggerScreenShake } from './gameContext.js';
 import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI } from './aiControllers.js';
 
 function checkTerrainAndBounds(x, y, terrain, canvas) {
@@ -134,6 +134,12 @@ export class Tank {
                 if (damage > 0) {
                     // Reduce health (could be mitigated by items later)
                     this.health = Math.max(0, this.health - damage);
+                    
+                    // Visual feedback
+                    if (damage > 10) {
+                        triggerScreenShake(Math.min(20, damage / 2), 300);
+                    }
+                    
                     if (this.health <= 0) this.alive = false;
                 }
             }

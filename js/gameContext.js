@@ -19,8 +19,16 @@ export const state = {
     currentGameIndex: 0,
     winCondition: 'score', // 'score' or 'wins'
     startingCash: 100,
-    playerRosterConfig: []
+    playerRosterConfig: [],
+    // Visual Effects
+    screenShake: { intensity: 0, startTime: 0, duration: 0 }
 };
+
+export function triggerScreenShake(intensity, duration) {
+    state.screenShake.intensity = intensity;
+    state.screenShake.duration = duration;
+    state.screenShake.startTime = performance.now();
+}
 
 export function getNextAliveTankIndex(startIndex) {
     if (!state.tanks || state.tanks.length === 0) return startIndex;
@@ -64,19 +72,46 @@ export function drawHUD() {
 
 export function draw() {
     if (!state.isGameOver) {
-        state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (state.screenShake.duration > 0) {
+            const now = performance.now();
+            const elapsed = now - state.screenShake.startTime;
+            if (elapsed < state.screenShake.duration) {
+                const decay = 1 - (elapsed / state.screenShake.duration);
+                const currentIntensity = state.screenShake.intensity * decay;
+                offsetX = (Math.random() * 2 - 1) * currentIntensity;
+                offsetY = (Math.random() * 2 - 1) * currentIntensity;
+            } else {
+                state.screenShake.duration = 0;
+            }
+        }
+
+        state.ctx.save();
+        state.ctx.translate(offsetX, offsetY);
+
+        state.ctx.clearRect(-offsetX, -offsetY, state.canvas.width, state.canvas.height);
         state.terrain.draw(state.ctx);
         state.tanks.forEach(tank => {
             if (tank.alive) {
                 tank.draw(state.ctx);
             }
         });
-        drawHUD();
+        
+        state.ctx.restore(); // Restore before HUD so HUD doesn't shake (optional choice, but standard)
+        
+        drawHUD(); // Draw HUD on top, static
+        
+        // Projectile should shake with the world
         if (state.projectile.x !== null && state.projectile.y !== null) {
+            state.ctx.save();
+            state.ctx.translate(offsetX, offsetY);
             state.ctx.beginPath();
             state.ctx.arc(state.projectile.x, state.projectile.y, 3, 0, 2 * Math.PI);
             state.ctx.fillStyle = state.projectile.color || 'black';
             state.ctx.fill();
+            state.ctx.restore();
         }
     }
 }
