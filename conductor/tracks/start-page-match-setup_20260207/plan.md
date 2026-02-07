@@ -4,7 +4,7 @@
 This phase focuses on updating the game's data model to support multi-game matches and persistence of the new configuration.
 
 - [x] Task: Extend Game State Model. Update `js/gameContext.js` to include properties for match tracking: `totalGames`, `currentGameIndex`, `winCondition`, `startingCash`, and the full player roster config. 6b64c3c
-- [ ] Task: Implement Session Persistence. Create a utility to serialize/deserialize the match configuration (e.g., to `localStorage` or URL parameters) to ensure the settings persist across page reloads or round resets.
+- [x] Task: Implement Session Persistence. Create a utility to serialize/deserialize the match configuration (e.g., to `localStorage` or URL parameters) to ensure the settings persist across page reloads or round resets. 2f2fb3f
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Session Management' (Protocol in workflow.md)
 
 ## Phase 2: Match Setup UI (HTML/CSS)
