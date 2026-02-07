@@ -9,7 +9,7 @@ Refactoring the `Tank` class to delegate AI logic to specialized controller clas
 - [ ] Task: Integrate with Tank Class. Update `js/tank.js` to instantiate the correct controller based on the tank's `aiLevel` or `personality` type.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: AI Architecture Refactor' (Protocol in workflow.md)
 
-## Phase 2: Combat Logic & Learning
+## Phase 2: Combat Logic & Learning [checkpoint: d605b12]
 Implementing the specific firing behaviors and the "zeroing in" mechanic.
 
 - [x] Task: Implement "Mr. Stupid" Logic. Add high randomness and potential for self-harm (e.g., negative power/angle offsets).

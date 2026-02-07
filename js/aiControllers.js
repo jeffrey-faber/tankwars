@@ -61,17 +61,27 @@ export class AIController {
         return this.shotsAgainstTarget.get(target.name) || 0;
     }
 
-        recordShot(target) {
+            recordShot(target) {
 
-            const count = this.getShotHistory(target);
+                const count = this.getShotHistory(target);
 
-            this.shotsAgainstTarget.set(target.name, count + 1);
+                this.shotsAgainstTarget.set(target.name, count + 1);
 
-        }
+            }
 
-    
+        
 
-        chooseTarget(tank, allTanks) {
+            onShotResult(target, impactX, impactY) {
+
+                // Default: do nothing
+
+            }
+
+        
+
+            chooseTarget(tank, allTanks) {
+
+        
 
             // Default: Random alive target that isn't self
 
@@ -323,110 +333,422 @@ export class AIController {
 
     
 
-    export class MastermindAI extends AIController {
-
-        constructor() {
-
-            super();
-
-            this.currentTarget = null;
-
-        }
+        export class MastermindAI extends AIController {
 
     
 
-        chooseTarget(tank, allTanks) {
+            constructor() {
 
-            // Stick to current target if alive
+    
 
-            if (this.currentTarget && this.currentTarget.alive) {
+                super();
 
-                return this.currentTarget;
+    
+
+                this.currentTarget = null;
+
+    
+
+                this.lastXError = new Map(); // targetName -> lastXDistError
+
+    
 
             }
 
     
 
-            // Find highest threat (closest + highest health)
-
-            const targets = allTanks.filter(t => t !== tank && t.alive);
-
-            if (targets.length === 0) return null;
+    
 
     
 
-            // Sort by 'threat' score: closer is better, higher health is better to focus down
-
-            targets.sort((a, b) => {
-
-                const distA = Math.abs(a.x - tank.x);
-
-                const distB = Math.abs(b.x - tank.x);
-
-                const scoreA = (1000 - distA) + (a.health * 2); // Heuristic
-
-                const scoreB = (1000 - distB) + (b.health * 2);
-
-                return scoreB - scoreA;
-
-            });
+            onShotResult(target, impactX, impactY) {
 
     
 
-            this.currentTarget = targets[0];
-
-            return this.currentTarget;
-
-        }
+                // Calculate error: how far away from target center we hit
 
     
 
-        calculateShot(tank, target, env) {
+                // Positive error = hit too far to the right
 
-            // Mastermind uses the best shot finding with high precision steps
+    
 
-            const result = findBestShot(tank, target, env, 0, Math.PI, Math.PI/360, 0.5);
+                // Negative error = hit too far to the left
+
+    
+
+                const tx = target.x + target.width / 2;
+
+    
+
+                const error = impactX - tx;
+
+    
+
+                this.lastXError.set(target.name, error);
+
+    
+
+            }
+
+    
+
+    
+
+    
+
+            chooseTarget(tank, allTanks) {
+
+    
+
+                // Stick to current target if alive
+
+    
+
+                if (this.currentTarget && this.currentTarget.alive) {
+
+    
+
+                    return this.currentTarget;
+
+    
+
+                }
+
+    
+
+    
+
+    
+
+                // Find highest threat (closest + highest health)
+
+    
+
+                const targets = allTanks.filter(t => t !== tank && t.alive);
+
+    
+
+                if (targets.length === 0) return null;
+
+    
+
+    
+
+    
+
+                // Sort by 'threat' score: closer is better, higher health is better to focus down
+
+    
+
+                targets.sort((a, b) => {
+
+    
+
+                    const distA = Math.abs(a.x - tank.x);
+
+    
+
+                    const distB = Math.abs(b.x - tank.x);
+
+    
+
+                    const scoreA = (1000 - distA) + (a.health * 2); // Heuristic
+
+    
+
+                    const scoreB = (1000 - distB) + (b.health * 2);
+
+    
+
+                    return scoreB - scoreA;
+
+    
+
+                });
+
+    
+
+    
+
+    
+
+                this.currentTarget = targets[0];
+
+    
+
+                return this.currentTarget;
+
+    
+
+            }
+
+    
+
+    
+
+    
+
+                    calculateShot(tank, target, env) {
+
+    
+
+    
+
+    
+
+                        // Step 1: Calculate the "perfect" shot for the actual target (Baseline)
+
+    
+
+    
+
+    
+
+                        const baseShot = findBestShot(tank, target, env, 0, Math.PI, Math.PI/360, 0.5);
+
+    
+
+    
+
+    
+
+                        let angle = baseShot.angle || Math.PI/4;
+
+    
+
+    
+
+    
+
+                        let power = baseShot.power || 70;
+
+    
+
+    
+
+    
 
             
 
-            const history = this.getShotHistory(target);
+    
+
+    
+
+    
+
+                        // Step 2: Apply compensation if we have a history
+
+    
+
+    
+
+    
+
+                        const prevError = this.lastXError.get(target.name);
+
+    
+
+    
+
+    
+
+                        
+
+    
+
+    
+
+    
+
+                        if (prevError !== undefined) {
+
+    
+
+    
+
+    
+
+                            // Heuristic: Adjust power to correct distance
+
+    
+
+    
+
+    
+
+                            // If error > 0 (hit right/long), decrease power
+
+    
+
+    
+
+    
+
+                            // If error < 0 (hit left/short), increase power
+
+    
+
+    
+
+    
+
+                            // 1 unit of power ~= X units of distance (depends on angle/wind)
+
+    
+
+    
+
+    
+
+                            // We'll use a conservative gain factor
+
+    
+
+    
+
+    
+
+                            const Kp = 0.15; 
+
+    
+
+    
+
+    
+
+                            power -= prevError * Kp;
+
+    
+
+    
+
+    
+
+                        }
+
+    
+
+    
+
+    
 
             
 
-            // Learning Curve:
-
-            // Shot 0: Moderate error (exploratory)
-
-            // Shot 1: Small error (adjustment)
-
-            // Shot 2+: Zero error (locked in)
-
-            let learningFactor = 0;
-
-            if (history === 0) learningFactor = 0.1; // 10% variance
-
-            else if (history === 1) learningFactor = 0.02; // 2% variance
-
-            else learningFactor = 0; // Perfect
+    
 
     
 
-            const angleError = (Math.random() * 2 - 1) * (Math.PI / 180) * 5 * learningFactor;
+    
 
-            const powerError = (Math.random() * 2 - 1) * 5 * learningFactor;
+                        // Step 3: Add very slight noise for "human-like" first shots if no history
 
     
 
-            return {
+    
 
-                angle: (result.angle || Math.PI/4) + angleError,
+    
 
-                power: Math.max(10, Math.min(100, (result.power || 70) + powerError))
+                        // But user requested "dead accurate after 3 shots", so let's keep noise minimal
 
-            };
+    
 
-        }
+    
 
-    }
+    
+
+                        const history = this.getShotHistory(target);
+
+    
+
+    
+
+    
+
+                        if (history === 0) {
+
+    
+
+    
+
+    
+
+                            power += (Math.random() * 4 - 2); // +/- 2 power random
+
+    
+
+    
+
+    
+
+                        }
+
+    
+
+    
+
+    
+
+            
+
+    
+
+    
+
+    
+
+                        return {
+
+    
+
+    
+
+    
+
+                            angle: angle,
+
+    
+
+    
+
+    
+
+                            power: Math.max(10, Math.min(100, power))
+
+    
+
+    
+
+    
+
+                        };
+
+    
+
+    
+
+    
+
+                    }
+
+    
+
+    
+
+    
+
+                }
+
+    
+
+    
+
+    
+
+            
+
+    
+
+    
 
     
