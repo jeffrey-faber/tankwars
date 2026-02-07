@@ -370,55 +370,42 @@ export class Tank {
         const centerX = Math.floor(this.x + this.width / 2);
         const rightX = Math.floor(this.x + this.width);
         
-        // Use a larger fallback to prevent tanks from floating in mid-air if canvas is missing
         const canvasHeight = state.canvas?.height || 800;
         const checkPoints = [leftX, centerX, rightX];
         
-        // Find the top-most solid pixel at any of our check positions
         let highestGround = canvasHeight;
-        
         for (let x of checkPoints) {
             for (let y = 0; y < canvasHeight; y++) {
                 if (terrain.isSolid(x, y)) {
-                    if (y < highestGround) {
-                        highestGround = y;
-                    }
-                    break; // Move to next check point once ground found for this X
+                    if (y < highestGround) highestGround = y;
+                    break;
                 }
             }
         }
         
-        // Clamp to screen bottom
         const bottomLimit = canvasHeight - this.height - 5;
         const finalGroundY = Math.min(highestGround, bottomLimit);
         
-        // If the tank bottom (this.y) is above the detected ground, it must fall.
-        // If the tank bottom is below the ground (buried), it should potentially snap UP or stay.
-        // For standard gravity, we only care about falling.
-        
-        if (finalGroundY > this.y) {
-            // Tank is in the air. Fell.
-            const fallDistance = finalGroundY - this.y;
+        if (this.y < finalGroundY) {
+            // IN AIR: Apply gravity
+            this.vy += state.gravity;
+            this.y += this.vy;
             
-            // Only apply damage for significant falls
-            const fallDamage = Math.max(0, Math.floor((fallDistance - 20) / 10));
-            if (fallDamage > 0 && !this.shielded) {
-                this.health -= fallDamage;
-                if (this.health <= 0) {
-                    this.health = 0;
-                    this.alive = false;
-                }
+            // Sub-pixel safety: if we crossed ground, land
+            if (this.y >= finalGroundY) {
+                this.y = finalGroundY;
+                this.vy = 0;
+                this.handleLanding(this.y);
             }
-            
+        } else if (this.y > finalGroundY) {
+            // BURIED: Snap to surface (upward movement is instant for now)
             this.y = finalGroundY;
-        } else if (finalGroundY < this.y) {
-            // Tank is buried. Snap to surface.
-            this.y = finalGroundY;
-        }
-        
-        // Final screen boundary check
-        if (this.y > bottomLimit) {
-            this.y = bottomLimit;
+            this.vy = 0;
+            this.lastSolidY = this.y; // Reset fall tracking when buried/snapped up
+        } else {
+            // ON GROUND
+            this.vy = 0;
+            this.lastSolidY = this.y;
         }
         
         this.checkBuried(terrain);
