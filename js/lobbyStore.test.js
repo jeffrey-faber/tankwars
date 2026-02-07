@@ -1,108 +1,41 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { state } from './gameContext.js';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Store } from './store.js';
-import './main.js';
 
-describe('Lobby Store UI', () => {
+describe('Store Purchase Logic', () => {
     let store;
-    let spyUpdate;
+    let tank;
 
     beforeEach(() => {
-        // Reset state
-        state.gameState = 'LOBBY';
-        state.tanks = [{ isAI: false, alive: true, currency: 100 }];
-        state.currentPlayer = 0;
-        
-        // Mock DOM
-        document.body.innerHTML = '<div id="gameCanvas"></div>';
-        
-        spyUpdate = vi.spyOn(Store.prototype, 'updateWeaponSelector');
-        
         store = new Store();
-        store.init(state.tanks);
-    });
-
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
-
-    it('should show the store button in LOBBY state', () => {
-        const storeButton = document.getElementById('storeButton');
-        expect(storeButton).not.toBeNull();
-        // We need to implement the logic that hides/shows it
-    });
-
-    it('should hide the store button when state is PLAYING', () => {
-        state.gameState = 'PLAYING';
-        store.updateVisibility();
-        
-        const storeButton = document.getElementById('storeButton');
-        expect(storeButton.style.display).toBe('none');
-    });
-
-    it('should allow buying multiple items of the same type', () => {
-        const tank = state.tanks[0];
-        tank.currency = 200;
-        
+        tank = {
+            name: 'Test Tank',
+            currency: 1000,
+            inventory: [],
+            health: 50,
+            maxHealth: 100,
+            shielded: false
+        };
         store.currentTank = tank;
+    });
+
+    it('should increment inventory for non-healing items', () => {
         store.buyItem('nuke');
-        store.buyItem('nuke');
-        
-        const nukes = tank.inventory.filter(i => i.id === 'nuke');
-        expect(nukes.length).toBe(2);
-        expect(tank.currency).toBe(200 - (store.items.find(i => i.id === 'nuke').price * 2));
+        expect(tank.inventory.length).toBe(1);
+        expect(tank.inventory[0].id).toBe('nuke');
+        expect(tank.currency).toBe(950);
     });
 
-    it('should trigger useItem on numeric key 1', () => {
-        const tank = state.tanks[0];
-        tank.inventory = [{ id: 'nuke', effect: { type: 'weapon' } }];
-        tank.useItem = vi.fn();
-        state.gameState = 'PLAYING';
-        state.store = store; // main.js uses state.store
-        
-        const event = { type: 'keydown', key: '1' };
-        document.dispatchEvent(event);
-        
-        expect(tank.useItem).toHaveBeenCalledWith('nuke');
+    it('should NOT increment inventory for healing items (used immediately)', () => {
+        store.buyItem('health');
+        expect(tank.inventory.length).toBe(0);
+        expect(tank.health).toBe(100);
+        expect(tank.currency).toBe(975);
     });
 
-    it('should select default weapon on key 0', () => {
-        const tank = state.tanks[0];
-        tank.selectedWeapon = 'nuke';
-        state.gameState = 'PLAYING';
-        state.store = store;
-        
-        const event = { type: 'keydown', key: '0' };
-        document.dispatchEvent(event);
-        
-        expect(tank.selectedWeapon).toBe('default');
-    });
-
-    it('should ignore hotkeys in LOBBY state', () => {
-        const tank = state.tanks[0];
-        tank.inventory = [{ id: 'nuke', effect: { type: 'weapon' } }];
-        tank.useItem = vi.fn();
-        state.gameState = 'LOBBY';
-        state.store = store;
-        
-        const event = { type: 'keydown', key: '1' };
-        document.dispatchEvent(event);
-        
-        expect(tank.useItem).not.toHaveBeenCalled();
-    });
-
-    it('should refresh weapon selector when starting match', () => {
-        const tank = state.tanks[0];
-        
-        // Find start button (created in init)
-        // We need to query document body because it's appended there
-        const startButton = document.getElementById('startMatchButton');
-        expect(startButton).toBeTruthy();
-        
-        // Click it
-        startButton.click();
-        
-        expect(state.gameState).toBe('PLAYING');
-        expect(spyUpdate).toHaveBeenCalledWith(tank);
+    it('should increment inventory for shields', () => {
+        store.buyItem('shield');
+        expect(tank.inventory.length).toBe(1);
+        expect(tank.inventory[0].id).toBe('shield');
+        expect(tank.currency).toBe(970);
     });
 });

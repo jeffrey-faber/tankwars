@@ -8,6 +8,7 @@ export class Store {
                 name: 'Nuke',
                 description: 'A powerful explosive with larger blast radius',
                 price: 50,
+                category: 'weapons',
                 effect: {
                     type: 'weapon',
                     radius: 50,  // Regular explosion radius is 15
@@ -19,6 +20,7 @@ export class Store {
                 name: 'Laser',
                 description: 'High-velocity projectile, less affected by wind',
                 price: 40,
+                category: 'weapons',
                 effect: {
                     type: 'weapon',
                     speedMultiplier: 2.0,
@@ -30,6 +32,7 @@ export class Store {
                 name: 'Shield',
                 description: 'Protects your tank from one hit',
                 price: 30,
+                category: 'defense',
                 effect: {
                     type: 'defense',
                     uses: 1
@@ -40,6 +43,7 @@ export class Store {
                 name: 'Health Pack',
                 description: 'Heals 50 health points',
                 price: 25,
+                category: 'utility',
                 effect: {
                     type: 'healing',
                     amount: 50
@@ -49,6 +53,7 @@ export class Store {
         
         this.isOpen = false;
         this.currentTank = null;
+        this.currentCategory = 'weapons';
     }
     
     init(tanks) {
@@ -149,6 +154,17 @@ export class Store {
         
         document.body.appendChild(overlay);
         
+        // Tab switching logic
+        const tabs = overlay.querySelectorAll('.store-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.currentCategory = tab.dataset.category;
+                this.updateStoreItems();
+            });
+        });
+
         // Add event listener to close button
         const closeBtn = overlay.querySelector('#closeStore');
         if (closeBtn) {
@@ -325,27 +341,37 @@ export class Store {
             overlay.classList.add('hidden');
         }
         this.currentTank = null;
+        
+        // Notify that the store turn is finished
+        document.dispatchEvent(new CustomEvent('storeClosed'));
     }
     
     updateStoreItems() {
-        const container = document.querySelector('.store-items');
+        const container = document.querySelector('.store-items-grid');
+        const currencyDisplay = document.querySelector('#storeCurrency');
         if (!container || !this.currentTank) return;
         
         container.innerHTML = '';
         
-        // Add max height to prevent overflow
-        container.style.maxHeight = '60vh';
-        container.style.overflowY = 'auto';
-        container.style.padding = '10px';
+        if (currencyDisplay) {
+            currencyDisplay.textContent = `Coins: ${this.currentTank.currency}`;
+        }
         
-        this.items.forEach(item => {
+        const filteredItems = this.items.filter(item => item.category === this.currentCategory);
+        
+        filteredItems.forEach(item => {
             const count = (this.currentTank.inventory || []).filter(i => i.id === item.id).length;
+            const ownershipText = item.effect.type === 'healing' ? 'Instant Use' : `Owned: ${count}`;
+            
             const itemElement = document.createElement('div');
             itemElement.className = 'store-item';
+            itemElement.style.width = 'auto'; // Let grid handle width
             itemElement.innerHTML = `
-                <h3>${item.name} ${count > 0 ? `(${count} owned)` : ''}</h3>
+                <div style="font-size: 40px; margin-bottom: 10px;">${this.getWeaponIcon(item.id)}</div>
+                <h3>${item.name}</h3>
                 <p class="item-description">${item.description}</p>
                 <p class="item-price">${item.price} Coins</p>
+                <div style="margin-bottom: 10px; font-size: 12px; color: #00f7ff;">${ownershipText}</div>
                 <button class="buy-button ${this.currentTank.currency < item.price ? 'disabled' : ''}" 
                     data-item-id="${item.id}" 
                     ${this.currentTank.currency < item.price ? 'disabled' : ''}>
@@ -360,15 +386,6 @@ export class Store {
             
             container.appendChild(itemElement);
         });
-        
-        // Display current currency
-        const currencyDisplay = document.createElement('div');
-        currencyDisplay.style.marginTop = '20px';
-        currencyDisplay.style.fontSize = '18px';
-        currencyDisplay.style.color = 'gold';
-        currencyDisplay.textContent = `Your coins: ${this.currentTank.currency}`;
-        
-        container.appendChild(currencyDisplay);
     }
     
     buyItem(itemId) {

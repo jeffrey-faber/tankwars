@@ -19,10 +19,10 @@ Creating the HTML/CSS structure and basic show/hide logic for the new full-scree
 ## Phase 3: Store Logic & Item Grid
 Connecting the UI to the existing `Store` class and implementing the categorized grid.
 
-- [ ] Task: Tab Navigation Logic. Implement the JavaScript to switch between categories (Weapons, Tools, etc.) in the Store UI.
-- [ ] Task: Dynamic Item Rendering. Write logic to populate the grid based on available items in the `Store` class, including icons, prices, and descriptions.
-- [ ] Task: Purchase Integration. Connect the "Buy" clicks in the new UI to the existing `store.buyItem()` logic and update the player's currency display in real-time.
-- [ ] Task: Finish Turn Logic. Implement the "Done" button that triggers the transition to the next player or starts the game.
+- [x] Task: Tab Navigation Logic. Implement the JavaScript to switch between categories (Weapons, Tools, etc.) in the Store UI.
+- [x] Task: Dynamic Item Rendering. Write logic to populate the grid based on available items in the `Store` class, including icons, prices, and descriptions.
+- [x] Task: Purchase Integration. Connect the "Buy" clicks in the new UI to the existing `store.buyItem()` logic and update the player's currency display in real-time.
+- [x] Task: Finish Turn Logic. Implement the "Done" button that triggers the transition to the next player or starts the game.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Store Logic & Item Grid' (Protocol in workflow.md)
 
 ## Phase 4: Integration & Refinement
