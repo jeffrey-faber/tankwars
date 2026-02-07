@@ -5,107 +5,95 @@ import { BitmaskTerrain } from './BitmaskTerrain.js';
 import { Store } from './store.js';
 import { LobbyManager } from './lobbyManager.js';
 import { ScoreManager } from './scoreManager.js';
+import { MatchSetup } from './matchSetup.js';
+import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
 import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD } from './gameContext.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const urlParams = getUrlParams();
-state.numPlayers = parseInt(urlParams.players) || 2;
-const canvasWidth = parseInt(urlParams.width) || 800;
-const canvasHeight = parseInt(urlParams.height) || 400;
-canvas.width = canvasWidth;
-canvas.height = canvasHeight;
+
+// UI Elements
+const matchSetupOverlay = document.getElementById('matchSetupOverlay');
+const gameCanvas = document.getElementById('gameCanvas');
+
+let matchSetup = null;
 
 // Initialize game state from context
 state.wind = (Math.random() * 2 - 1) / 10;
 window.state = state; // Debugging
 
-const lobbyManager = new LobbyManager(state.tanks);
+function initGameFromConfig(config) {
+    // Apply config to state
+    state.totalGames = config.totalGames;
+    state.winCondition = config.winCondition;
+    state.startingCash = config.startingCash;
+    state.playerRosterConfig = config.players;
+    state.currentGameIndex = 0;
+    state.numPlayers = config.players.length;
 
-function showScoreboard() {
-    const scoreboardContainer = document.getElementById('scoreboardContainer');
-    if (scoreboardContainer) {
-        scoreboardContainer.innerHTML = ScoreManager.generateScoreboardHTML(state.tanks);
-    }
-    document.getElementById('lobbyOverlay').classList.remove('hidden');
-}
+    // Set canvas dimensions
+    const canvasWidth = 1200;
+    const canvasHeight = 600;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
 
-function startNextStoreTurn() {
-    if (lobbyManager.isDone()) {
-        const prompt = document.getElementById('lobbyPrompt');
-        prompt.innerHTML = "All players ready!";
+    // Initialize Terrain
+    const oldTerrain = new Terrain(canvasWidth, canvasHeight);
+    state.terrain = new BitmaskTerrain(canvasWidth, canvasHeight);
+    state.terrain.bakeHeightmap(oldTerrain.points);
+
+    // Initialize Tanks
+    state.tanks = [];
+    const tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain);
+    config.players.forEach((p, i) => {
+        const isAI = p.type.startsWith('bot');
+        let aiLevel = 0;
+        if (p.type === 'bot-easy') aiLevel = 2;
+        if (p.type === 'bot-medium') aiLevel = 5;
+        if (p.type === 'bot-hard') aiLevel = 8;
         
-        const startBtn = document.getElementById('startMatchButton');
-        if (startBtn) startBtn.style.display = 'block';
-        
-        const shoppingBtn = document.getElementById('startShoppingButton');
-        if (shoppingBtn) shoppingBtn.classList.add('hidden');
-        return;
-    }
+        const tank = new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, p.name);
+        tank.color = p.color;
+        tank.currency = state.startingCash;
+        state.tanks.push(tank);
+    });
 
-    const playerIndex = lobbyManager.getCurrentPlayerIndex();
-    const tank = state.tanks[playerIndex];
+    // Initialize Managers
+    state.store = new Store();
+    state.store.init(state.tanks);
     
-    const prompt = document.getElementById('lobbyPrompt');
-    prompt.innerHTML = `<span style="color: ${tank.color}">${tank.name}</span>'s Turn`;
-    
-    const btn = document.getElementById('startShoppingButton');
-    btn.classList.remove('hidden');
-    
-    // One-time listener for shopping start
-    const startShopping = () => {
-        btn.classList.add('hidden');
-        if (state.store) {
-            state.store.open(tank);
-        }
-        btn.removeEventListener('click', startShopping);
-    };
-    btn.addEventListener('click', startShopping);
+    window.lobbyManager = new LobbyManager(state.tanks);
+
+    // Show game, hide setup
+    matchSetupOverlay.classList.add('hidden');
+    gameCanvas.classList.remove('hidden');
+
+    enterLobby();
 }
 
-document.addEventListener('storeClosed', () => {
-    lobbyManager.next();
-    startNextStoreTurn();
-});
-
-function enterLobby() {
-    state.gameState = 'LOBBY';
-    lobbyManager.start();
-    showScoreboard();
-    startNextStoreTurn();
-}
-
-// Initialize Terrain and Tanks
-const oldTerrain = new Terrain(canvasWidth, canvasHeight); // Used for heightmap generation
-state.terrain = new BitmaskTerrain(canvasWidth, canvasHeight);
-state.terrain.bakeHeightmap(oldTerrain.points);
-
-const tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain); // Use oldTerrain for positions
-const aiPlayers = urlParams.ai ? urlParams.ai.split(',').map(p => parseInt(p)) : [];
-for (let i = 0; i < state.numPlayers; i++) {
-    const isAI = aiPlayers.includes(i + 1);
-    const aiLevel = isAI ? 8 : 0;
-    state.tanks.push(new Tank(tankPositions[i].x, tankPositions[i].y, isAI, aiLevel, `Player ${i + 1}`));
-}
-
-// Initialize Store
-state.store = new Store();
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize canvas ref
     state.canvas = document.getElementById('gameCanvas');
     state.ctx = state.canvas.getContext('2d');
-    
-    // Ensure canvas size is set
-    state.canvas.width = canvasWidth;
-    state.canvas.height = canvasHeight;
 
-    setTimeout(() => {
-        state.store.init(state.tanks);
-        if (urlParams.players) {
-            enterLobby();
+    matchSetup = new MatchSetup();
+
+    document.getElementById('startMatchButton').addEventListener('click', () => {
+        const config = matchSetup.getConfig();
+        if (config.players.length < 2) {
+            alert('A match requires at least 2 players.');
+            return;
         }
-    }, 100);
+        saveMatchSettings(config);
+        initGameFromConfig(config);
+    });
+
+    // Check if we are resuming a match (e.g. after refresh)
+    const savedConfig = loadMatchSettings();
+    if (savedConfig && urlParams.resume) {
+        initGameFromConfig(savedConfig);
+    }
 });
 
 function resetRound() {

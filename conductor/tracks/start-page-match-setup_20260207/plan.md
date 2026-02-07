@@ -18,9 +18,9 @@ Creating the new interactive setup interface that replaces the legacy start form
 ## Phase 3: Roster & Configuration Logic
 Implementing the JavaScript logic that drives the setup experience and initializes the match.
 
-- [ ] Task: Player Roster Controller. Write the JS logic to manage adding/removing players and auto-assigning default names/colors.
-- [ ] Task: Config Validation & Serialization. Implement logic to validate match settings (e.g., min 2 players) and prepare the data for match start.
-- [ ] Task: Match Initialization. Update the initialization sequence in `js/main.js` to consume the new roster and settings instead of the legacy URL parameters.
+- [x] Task: Player Roster Controller. Write the JS logic to manage adding/removing players and auto-assigning default names/colors. eb158f1
+- [x] Task: Config Validation & Serialization. Implement logic to validate match settings (e.g., min 2 players) and prepare the data for match start. eb158f1
+- [x] Task: Match Initialization. Update the initialization sequence in `js/main.js` to consume the new roster and settings instead of the legacy URL parameters. eb158f1
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Roster & Configuration Logic' (Protocol in workflow.md)
 
 ## Phase 4: Match Flow & Round Transitions
