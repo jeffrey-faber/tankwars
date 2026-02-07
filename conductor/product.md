@@ -16,7 +16,7 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 - **Economic Strategy:** A persistent economy and pre-match shop system that rewards tactical spending across multiple battles.
 
 ## Core Features
-- **Sophisticated AI:** Opponents that utilize advanced simulation to provide a human-like challenge.
+- **Sophisticated AI:** Distinct AI personalities (Mr. Stupid, Lobber, Sniper, Mastermind) with unique combat strategies, learning curves, and shopping behaviors.
 - **Arsenal Variety:** A diverse set of weapons and items selectable via a grid-based inventory HUD with numeric hotkeys.
 - **Sequential Lobby & Full-Screen Shop:** A pre-match phase with a competitive scoreboard and a dedicated full-screen, tabbed shopping experience for each human player.
 - **Deep Match Customization:** A comprehensive setup suite allowing for custom rosters of humans and bots (Easy, Medium, Hard), multi-round matches, and configurable win conditions.
