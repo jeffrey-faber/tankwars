@@ -1,5 +1,6 @@
 import { getRandomColor, createExplosion } from './utils.js';
 import { state, getNextAliveTankIndex, draw } from './gameContext.js';
+import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI } from './aiControllers.js';
 
 function checkTerrainAndBounds(x, y, terrain, canvas) {
     if (x < 0 || x > canvas.width || y > canvas.height) return true;
@@ -66,7 +67,7 @@ function applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, 
 }
 
 export class Tank {
-    constructor(x, y, isAI = false, aiLevel = 0, name = '') {
+    constructor(x, y, isAI = false, aiLevel = 0, name = '', personality = null) {
         this.x = x;
         this.y = y;
         this.width = 20;
@@ -76,6 +77,7 @@ export class Tank {
         this.color = getRandomColor();
         this.isAI = isAI;
         this.aiLevel = aiLevel;
+        this.personality = personality;
         this.name = name;
         this.score = 0;
         this.wins = 0;
@@ -88,16 +90,26 @@ export class Tank {
         this.inventory = [];
         this.selectedWeapon = 'default';
         this.vy = 0; // Vertical velocity for falling
-        this.aiParams = {
-            angleRange: 5 * Math.PI / 180,
-            powerRange: 2.5,
-            angleIncrement: 1 * Math.PI / 180,
-            powerIncrement: 0.5,
-            minAngleRange: 2 * Math.PI / 180,
-            maxAngleRange: 15 * Math.PI / 180,
-            minPowerRange: 1,
-            maxPowerRange: 10
-        };
+        
+        if (this.isAI) {
+            this.initAIController();
+        }
+    }
+
+    initAIController() {
+        if (this.personality === 'stupid') {
+            this.aiController = new StupidAI();
+        } else if (this.personality === 'lobber') {
+            this.aiController = new LobberAI();
+        } else if (this.personality === 'sniper') {
+            this.aiController = new SniperAI();
+        } else if (this.personality === 'mastermind') {
+            this.aiController = new MastermindAI();
+        } else {
+            // Standard AI based on aiLevel if no personality
+            const diff = this.aiLevel <= 3 ? 'easy' : this.aiLevel <= 6 ? 'medium' : 'hard';
+            this.aiController = new StandardAI(diff);
+        }
     }
 
     draw(ctx) {
@@ -386,9 +398,9 @@ export class Tank {
         if (!this.alive || !state.aiReadyToFire) return;
         state.aiReadyToFire = false;
         
-        if (this.inventory && this.inventory.length > 0 && Math.random() < 0.7) {
-            const randomItem = this.inventory[Math.floor(Math.random() * this.inventory.length)];
-            this.useItem(randomItem.id);
+        // Shopping phase (before firing)
+        if (state.store) {
+            this.aiController.shop(state.store, this);
         }
         
         let targetTank;
@@ -396,251 +408,16 @@ export class Tank {
             targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
         } while (targetTank === this || !targetTank.alive);
         
-        if (this.aiLevel === 8) {
-            this.aiLevelMaxLob(targetTank, state.terrain);
-        }
+        const env = { wind: state.wind, gravity: state.gravity };
+        const shot = this.aiController.calculateShot(this, targetTank, env);
+        
+        this.angle = shot.angle;
+        this.power = shot.power;
+        this.aiController.recordShot(targetTank);
+
         setTimeout(() => {
             this.fire();
             state.aiReadyToFire = true;
         }, 1000);
-    }
-
-    aiLevel8(targetTank) {
-        const g = state.gravity;
-        const windFactor = state.wind * 5.5;
-        const dx = targetTank.x + targetTank.width / 2 - (this.x + this.width / 2);
-        const dy = targetTank.y - this.y - this.height + 5;
-        let bestAngle, bestPower, minError = Infinity;
-        
-        const angleMin = 20 * (Math.PI / 180);
-        const angleMax = 160 * (Math.PI / 180);
-        
-        for (let power = 40; power <= 100; power += 1) {
-            for (let angle = angleMin; angle <= angleMax; angle += (Math.PI / 360)) {
-                const vx = power * Math.cos(angle) * 0.2 - windFactor * state.wind;
-                const vy = -power * Math.sin(angle) * 0.2;
-                
-                if ((dx > 0 && vx <= 0) || (dx < 0 && vx >= 0)) continue;
-                
-                const t = Math.abs(dx / vx);
-                if (t > 0) {
-                    const landingX = vx * t;
-                    const landingY = vy * t + 0.5 * g * t * t;
-                    const error = Math.sqrt((landingX - dx) ** 2 + (landingY - dy) ** 2);
-                    
-                    if (error < minError) {
-                        minError = error;
-                        bestAngle = angle;
-                        bestPower = power;
-                    }
-                }
-            }
-        }
-        
-        if (bestAngle === undefined) {
-            bestAngle = Math.PI / 4;
-            bestPower = 70;
-        }
-        
-        const angleError = (Math.random() * 1 - 0.5) * (Math.PI / 180);
-        const powerError = Math.random() * 2 - 1;
-        
-        this.angle = bestAngle + angleError;
-        this.power = Math.max(40, Math.min(100, bestPower + powerError));
-        
-        if (this.inventory && this.inventory.length > 0) {
-            const useSpecialWeapon = minError < 20 && Math.random() < 0.8;
-            if (useSpecialWeapon) {
-                const weapons = this.inventory.filter(item => 
-                    item.effect.type === 'weapon' || 
-                    (item.effect.type === 'defense' && targetTank.health > 50)
-                );
-                
-                if (weapons.length > 0) {
-                    const weapon = weapons[Math.floor(Math.random() * weapons.length)];
-                    this.useItem(weapon.id);
-                }
-            }
-        }
-    }
-
-    aiLevelMax(targetTank) {
-        const g = state.gravity;
-        const physicsScale = 0.2;
-        const calc = this.aiCalculations(targetTank);
-        let bestAngle = null;
-        let bestPower = null;
-        let minError = Infinity;
-
-        for (let power = 10; power <= 100; power += 0.1) {
-            for (
-                let angle = 5 * Math.PI / 180;
-                angle <= 175 * Math.PI / 180;
-                angle += (0.1 * Math.PI / 180)
-            ) {
-                const vx = power * Math.cos(angle) * physicsScale + state.wind;
-                const vy = -power * Math.sin(angle) * physicsScale;
-                if (vx <= 0) continue;
-                const t = calc.dx / vx;
-                if (t > 0) {
-                    const predictedY = vy * t + 0.5 * g * t * t;
-                    const error = Math.abs(vx * t - calc.dx) + Math.abs(predictedY - calc.dy);
-                    if (error < minError) {
-                        minError = error;
-                        bestAngle = angle;
-                        bestPower = power;
-                    }
-                }
-            }
-        }
-
-        if (bestAngle === null || bestPower === null) {
-            return this.aiLevel8(targetTank);
-        }
-
-        this.angle = bestAngle;
-        this.power = Math.max(30, Math.min(100, bestPower));
-    }
-
-    aiLevelMaxLob(targetTank) {
-        const dt = 0.05;
-        const maxSimTime = 10;
-        const g = state.gravity;
-        const physicsScale = 0.2;
-        
-        const barrelLength = 30;
-        const startX = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
-        const startY = this.y - this.height - barrelLength * Math.sin(this.angle);
-
-        const calc = {
-            dx: targetTank.x + targetTank.width / 2 - startX,
-            dy: targetTank.y - startY
-        };
-
-        let bestAngle = null;
-        let bestPower = null;
-        let minError = Infinity;
-        
-        let angleMin, angleMax, powerMin, powerMax;
-        if (this.lastBestAngle !== undefined && this.lastBestPower !== undefined) {
-            angleMin = Math.max(Math.PI/6, this.lastBestAngle - this.aiParams.angleRange);
-            angleMax = Math.min(5*Math.PI/6, this.lastBestAngle + this.aiParams.angleRange);
-            powerMin = Math.max(40, this.lastBestPower - this.aiParams.powerRange);
-            powerMax = Math.min(100, this.lastBestPower + this.aiParams.powerRange);
-        } else {
-            const distanceToTarget = Math.sqrt(calc.dx * calc.dx + calc.dy * calc.dy);
-            
-            if (distanceToTarget < state.canvas.width * 0.3) {
-                angleMin = Math.PI / 2.5;
-                angleMax = Math.PI / 1.5;
-            } else {
-                angleMin = Math.PI / 4;
-                angleMax = Math.PI / 2.2;
-            }
-            
-            powerMin = 40 + (distanceToTarget / state.canvas.width) * 30;
-            powerMax = 100;
-        }
-
-        const angleIncrement = Math.PI / 360;
-        const powerIncrement = 0.5;
-        
-        for (let power = powerMin; power <= powerMax; power += powerIncrement) {
-            for (let angle = angleMin; angle <= angleMax; angle += angleIncrement) {
-                let minWindError = Infinity;
-                const windScenarios = [0, state.wind, state.wind * 2];
-                
-                for (const windFactor of windScenarios) {
-                    let x = startX, y = startY;
-                    let vx = power * Math.cos(angle) * physicsScale;
-                    let vy = -power * Math.sin(angle) * physicsScale;
-                    let t = 0;
-    
-                    while (t < maxSimTime && y < state.canvas.height) {
-                        x += vx * dt;
-                        y += vy * dt;
-                        vy += g * dt;
-                        vx += windFactor * dt;
-                        t += dt;
-                        
-                        if ((calc.dx > 0 && vx < 0) || (calc.dx < 0 && vx > 0)) {
-                            break;
-                        }
-                    }
-    
-                    const error = Math.sqrt(
-                        Math.pow(x - (startX + calc.dx), 2) + 
-                        Math.pow(y - (startY + calc.dy), 2)
-                    );
-                    
-                    minWindError = Math.min(minWindError, error);
-                }
-                
-                if (minWindError < minError) {
-                    minError = minWindError;
-                    bestAngle = angle;
-                    bestPower = power;
-                }
-            }
-        }
-
-        if (bestAngle === null || bestPower === null) {
-            return this.aiLevel8(targetTank);
-        }
-
-        this.lastBestAngle = bestAngle;
-        this.lastBestPower = bestPower;
-
-        const errorThreshold = 15;
-        if (minError < errorThreshold) {
-            this.aiParams.angleRange = Math.max(this.aiParams.minAngleRange, this.aiParams.angleRange * 0.7);
-            this.aiParams.powerRange = Math.max(this.aiParams.minPowerRange, this.aiParams.powerRange * 0.7);
-        } else {
-            this.aiParams.angleRange = Math.min(this.aiParams.maxAngleRange, this.aiParams.angleRange * 1.3);
-            this.aiParams.powerRange = Math.min(this.aiParams.maxPowerRange, this.aiParams.powerRange * 1.3);
-        }
-
-        this.angle = bestAngle + (Math.random() * 0.01 - 0.005);
-        this.power = Math.max(40, Math.min(100, bestPower));
-        
-        if (this.inventory && this.inventory.length > 0) {
-            const targetDistance = Math.sqrt(calc.dx * calc.dx + calc.dy * calc.dy);
-            const isGoodShot = minError < errorThreshold;
-            const useSpecialWeapon = isGoodShot && Math.random() < 0.7;
-            
-            if (useSpecialWeapon) {
-                let preferredWeaponType = null;
-                
-                if (targetDistance > state.canvas.width * 0.6) {
-                    preferredWeaponType = 'nuke';
-                } else if (targetDistance < state.canvas.width * 0.3) {
-                    preferredWeaponType = 'laser';
-                }
-                
-                const weapons = this.inventory.filter(item => 
-                    item.effect.type === 'weapon' && 
-                    (!preferredWeaponType || item.id === preferredWeaponType)
-                );
-                
-                if (this.health < 40 && Math.random() < 0.8) {
-                    const shields = this.inventory.filter(item => item.id === 'shield');
-                    if (shields.length > 0) {
-                        this.useItem('shield');
-                        return;
-                    }
-                }
-                
-                if (weapons.length > 0) {
-                    const weapon = weapons[Math.floor(Math.random() * weapons.length)];
-                    this.useItem(weapon.id);
-                }
-            }
-        }
-    }
-
-    aiCalculations(targetTank) {
-        const dx = targetTank.x + targetTank.width / 2 - (this.x + this.width / 2);
-        const dy = targetTank.y - this.y - this.height + 5;
-        return { dx, dy };
     }
 }
