@@ -373,37 +373,43 @@ export class Tank {
         const canvasHeight = state.canvas?.height || 800;
         const checkPoints = [leftX, centerX, rightX];
         
-        let highestGround = canvasHeight;
+        let highestStableGround = canvasHeight;
         for (let x of checkPoints) {
             for (let y = 0; y < canvasHeight; y++) {
                 if (terrain.isSolid(x, y)) {
-                    if (y < highestGround) highestGround = y;
-                    break;
+                    // A pixel is 'stable' if it's at the bottom or has solid terrain beneath it
+                    const isAtBottom = (y === canvasHeight - 1);
+                    const hasSupport = terrain.isSolid(x, y + 1);
+                    
+                    if (isAtBottom || hasSupport) {
+                        if (y < highestStableGround) highestStableGround = y;
+                        break;
+                    }
                 }
             }
         }
         
         const bottomLimit = canvasHeight - this.height - 5;
-        const finalGroundY = Math.min(highestGround, bottomLimit);
+        const finalGroundY = Math.min(highestStableGround, bottomLimit);
         
         if (this.y < finalGroundY) {
             // IN AIR: Apply gravity
             this.vy += state.gravity;
             this.y += this.vy;
             
-            // Sub-pixel safety: if we crossed ground, land
+            // Sub-pixel safety: if we crossed stable ground, land
             if (this.y >= finalGroundY) {
                 this.y = finalGroundY;
                 this.vy = 0;
                 this.handleLanding(this.y);
             }
         } else if (this.y > finalGroundY) {
-            // BURIED: Snap to surface (upward movement is instant for now)
+            // BURIED: Snap to surface
             this.y = finalGroundY;
             this.vy = 0;
-            this.lastSolidY = this.y; // Reset fall tracking when buried/snapped up
+            this.lastSolidY = this.y;
         } else {
-            // ON GROUND
+            // ON STABLE GROUND
             this.vy = 0;
             this.lastSolidY = this.y;
         }
