@@ -6,10 +6,10 @@ Implementing physical consequences for tank falls with safety thresholds.
 - [x] Task: Define Fall Damage Logic.
     - [x] Add `safeFallHeight` and `fallDamageMultiplier` to game constants.
     - [x] Implement `lastSolidY` tracking in `Tank` class to measure fall distance.
-- [ ] Task: Implement Fall Damage Calculation.
-    - [ ] Create unit tests for damage thresholds.
-    - [ ] Implement health reduction in `applyGravity`.
-    - [ ] Add check for `isInitialSpawn` to prevent damage at game start.
+- [x] Task: Implement Fall Damage Calculation.
+    - [x] Create unit tests for damage thresholds.
+    - [x] Implement health reduction in `applyGravity`.
+    - [x] Add check for `isInitialSpawn` to prevent damage at game start.
 - [ ] Task: Visual Impact Effects.
     - [ ] Add camera shake or particle effect on high-damage landings.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Fall Damage System' (Protocol in workflow.md)
