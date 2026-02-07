@@ -95,6 +95,7 @@ export class Tank {
         this.safeFallHeight = 50; // px
         this.fallDamageMultiplier = 0.5; // damage per px over limit
         this.lastSolidY = this.y;
+        this.isInitialSpawn = true;
         
         if (this.isAI) {
             this.initAIController();
@@ -119,8 +120,28 @@ export class Tank {
 
     updateFallTracking(isOnGround) {
         if (isOnGround) {
-            this.lastSolidY = this.y;
+            this.handleLanding(this.y);
         }
+    }
+
+    handleLanding(currentY) {
+        const fallDistance = currentY - this.lastSolidY;
+        
+        if (fallDistance > this.safeFallHeight) {
+            if (!this.isInitialSpawn) {
+                const excess = fallDistance - this.safeFallHeight;
+                const damage = Math.floor(excess * this.fallDamageMultiplier);
+                if (damage > 0) {
+                    // Reduce health (could be mitigated by items later)
+                    this.health = Math.max(0, this.health - damage);
+                    if (this.health <= 0) this.alive = false;
+                }
+            }
+        }
+        
+        // Always reset spawn flag and update tracker on landing
+        this.isInitialSpawn = false;
+        this.lastSolidY = currentY;
     }
 
     draw(ctx) {
