@@ -3,6 +3,8 @@ import { Tank } from './tank.js';
 import { Terrain } from './terrain.js';
 import { BitmaskTerrain } from './BitmaskTerrain.js';
 import { Store } from './store.js';
+import { LobbyManager } from './lobbyManager.js';
+import { ScoreManager } from './scoreManager.js';
 import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD } from './gameContext.js';
 
 // Initialize canvas
@@ -18,6 +20,61 @@ canvas.height = canvasHeight;
 // Initialize game state from context
 state.wind = (Math.random() * 2 - 1) / 10;
 window.state = state; // Debugging
+
+const lobbyManager = new LobbyManager(state.tanks);
+
+function showScoreboard() {
+    const scoreboardContainer = document.getElementById('scoreboardContainer');
+    if (scoreboardContainer) {
+        scoreboardContainer.innerHTML = ScoreManager.generateScoreboardHTML(state.tanks);
+    }
+    document.getElementById('lobbyOverlay').classList.remove('hidden');
+}
+
+function startNextStoreTurn() {
+    if (lobbyManager.isDone()) {
+        const prompt = document.getElementById('lobbyPrompt');
+        prompt.innerHTML = "All players ready!";
+        
+        const startBtn = document.getElementById('startMatchButton');
+        if (startBtn) startBtn.style.display = 'block';
+        
+        const shoppingBtn = document.getElementById('startShoppingButton');
+        if (shoppingBtn) shoppingBtn.classList.add('hidden');
+        return;
+    }
+
+    const playerIndex = lobbyManager.getCurrentPlayerIndex();
+    const tank = state.tanks[playerIndex];
+    
+    const prompt = document.getElementById('lobbyPrompt');
+    prompt.innerHTML = `<span style="color: ${tank.color}">${tank.name}</span>'s Turn`;
+    
+    const btn = document.getElementById('startShoppingButton');
+    btn.classList.remove('hidden');
+    
+    // One-time listener for shopping start
+    const startShopping = () => {
+        btn.classList.add('hidden');
+        if (state.store) {
+            state.store.open(tank);
+        }
+        btn.removeEventListener('click', startShopping);
+    };
+    btn.addEventListener('click', startShopping);
+}
+
+document.addEventListener('storeClosed', () => {
+    lobbyManager.next();
+    startNextStoreTurn();
+});
+
+function enterLobby() {
+    state.gameState = 'LOBBY';
+    lobbyManager.start();
+    showScoreboard();
+    startNextStoreTurn();
+}
 
 // Initialize Terrain and Tanks
 const oldTerrain = new Terrain(canvasWidth, canvasHeight); // Used for heightmap generation
@@ -45,6 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => {
         state.store.init(state.tanks);
+        if (urlParams.players) {
+            enterLobby();
+        }
     }, 100);
 });
 
@@ -85,6 +145,8 @@ function resetRound() {
         }
         draw(); // Force redraw after positioning
     }, 100);
+
+    enterLobby();
 }
 
 function gameLoop() {

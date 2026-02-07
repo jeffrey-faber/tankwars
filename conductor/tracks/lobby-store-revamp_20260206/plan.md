@@ -28,7 +28,7 @@ Connecting the UI to the existing `Store` class and implementing the categorized
 ## Phase 4: Integration & Refinement
 Wiring everything together and polishing the transition flows.
 
-- [ ] Task: Lobby Entry/Exit Flow. Ensure the game correctly transitions from "Setup" or "Round End" into the Lobby, and from the Lobby into the "Match".
-- [ ] Task: AI Skipping Logic. Ensure the sequential lobby cycle automatically passes over AI-controlled players.
-- [ ] Task: UI Polish & Responsiveness. Refine CSS to ensure the full-screen UI looks good at various resolutions and handle the "Ready" prompts between player turns.
+- [x] Task: Lobby Entry/Exit Flow. Ensure the game correctly transitions from "Setup" or "Round End" into the Lobby, and from the Lobby into the "Match".
+- [x] Task: AI Skipping Logic. Ensure the sequential lobby cycle automatically passes over AI-controlled players.
+- [x] Task: UI Polish & Responsiveness. Refine CSS to ensure the full-screen UI looks good at various resolutions and handle the "Ready" prompts between player turns.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Integration & Refinement' (Protocol in workflow.md)

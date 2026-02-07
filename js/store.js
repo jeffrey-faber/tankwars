@@ -93,14 +93,17 @@ export class Store {
         startButton.style.cursor = 'pointer';
         startButton.style.fontFamily = "'Press Start 2P', cursive";
         startButton.style.fontSize = '20px';
-        startButton.style.zIndex = '100';
+        startButton.style.zIndex = '150'; // Higher than overlays
         startButton.style.boxShadow = '0 0 20px #ff00ff';
+        startButton.style.display = 'none'; // Hidden by default
         
         document.body.appendChild(startButton);
         
         startButton.addEventListener('click', () => {
             state.gameState = 'PLAYING';
             this.updateVisibility();
+            document.getElementById('lobbyOverlay').classList.add('hidden');
+            startButton.style.display = 'none';
             // Refresh selector to show purchased items
             if (state.tanks && state.tanks[state.currentPlayer]) {
                 this.updateWeaponSelector(state.tanks[state.currentPlayer]);
@@ -116,7 +119,7 @@ export class Store {
         if (state.gameState === 'LOBBY') {
             // Hide lobby buttons if store is open to prevent overlap
             if (storeButton) storeButton.style.display = this.isOpen ? 'none' : 'block';
-            if (startMatchButton) startMatchButton.style.display = this.isOpen ? 'none' : 'block';
+            // Only show startMatchButton via main.js logic when lobby is done
             if (weaponSelector) weaponSelector.style.display = 'none';
         } else {
             if (storeButton) storeButton.style.display = 'none';
@@ -147,12 +150,19 @@ export class Store {
                 <div class="store-items-grid"></div>
                 <div class="store-controls">
                     <div id="storeCurrency" style="margin-bottom: 20px; color: gold;">Coins: 0</div>
+                    <button id="backToLobby" style="background-color: #555; margin-right: 10px;">VIEW SCOREBOARD</button>
                     <button id="closeStore">FINISH SHOPPING</button>
                 </div>
             </div>
         `;
         
         document.body.appendChild(overlay);
+        
+        // Back to lobby logic
+        overlay.querySelector('#backToLobby').addEventListener('click', () => {
+            overlay.classList.add('hidden');
+            document.getElementById('lobbyOverlay').classList.remove('hidden');
+        });
         
         // Tab switching logic
         const tabs = overlay.querySelectorAll('.store-tab');

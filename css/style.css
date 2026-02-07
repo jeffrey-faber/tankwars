@@ -83,8 +83,9 @@ input[type="submit"] {
 .player-name-cell {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
+    justify-content: flex-start;
+    gap: 15px;
+    padding-left: 10px;
 }
 
 .color-swatch {
