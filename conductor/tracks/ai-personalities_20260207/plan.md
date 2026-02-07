@@ -32,7 +32,7 @@ customizing store behavior for each personality.
 ## Phase 4: UI Integration
 Connecting the new AI types to the Match Setup screen.
 
-- [ ] Task: Update Setup Dropdown. Modify `js/matchSetup.js` to populate the player type dropdown with the new personality options.
-- [ ] Task: Default Naming Logic. Update the player adding logic to auto-generate names based on the selected type (e.g., "Sniper 1").
-- [ ] Task: "Random" Bot Logic. Implement the logic to resolve "Bot: Random" into a specific personality when the match initializes.
+- [x] Task: Update Setup Dropdown. Modify `js/matchSetup.js` to populate the player type dropdown with the new personality options.
+- [x] Task: Default Naming Logic. Update the player adding logic to auto-generate names based on the selected type (e.g., "Sniper 1").
+- [x] Task: "Random" Bot Logic. Implement the logic to resolve "Bot: Random" into a specific personality when the match initializes.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: UI Integration' (Protocol in workflow.md)

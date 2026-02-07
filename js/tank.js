@@ -403,10 +403,13 @@ export class Tank {
             this.aiController.shop(state.store, this);
         }
         
-        let targetTank;
-        do {
-            targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
-        } while (targetTank === this || !targetTank.alive);
+        // Use controller's target selection logic
+        const targetTank = this.aiController.chooseTarget(this, state.tanks);
+        
+        if (!targetTank) {
+            // No valid targets (game over condition mostly)
+            return;
+        }
         
         const env = { wind: state.wind, gravity: state.gravity };
         const shot = this.aiController.calculateShot(this, targetTank, env);
