@@ -13,7 +13,13 @@ export const state = {
     terrain: null,
     canvas: null,
     ctx: null,
-    store: null
+    store: null,
+    // Match settings
+    totalGames: 5,
+    currentGameIndex: 0,
+    winCondition: 'score', // 'score' or 'wins'
+    startingCash: 100,
+    playerRosterConfig: []
 };
 
 export function getNextAliveTankIndex(startIndex) {
