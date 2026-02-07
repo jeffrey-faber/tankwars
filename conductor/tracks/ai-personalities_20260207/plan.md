@@ -12,10 +12,10 @@ Refactoring the `Tank` class to delegate AI logic to specialized controller clas
 ## Phase 2: Combat Logic & Learning
 Implementing the specific firing behaviors and the "zeroing in" mechanic.
 
-- [ ] Task: Implement "Mr. Stupid" Logic. Add high randomness and potential for self-harm (e.g., negative power/angle offsets).
-- [ ] Task: Implement "Lobber" & "Sniper" Logic. Constrain their firing angles (Lobber: 60-85°, Sniper: 0-20°) and optimize power for those trajectories.
-- [ ] Task: Implement "Mastermind" Simulation. Create a physics-based shot simulator that iterates to find the perfect angle/power, refining its solution based on the previous shot's error.
-- [ ] Task: Implement Target Memory. Update `Tank.js` to store the last target and shot result, allowing the AI to reduce error for consecutive shots at the same target.
+- [x] Task: Implement "Mr. Stupid" Logic. Add high randomness and potential for self-harm (e.g., negative power/angle offsets).
+- [x] Task: Implement "Lobber" & "Sniper" Logic. Constrain their firing angles (Lobber: 60-85°, Sniper: 0-20°) and optimize power for those trajectories.
+- [x] Task: Implement "Mastermind" Simulation. Create a physics-based shot simulator that iterates to find the perfect angle/power, refining its solution based on the previous shot's error.
+- [x] Task: Implement Target Memory. Update `Tank.js` to store the last target and shot result, allowing the AI to reduce error for consecutive shots at the same target.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Combat Logic & Learning' (Protocol in workflow.md)
 
 ## Phase 3: Shopping Intelligence

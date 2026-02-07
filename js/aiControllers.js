@@ -1,3 +1,48 @@
+// Helper to simulate shots and find the best parameters within constraints
+function findBestShot(tank, target, env, angleMin, angleMax, angleStep = Math.PI / 180, powerStep = 1) {
+    const g = env.gravity;
+    const windFactor = env.wind * 5.5; // Tuning factor for wind
+    const physicsScale = 0.2; // From tank.js
+    
+    const startX = tank.x + tank.width / 2;
+    const startY = tank.y - tank.height;
+    
+    // Target center
+    const tx = target.x + target.width / 2;
+    const ty = target.y - target.height / 2;
+
+    let bestAngle = null;
+    let bestPower = null;
+    let minError = Infinity;
+
+    for (let power = 20; power <= 100; power += powerStep) {
+        for (let angle = angleMin; angle <= angleMax; angle += angleStep) {
+            
+            // Quick heuristic filter
+            const vx = power * Math.cos(angle) * physicsScale - windFactor * env.wind;
+            const vy = -power * Math.sin(angle) * physicsScale;
+            
+            const dx = tx - startX;
+            // If shooting away from target, skip
+            if ((dx > 0 && vx <= 0) || (dx < 0 && vx >= 0)) continue;
+
+            // Simplified trajectory check
+            const t = Math.abs(dx / vx);
+            if (t > 0 && isFinite(t)) {
+                const landingY = startY + vy * t + 0.5 * g * t * t;
+                const error = Math.abs(landingY - ty); // Vertical error at target X
+
+                if (error < minError) {
+                    minError = error;
+                    bestAngle = angle;
+                    bestPower = power;
+                }
+            }
+        }
+    }
+    
+    return { angle: bestAngle, power: bestPower, error: minError };
+}
 
 export class AIController {
     constructor() {
@@ -29,42 +74,11 @@ export class StandardAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
-        // Ported from aiLevel8 but with scaling error
-        const g = env.gravity;
-        const windFactor = env.wind * 5.5;
-        const dx = target.x + target.width / 2 - (tank.x + tank.width / 2);
-        const dy = target.y - tank.y - tank.height + 5;
-        let bestAngle, bestPower, minError = Infinity;
+        // Standard AI uses the full range but with scaled error
+        const result = findBestShot(tank, target, env, 10 * Math.PI/180, 170 * Math.PI/180);
         
-        const angleMin = 20 * (Math.PI / 180);
-        const angleMax = 160 * (Math.PI / 180);
-        
-        for (let power = 40; power <= 100; power += 1) {
-            for (let angle = angleMin; angle <= angleMax; angle += (Math.PI / 360)) {
-                const vx = power * Math.cos(angle) * 0.2 - windFactor * env.wind;
-                const vy = -power * Math.sin(angle) * 0.2;
-                
-                if ((dx > 0 && vx <= 0) || (dx < 0 && vx >= 0)) continue;
-                
-                const t = Math.abs(dx / vx);
-                if (t > 0) {
-                    const landingX = vx * t;
-                    const landingY = vy * t + 0.5 * g * t * t;
-                    const error = Math.sqrt((landingX - dx) ** 2 + (landingY - dy) ** 2);
-                    
-                    if (error < minError) {
-                        minError = error;
-                        bestAngle = angle;
-                        bestPower = power;
-                    }
-                }
-            }
-        }
-        
-        if (bestAngle === undefined) {
-            bestAngle = Math.PI / 4;
-            bestPower = 70;
-        }
+        let bestAngle = result.angle || Math.PI / 4;
+        let bestPower = result.power || 70;
 
         // Apply error based on difficulty and shot history
         let errorScale = 1.0;
@@ -72,6 +86,7 @@ export class StandardAI extends AIController {
         if (this.difficulty === 'hard') errorScale = 0.5;
 
         const history = this.getShotHistory(target);
+        // Learning: reduce error by 30% for each shot
         const learningFactor = Math.max(0.1, 1.0 - (history * 0.3));
         
         const angleError = (Math.random() * 2 - 1) * (Math.PI / 180) * 5 * errorScale * learningFactor;
@@ -86,91 +101,97 @@ export class StandardAI extends AIController {
 
 export class StupidAI extends AIController {
     calculateShot(tank, target, env) {
-        // Just random stuff, might hit self
-        const angle = Math.random() * Math.PI;
-        const power = 20 + Math.random() * 80;
+        // High randomness, potential for self-harm
+        let angle = Math.random() * Math.PI; // 0 to 180 degrees
+        
+        // 10% chance to fire at an absurd angle (straight up or backwards) that might hit self
+        if (Math.random() < 0.1) {
+            angle = (Math.random() * 20 + 80) * (Math.PI / 180); // 80-100 degrees (near vertical)
+        }
+
+        const power = 10 + Math.random() * 90;
         return { angle, power };
     }
 }
 
 export class LobberAI extends AIController {
     calculateShot(tank, target, env) {
-        // High angles
-        const angle = (60 + Math.random() * 25) * (Math.PI / 180);
-        const power = 60 + Math.random() * 40;
-        return { angle, power };
+        // Constrain to high angles: 60 to 85 degrees (and mirrored)
+        // Check direction
+        const dx = target.x - tank.x;
+        let minA, maxA;
+        
+        // Always try to lob "forward" relative to target
+        if (dx > 0) {
+            minA = 60 * Math.PI / 180;
+            maxA = 85 * Math.PI / 180;
+        } else {
+            minA = 95 * Math.PI / 180;
+            maxA = 120 * Math.PI / 180;
+        }
+
+        const result = findBestShot(tank, target, env, minA, maxA);
+        
+        const history = this.getShotHistory(target);
+        const learningFactor = Math.max(0.1, 1.0 - (history * 0.2)); // Slower learning than standard
+        
+        // Add some noise so it's not perfect
+        const noise = (Math.random() * 2 - 1) * 2 * learningFactor;
+
+        return {
+            angle: (result.angle || (minA + maxA)/2) + (noise * Math.PI / 180),
+            power: Math.max(10, Math.min(100, (result.power || 70) + noise * 2))
+        };
     }
 }
 
 export class SniperAI extends AIController {
     calculateShot(tank, target, env) {
-        // Low angles
-        const angle = (10 + Math.random() * 20) * (Math.PI / 180);
-        // Sniper needs to adjust power more carefully or use specialized math
-        // For now, random but focused
-        const power = 80 + Math.random() * 20;
-        return { angle, power };
+        // Constrain to low angles: 0-20 degrees (and mirrored)
+        const dx = target.x - tank.x;
+        let minA, maxA;
+        
+        if (dx > 0) {
+            minA = 0;
+            maxA = 25 * Math.PI / 180;
+        } else {
+            minA = 155 * Math.PI / 180;
+            maxA = 180 * Math.PI / 180;
+        }
+
+        const result = findBestShot(tank, target, env, minA, maxA);
+        
+        // Snipers are accurate initially but improve fast
+        const history = this.getShotHistory(target);
+        const learningFactor = Math.max(0.05, 0.8 - (history * 0.4)); 
+        
+        const noise = (Math.random() * 2 - 1) * 1 * learningFactor; // Very low noise
+
+        return {
+            angle: (result.angle || (minA + maxA)/2) + (noise * Math.PI / 180),
+            power: Math.max(10, Math.min(100, (result.power || 80) + noise))
+        };
     }
 }
 
 export class MastermindAI extends AIController {
-    constructor() {
-        super();
-        this.lastResult = null;
-    }
-
     calculateShot(tank, target, env) {
-        // Ported from aiLevelMaxLob
-        const dt = 0.05;
-        const maxSimTime = 10;
-        const g = env.gravity;
-        const physicsScale = 0.2;
+        // Mastermind uses the best shot finding with high precision steps
+        const result = findBestShot(tank, target, env, 0, Math.PI, Math.PI/360, 0.5);
         
-        const barrelLength = 30;
-        const startX = tank.x + tank.width / 2; // simplified for interface
-        const startY = tank.y - tank.height;
-
-        const calc = {
-            dx: target.x + target.width / 2 - startX,
-            dy: target.y - startY
-        };
-
-        let bestAngle = null;
-        let bestPower = null;
-        let minError = Infinity;
-        
-        // Mastermind runs deep simulation
-        for (let power = 40; power <= 100; power += 2) {
-            for (let angle = 10 * Math.PI/180; angle <= 170 * Math.PI/180; angle += Math.PI/180) {
-                let x = startX, y = startY;
-                let vx = power * Math.cos(angle) * physicsScale;
-                let vy = -power * Math.sin(angle) * physicsScale;
-                let t = 0;
-
-                while (t < maxSimTime && y < 1000) { // arbitrary floor
-                    x += vx * dt;
-                    y += vy * dt;
-                    vy += g * dt;
-                    vx += env.wind * dt;
-                    t += dt;
-                    
-                    const dist = Math.sqrt(Math.pow(x - (target.x + target.width/2), 2) + Math.pow(y - target.y, 2));
-                    if (dist < minError) {
-                        minError = dist;
-                        bestAngle = angle;
-                        bestPower = power;
-                    }
-                    if (y > target.y + 50) break;
-                }
-            }
-        }
-
         const history = this.getShotHistory(target);
-        const noise = history >= 2 ? 0 : (0.05 / (history + 1));
+        // Mastermind starts good, becomes perfect quickly
+        // 0 shots: small error
+        // 1 shot: tiny error
+        // 2+ shots: 0 error
+        const learningFactor = history >= 2 ? 0 : (0.2 / (history + 1));
         
+        const angleError = (Math.random() * 2 - 1) * (Math.PI / 180) * 2 * learningFactor;
+        const powerError = (Math.random() * 2 - 1) * 2 * learningFactor;
+
         return {
-            angle: (bestAngle || Math.PI/4) + (Math.random() * 2 - 1) * noise,
-            power: (bestPower || 50) + (Math.random() * 2 - 1) * noise * 10
+            angle: (result.angle || Math.PI/4) + angleError,
+            power: Math.max(10, Math.min(100, (result.power || 70) + powerError))
         };
     }
 }
