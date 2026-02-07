@@ -1,0 +1,7 @@
+{
+  "id": "ai-accuracy-overhaul_20260207",
+  "name": "AI Accuracy and Robustness Overhaul",
+  "description": "Achieve >90% hit rate within 4 shots across all standard map types for Mastermind AI.",
+  "created_at": "2026-02-07",
+  "status": "completed"
+}
