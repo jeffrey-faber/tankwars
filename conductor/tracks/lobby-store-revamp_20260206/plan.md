@@ -25,7 +25,7 @@ Connecting the UI to the existing `Store` class and implementing the categorized
 - [x] Task: Finish Turn Logic. Implement the "Done" button that triggers the transition to the next player or starts the game.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Store Logic & Item Grid' (Protocol in workflow.md)
 
-## Phase 4: Integration & Refinement
+## Phase 4: Integration & Refinement [checkpoint: 7fe6680]
 Wiring everything together and polishing the transition flows.
 
 - [x] Task: Lobby Entry/Exit Flow. Ensure the game correctly transitions from "Setup" or "Round End" into the Lobby, and from the Lobby into the "Match".
