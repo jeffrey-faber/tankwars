@@ -91,6 +91,11 @@ export class Tank {
         this.selectedWeapon = 'default';
         this.vy = 0; // Vertical velocity for falling
         
+        // Fall Damage Properties
+        this.safeFallHeight = 50; // px
+        this.fallDamageMultiplier = 0.5; // damage per px over limit
+        this.lastSolidY = this.y;
+        
         if (this.isAI) {
             this.initAIController();
         }
@@ -109,6 +114,12 @@ export class Tank {
             // Standard AI based on aiLevel if no personality
             const diff = this.aiLevel <= 3 ? 'easy' : this.aiLevel <= 6 ? 'medium' : 'hard';
             this.aiController = new StandardAI(diff);
+        }
+    }
+
+    updateFallTracking(isOnGround) {
+        if (isOnGround) {
+            this.lastSolidY = this.y;
         }
     }
 
