@@ -11,8 +11,9 @@ This document outlines the core technologies and architectural patterns used in 
 ## Architecture
 - **Client-Side Only:** A static web application that runs entirely in the user's browser without the need for a dedicated backend.
 - **Offscreen Canvas Caching:** Optimized rendering pipeline that caches terrain state to an offscreen buffer, ensuring 60 FPS performance during complex physics simulations.
-- **Modular OOP:** The game is structured into discrete, object-oriented modules (e.g., `Tank`, `BitmaskTerrain`, `Store`, `ScoreManager`, `LobbyManager`) to promote maintainability and scalability.
+- **Modular OOP:** The game is structured into discrete, object-oriented modules (e.g., `Tank`, `BitmaskTerrain`, `Store`, `ScoreManager`, `LobbyManager`, `MatchSetup`) to promote maintainability and scalability.
 - **Event-Driven State Management:** Utilizes standard DOM CustomEvents (e.g., `storeClosed`) to orchestrate complex UI flows and phase transitions without tight coupling between modules.
+- **Persistent Session State:** Leverages `localStorage` for cross-refresh match persistence and user preference storage.
 - **Global Game Orchestrator:** `main.js` serves as the central hub for the game loop, event handling, and cross-module communication.
 
 ## Development Environment
