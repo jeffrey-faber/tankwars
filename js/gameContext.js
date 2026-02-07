@@ -23,6 +23,7 @@ export const state = {
 };
 
 export function getNextAliveTankIndex(startIndex) {
+    if (!state.tanks || state.tanks.length === 0) return startIndex;
     let nextIndex = startIndex;
     do {
         nextIndex = (nextIndex + 1) % state.tanks.length;

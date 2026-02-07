@@ -23,9 +23,9 @@ Implementing the JavaScript logic that drives the setup experience and initializ
 - [x] Task: Match Initialization. Update the initialization sequence in `js/main.js` to consume the new roster and settings instead of the legacy URL parameters. eb158f1
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Roster & Configuration Logic' (Protocol in workflow.md)
 
-## Phase 4: Match Flow & Round Transitions
+## Phase 4: Match Flow & Round Transitions [checkpoint: 7b02e12]
 Updating the core game loop to handle multi-round matches and the final return to the setup page.
 
-- [ ] Task: Multi-Round State Machine. Update the game loop and `resetRound` logic to track match progress, aggregate scores across rounds, and determine when a match is complete.
-- [ ] Task: Match Result & Reset. Create a final "Match Summary" screen that declares the overall winner based on the chosen win condition and provides a button to return to the setup page.
+- [x] Task: Multi-Round State Machine. Update the game loop and `resetRound` logic to track match progress, aggregate scores across rounds, and determine when a match is complete. 7b02e12
+- [x] Task: Match Result & Reset. Create a final "Match Summary" screen that declares the overall winner based on the chosen win condition and provides a button to return to the setup page. 7b02e12
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Match Flow & Round Transitions' (Protocol in workflow.md)

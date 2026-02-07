@@ -24,6 +24,82 @@ let matchSetup = null;
 state.wind = (Math.random() * 2 - 1) / 10;
 window.state = state; // Debugging
 
+document.addEventListener('DOMContentLoaded', () => {
+    state.canvas = document.getElementById('gameCanvas');
+    state.ctx = state.canvas.getContext('2d');
+
+    matchSetup = new MatchSetup();
+
+    document.getElementById('initMatchButton').addEventListener('click', () => {
+        const config = matchSetup.getConfig();
+        if (config.players.length < 2) {
+            alert('A match requires at least 2 players.');
+            return;
+        }
+        saveMatchSettings(config);
+        initGameFromConfig(config);
+    });
+
+    // Check if we are resuming a match (e.g. after refresh)
+    const savedConfig = loadMatchSettings();
+    if (savedConfig && urlParams.resume) {
+        initGameFromConfig(savedConfig);
+    }
+});
+
+function showScoreboard() {
+    const scoreboardContainer = document.getElementById('scoreboardContainer');
+    if (scoreboardContainer) {
+        scoreboardContainer.innerHTML = ScoreManager.generateScoreboardHTML(state.tanks);
+    }
+    document.getElementById('lobbyOverlay').classList.remove('hidden');
+}
+
+function startNextStoreTurn() {
+    if (window.lobbyManager.isDone()) {
+        const prompt = document.getElementById('lobbyPrompt');
+        prompt.innerHTML = "All players ready!";
+        
+        const startBtn = document.getElementById('startMatchButton');
+        if (startBtn) startBtn.style.display = 'block';
+        
+        const shoppingBtn = document.getElementById('startShoppingButton');
+        if (shoppingBtn) shoppingBtn.classList.add('hidden');
+        return;
+    }
+
+    const playerIndex = window.lobbyManager.getCurrentPlayerIndex();
+    const tank = state.tanks[playerIndex];
+    
+    const prompt = document.getElementById('lobbyPrompt');
+    prompt.innerHTML = `<span style="color: ${tank.color}">${tank.name}</span>'s Turn`;
+    
+    const btn = document.getElementById('startShoppingButton');
+    btn.classList.remove('hidden');
+    
+    // One-time listener for shopping start
+    const startShopping = () => {
+        btn.classList.add('hidden');
+        if (state.store) {
+            state.store.open(tank);
+        }
+        btn.removeEventListener('click', startShopping);
+    };
+    btn.addEventListener('click', startShopping);
+}
+
+document.addEventListener('storeClosed', () => {
+    window.lobbyManager.next();
+    startNextStoreTurn();
+});
+
+function enterLobby() {
+    state.gameState = 'LOBBY';
+    window.lobbyManager.start();
+    showScoreboard();
+    startNextStoreTurn();
+}
+
 function initGameFromConfig(config) {
     // Apply config to state
     state.totalGames = config.totalGames;
@@ -67,34 +143,49 @@ function initGameFromConfig(config) {
     window.lobbyManager = new LobbyManager(state.tanks);
 
     // Show game, hide setup
+    const matchSetupOverlay = document.getElementById('matchSetupOverlay');
+    const gameCanvas = document.getElementById('gameCanvas');
     matchSetupOverlay.classList.add('hidden');
     gameCanvas.classList.remove('hidden');
 
     enterLobby();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    state.canvas = document.getElementById('gameCanvas');
-    state.ctx = state.canvas.getContext('2d');
-
-    matchSetup = new MatchSetup();
-
-    document.getElementById('startMatchButton').addEventListener('click', () => {
-        const config = matchSetup.getConfig();
-        if (config.players.length < 2) {
-            alert('A match requires at least 2 players.');
-            return;
-        }
-        saveMatchSettings(config);
-        initGameFromConfig(config);
-    });
-
-    // Check if we are resuming a match (e.g. after refresh)
-    const savedConfig = loadMatchSettings();
-    if (savedConfig && urlParams.resume) {
-        initGameFromConfig(savedConfig);
+function showMatchSummary() {
+    state.gameState = 'MATCH_OVER';
+    const overlay = document.getElementById('gameOverOverlay');
+    const messageElement = document.getElementById('gameOverMessage');
+    
+    // Determine winner
+    let winner;
+    if (state.winCondition === 'score') {
+        winner = state.tanks.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+    } else {
+        winner = state.tanks.reduce((prev, current) => (prev.wins > current.wins) ? prev : current);
     }
-});
+
+    messageElement.innerHTML = `
+        <h2 style="color: #ff00ff">MATCH OVER!</h2>
+        <div style="font-size: 24px; margin: 20px 0;">
+            Overall Winner: <span style="color: ${winner.color}">${winner.name}</span>
+        </div>
+        <div style="font-size: 16px;">
+            Final Score: ${winner.score}<br>
+            Total Wins: ${winner.wins}
+        </div>
+    `;
+
+    const continueBtn = document.getElementById('continueButton');
+    continueBtn.classList.add('hidden'); // No more rounds
+
+    const newGameBtn = document.getElementById('newGameButton');
+    newGameBtn.textContent = "RETURN TO SETUP";
+    newGameBtn.onclick = () => {
+        window.location.reload(); // Simplest way to go back to setup
+    };
+
+    overlay.classList.remove('hidden');
+}
 
 function resetRound() {
     state.gameState = 'LOBBY';
@@ -152,7 +243,15 @@ function gameLoop() {
             winner.wins += 1;
             winnerName = winner.name;
         }
-        showGameOverOverlay(`${winnerName} wins!`);
+        
+        state.currentGameIndex++;
+        
+        if (state.currentGameIndex >= state.totalGames) {
+            // Match is over
+            showMatchSummary();
+        } else {
+            showGameOverOverlay(`${winnerName} wins round ${state.currentGameIndex}!`);
+        }
     }
 
     if (!state.tanks[state.currentPlayer]?.alive && state.gameState === 'PLAYING') {
@@ -190,6 +289,13 @@ function gameLoop() {
 gameLoop();
 
 document.addEventListener('keydown', (event) => {
+    // Ignore if typing in inputs
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
+        return;
+    }
+
+    if (!state.tanks || state.tanks.length === 0) return;
+
     let tank = state.tanks[state.currentPlayer];
     if (!tank?.alive) {
         state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
