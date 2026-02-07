@@ -11,9 +11,9 @@ This phase focuses on the core logic for the new Lobby state machine and data st
 ## Phase 2: UI Infrastructure (Full-Screen Overlay)
 Creating the HTML/CSS structure and basic show/hide logic for the new full-screen interface.
 
-- [ ] Task: Base Full-Screen Overlay. Add a container to `index.html` and styles to `style.css` for a modal-like overlay that covers the canvas.
-- [ ] Task: Scoreboard Component. Create the HTML template for the enhanced lobby scoreboard showing all player stats.
-- [ ] Task: Store Layout Skeleton. Implement the tabbed grid structure (HTML/CSS) within the full-screen overlay.
+- [x] Task: Base Full-Screen Overlay. Add a container to `index.html` and styles to `style.css` for a modal-like overlay that covers the canvas.
+- [x] Task: Scoreboard Component. Create the HTML template for the enhanced lobby scoreboard showing all player stats.
+- [x] Task: Store Layout Skeleton. Implement the tabbed grid structure (HTML/CSS) within the full-screen overlay.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: UI Infrastructure (Full-Screen Overlay)' (Protocol in workflow.md)
 
 ## Phase 3: Store Logic & Item Grid

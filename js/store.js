@@ -132,11 +132,17 @@ export class Store {
         overlay.id = 'storeOverlay';
         overlay.className = 'hidden';
         overlay.innerHTML = `
-            <div class="store-container">
-                <h2>TANK STORE</h2>
-                <div class="store-items"></div>
+            <div class="store-container" style="max-width: 900px; width: 90%;">
+                <h2 id="storeTitle">TANK STORE</h2>
+                <div class="store-tabs">
+                    <button class="store-tab active" data-category="weapons">WEAPONS</button>
+                    <button class="store-tab" data-category="defense">DEFENSE</button>
+                    <button class="store-tab" data-category="utility">UTILITY</button>
+                </div>
+                <div class="store-items-grid"></div>
                 <div class="store-controls">
-                    <button id="closeStore">CLOSE</button>
+                    <div id="storeCurrency" style="margin-bottom: 20px; color: gold;">Coins: 0</div>
+                    <button id="closeStore">FINISH SHOPPING</button>
                 </div>
             </div>
         `;
