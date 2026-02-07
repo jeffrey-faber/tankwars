@@ -16,7 +16,7 @@ Creating the HTML/CSS structure and basic show/hide logic for the new full-scree
 - [x] Task: Store Layout Skeleton. Implement the tabbed grid structure (HTML/CSS) within the full-screen overlay.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: UI Infrastructure (Full-Screen Overlay)' (Protocol in workflow.md)
 
-## Phase 3: Store Logic & Item Grid
+## Phase 3: Store Logic & Item Grid [checkpoint: d8eab8c]
 Connecting the UI to the existing `Store` class and implementing the categorized grid.
 
 - [x] Task: Tab Navigation Logic. Implement the JavaScript to switch between categories (Weapons, Tools, etc.) in the Store UI.
