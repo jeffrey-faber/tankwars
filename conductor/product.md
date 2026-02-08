@@ -17,7 +17,8 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 
 ## Core Features
 - **Sophisticated AI:** Distinct AI personalities (Mr. Stupid, Lobber, Sniper, Mastermind) with unique combat strategies, learning curves, and shopping behaviors.
-- **Arsenal Variety:** A diverse set of weapons and items selectable via a grid-based inventory HUD with numeric hotkeys.
+- **Arsenal Variety:** A diverse set of weapons including standard explosives, tactical lasers, and "Earth Shaper" tools (Dirt Ball, Shovel, Earthquake) for terrain manipulation.
+- **Physical Consequences:** A dynamic gravity and fall damage system that rewards tactical positioning and terrain destruction.
 - **Sequential Lobby & Full-Screen Shop:** A pre-match phase with a competitive scoreboard and a dedicated full-screen, tabbed shopping experience for each human player.
 - **Deep Match Customization:** A comprehensive setup suite allowing for custom rosters of humans and bots (Easy, Medium, Hard), multi-round matches, and configurable win conditions.
 - **Polished Interface:** A seamless user journey from game configuration to the final victory screen.

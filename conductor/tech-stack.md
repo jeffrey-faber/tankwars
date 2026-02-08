@@ -10,7 +10,8 @@ This document outlines the core technologies and architectural patterns used in 
 
 ## Architecture
 - **Client-Side Only:** A static web application that runs entirely in the user's browser without the need for a dedicated backend.
-- **Offscreen Canvas Caching:** Optimized rendering pipeline that caches terrain state to an offscreen buffer, ensuring 60 FPS performance during complex physics simulations.
+- **Offscreen Canvas Caching:** Optimized rendering pipeline that caches terrain state to an offscreen buffer, supporting real-time destructive and constructive terrain manipulation (Earth Shapers).
+- **Velocity-Based Physics:** Realistic gravity system for tanks using vertical velocity and landing detection for physical impact calculation.
 - **Modular OOP:** The game is structured into discrete, object-oriented modules (e.g., `Tank`, `BitmaskTerrain`, `Store`, `ScoreManager`, `LobbyManager`, `MatchSetup`) to promote maintainability and scalability.
 - **Strategy Pattern for AI:** AI logic is encapsulated into specialized `AIController` subclasses (e.g., `MastermindAI`, `SniperAI`), enabling diverse behavioral archetypes without bloating the `Tank` class.
 - **Automated Accuracy Benchmarking:** A specialized test suite (`js/aiAccuracy.test.js`) that simulates physics and terrain to verify AI convergence and behavioral constraints (e.g., direct vs lob shots) across 8+ scenarios.
