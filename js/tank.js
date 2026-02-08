@@ -96,6 +96,7 @@ export class Tank {
         this.fallDamageMultiplier = 0.5; // damage per px over limit
         this.lastSolidY = this.y;
         this.isInitialSpawn = true;
+        this.parachuteDurability = 0; // Durability in HP points
         
         if (this.isAI) {
             this.initAIController();
@@ -130,17 +131,27 @@ export class Tank {
         if (fallDistance > this.safeFallHeight) {
             if (!this.isInitialSpawn) {
                 const excess = fallDistance - this.safeFallHeight;
-                const damage = Math.floor(excess * this.fallDamageMultiplier);
+                let damage = Math.floor(excess * this.fallDamageMultiplier);
+                
                 if (damage > 0) {
-                    // Reduce health (could be mitigated by items later)
-                    this.health = Math.max(0, this.health - damage);
-                    
-                    // Visual feedback
-                    if (damage > 10) {
-                        triggerScreenShake(Math.min(20, damage / 2), 300);
+                    // Parachute mitigation
+                    if (this.parachuteDurability > 0) {
+                        const absorbed = Math.min(damage, this.parachuteDurability);
+                        this.parachuteDurability -= absorbed;
+                        damage -= absorbed;
                     }
-                    
-                    if (this.health <= 0) this.alive = false;
+
+                    // Apply remaining damage to health
+                    if (damage > 0) {
+                        this.health = Math.max(0, this.health - damage);
+                        
+                        // Visual feedback
+                        if (damage > 10) {
+                            triggerScreenShake(Math.min(20, damage / 2), 300);
+                        }
+                        
+                        if (this.health <= 0) this.alive = false;
+                    }
                 }
             }
         }
@@ -169,6 +180,12 @@ export class Tank {
             ctx.strokeStyle = 'red';
         } else if (this.selectedWeapon === 'laser') {
             ctx.strokeStyle = '#00ff00';
+        } else if (this.selectedWeapon === 'dirtball') {
+            ctx.strokeStyle = '#3d2b1f';
+        } else if (this.selectedWeapon === 'shovel') {
+            ctx.strokeStyle = '#aaaaaa';
+        } else if (this.selectedWeapon.startsWith('earthquake')) {
+            ctx.strokeStyle = '#555555';
         } else {
             ctx.strokeStyle = 'black';
         }
@@ -197,6 +214,22 @@ export class Tank {
             ctx.fillStyle = 'red';
             ctx.fillText('BURIED!', this.x, this.y - this.height - 20);
         }
+
+        // Draw Parachute if falling and has durability
+        if (this.vy > 0 && this.parachuteDurability > 0) {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - this.height);
+            ctx.quadraticCurveTo(this.x + this.width / 2, this.y - this.height - 40, this.x + this.width, this.y - this.height);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y - this.height);
+            ctx.lineTo(this.x + this.width / 2, this.y - this.height - 30);
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
     }
 
     fire() {
@@ -220,6 +253,19 @@ export class Tank {
             vy *= 2;
             projectileColor = '#00ff00';
             extraDistance = 5;
+        } else if (this.selectedWeapon === 'dirtball') {
+            explosionRadius = 30;
+            damage = 10;
+            projectileColor = '#3d2b1f';
+        } else if (this.selectedWeapon === 'shovel') {
+            explosionRadius = 40;
+            damage = 0;
+            projectileColor = '#aaaaaa';
+        } else if (this.selectedWeapon.startsWith('earthquake')) {
+            const weaponItem = this.inventory.find(i => i.id === this.selectedWeapon);
+            explosionRadius = weaponItem?.effect?.radius || 100;
+            damage = weaponItem?.effect?.damage || 20;
+            projectileColor = '#555555';
         }
         
         const barrelLength = 30 + extraDistance;
@@ -310,12 +356,45 @@ export class Tank {
                     }
 
                     if (y >= 0 && y <= (state.canvas?.height || 400)) {
-                        if (state.terrain.explode) {
-                            state.terrain.explode(x, y, state.projectile.explosionRadius);
+                        if (state.projectile.type === 'dirtball') {
+                            if (state.terrain.addTerrain) {
+                                state.terrain.addTerrain(x, y, state.projectile.explosionRadius);
+                            }
+                        } else if (state.projectile.type === 'shovel') {
+                            if (state.terrain.removeTerrainCone) {
+                                // Shovel removes in a cone pointing away from the shooter
+                                const angle = Math.atan2(-(y - (this.y - this.height)), x - (this.x + this.width / 2));
+                                state.terrain.removeTerrainCone(x, y, state.projectile.explosionRadius, angle, Math.PI / 2);
+                            }
+                        } else if (state.projectile.type.startsWith('earthquake')) {
+                            if (state.terrain.createCracks) {
+                                state.terrain.freezeGravity = true;
+                                
+                                // Get intensity from item if possible
+                                const weaponItem = this.inventory.find(i => i.id === state.projectile.type) || { effect: { intensity: 8 } };
+                                const intensity = weaponItem.effect.intensity || 8;
+
+                                // Create several cracks starting from impact
+                                // Scale length with intensity
+                                const baseLength = 20 + (intensity * 3);
+                                for (let i = 0; i < intensity; i++) {
+                                    state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
+                                }
+                                
+                                // Unfreeze after cracks propagate
+                                setTimeout(() => {
+                                    state.terrain.freezeGravity = false;
+                                }, 1500);
+                            }
+                        } else {
+                            if (state.terrain.explode) {
+                                state.terrain.explode(x, y, state.projectile.explosionRadius);
+                            }
                         }
                         
                         if (state.ctx && state.canvas && draw) {
-                            createExplosion(x, y, state.projectile.explosionRadius, state.ctx, state.canvas, draw);
+                            const color = state.projectile.type === 'dirtball' ? '#3d2b1f' : (state.projectile.type === 'shovel' ? '#aaaaaa' : null);
+                            createExplosion(x, y, state.projectile.explosionRadius, state.ctx, state.canvas, draw, color);
                         }
                         
                         applyExplosionDamage(x, y, state.tanks, state.projectile.explosionRadius, state.projectile.damage, state.projectile.sourcePlayerId, this.directHitTank);
@@ -358,6 +437,11 @@ export class Tank {
             // Activate shield
             this.shielded = true;
             // Remove from inventory after use
+            this.inventory.splice(index, 1);
+            return true;
+        } else if (item.effect.type === 'defense' && item.id === 'parachute') {
+            // Can only have 1 active parachute
+            this.parachuteDurability = this.maxHealth * 2;
             this.inventory.splice(index, 1);
             return true;
         }

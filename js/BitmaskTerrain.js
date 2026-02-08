@@ -3,6 +3,7 @@ export class BitmaskTerrain {
         this.width = width;
         this.height = height;
         this.data = new Uint8Array(width * height);
+        this.freezeGravity = false;
         
         // Create an offscreen canvas to cache the visual state
         this.canvas = document.createElement('canvas');
@@ -109,6 +110,109 @@ export class BitmaskTerrain {
         }
     }
 
+    addTerrain(centerX, centerY, radius) {
+        const r2 = radius * radius;
+        const xMin = Math.max(0, Math.floor(centerX - radius));
+        const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
+        const yMin = Math.max(0, Math.floor(centerY - radius));
+        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+
+        let changed = false;
+        for (let y = yMin; y <= yMax; y++) {
+            for (let x = xMin; x <= xMax; x++) {
+                const dx = x - centerX;
+                const dy = y - centerY;
+                if (dx * dx + dy * dy <= r2) {
+                    if (!this.isSolid(x, y)) {
+                        this.setSolid(x, y, true);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        if (changed) {
+            this.ctx.putImageData(this.imageData, 0, 0);
+        }
+    }
+
+    removeTerrainCone(centerX, centerY, radius, centralAngle, spread) {
+        const r2 = radius * radius;
+        const xMin = Math.max(0, Math.floor(centerX - radius));
+        const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
+        const yMin = Math.max(0, Math.floor(centerY - radius));
+        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+
+        let changed = false;
+        const halfSpread = spread / 2;
+
+        for (let y = yMin; y <= yMax; y++) {
+            for (let x = xMin; x <= xMax; x++) {
+                const dx = x - centerX;
+                const dy = y - centerY;
+                const dist2 = dx * dx + dy * dy;
+                
+                if (dist2 <= r2) {
+                    // Check angle
+                    let angle = Math.atan2(-dy, dx); // Negative dy because Y is down
+                    if (angle < 0) angle += Math.PI * 2;
+                    
+                    let diff = Math.abs(angle - centralAngle);
+                    if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+                    if (diff <= halfSpread) {
+                        if (this.isSolid(x, y)) {
+                            this.setSolid(x, y, false);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (changed) {
+            this.ctx.putImageData(this.imageData, 0, 0);
+        }
+    }
+
+    createCracks(startX, startY, length, angle, depth = 0) {
+        // Increase max depth for more complex patterns
+        if (depth > 8 || length < 3) return;
+        
+        const endX = startX + Math.cos(angle) * length;
+        const endY = startY + Math.sin(angle) * length;
+        
+        // Rasterize line with some thickness based on depth
+        const steps = Math.ceil(length);
+        const thickness = depth < 3 ? 2 : 1; // Thicker at the start/core
+        let changed = false;
+        
+        for (let i = 0; i <= steps; i++) {
+            const px = Math.floor(startX + (endX - startX) * (i / steps));
+            const py = Math.floor(startY + (endY - startY) * (i / steps));
+            
+            // Draw a small cross/block for thickness
+            for (let tx = -thickness; tx <= thickness; tx++) {
+                for (let ty = -thickness; ty <= thickness; ty++) {
+                    if (this.isSolid(px + tx, py + ty)) {
+                        this.setSolid(px + tx, py + ty, false);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        
+        if (changed) {
+            this.ctx.putImageData(this.imageData, 0, 0);
+        }
+
+        // Branching logic: more branches at early stages
+        const branches = depth < 2 ? 3 : 2;
+        for (let b = 0; b < branches; b++) {
+            const nextAngle = angle + (Math.random() * 1.2 - 0.6); // Wider spread
+            const nextLength = length * (0.7 + Math.random() * 0.3);
+            this.createCracks(endX, endY, nextLength, nextAngle, depth + 1);
+        }
+    }
+
     findFloatingPixels() {
         const connected = new Uint8Array(this.width * this.height);
         const stack = [];
@@ -159,6 +263,7 @@ export class BitmaskTerrain {
     }
 
     updateGravity() {
+        if (this.freezeGravity) return false;
         let moved = false;
         let moveCount = 0;
         // Iterate from bottom to top (excluding bottom-most row)
