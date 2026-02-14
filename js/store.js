@@ -486,8 +486,22 @@ export class Store {
         
         filteredItems.forEach(item => {
             const count = (this.currentTank.inventory || []).filter(i => i.id === item.id).length;
-            const ownershipText = item.effect.type === 'healing' ? 'Instant Use' : `Owned: ${count}`;
+            let ownershipText = item.effect.type === 'healing' ? 'Instant Use' : `Owned: ${count}`;
+            let isMaxed = false;
+
+            if (item.id === 'shield') {
+                const maxShield = this.currentTank.maxHealth * 2;
+                ownershipText = `Durability: ${Math.ceil(this.currentTank.shieldDurability)}/${maxShield}`;
+                if (this.currentTank.shieldDurability >= maxShield) isMaxed = true;
+            } else if (item.id === 'parachute') {
+                const maxPara = this.currentTank.maxHealth * 2;
+                ownershipText = `Durability: ${Math.ceil(this.currentTank.parachuteDurability)}/${maxPara}`;
+                if (this.currentTank.parachuteDurability >= maxPara) isMaxed = true;
+            }
+
             const packText = item.packSize > 1 ? `<div style="color: #ff00ff; font-size: 10px; margin-bottom: 5px;">Pack of ${item.packSize}</div>` : '';
+            const canAfford = this.currentTank.currency >= item.price;
+            const buyDisabled = !canAfford || isMaxed;
             
             const itemElement = document.createElement('div');
             itemElement.className = 'store-item';
@@ -499,17 +513,19 @@ export class Store {
                 ${packText}
                 <p class="item-price">${item.price} Coins</p>
                 <div style="margin-bottom: 10px; font-size: 12px; color: #00f7ff;">${ownershipText}</div>
-                <button class="buy-button ${this.currentTank.currency < item.price ? 'disabled' : ''}" 
+                <button class="buy-button ${buyDisabled ? 'disabled' : ''}" 
                     data-item-id="${item.id}" 
-                    ${this.currentTank.currency < item.price ? 'disabled' : ''}>
-                    BUY
+                    ${buyDisabled ? 'disabled' : ''}>
+                    ${isMaxed ? 'MAXED' : 'BUY'}
                 </button>
             `;
             
             const buyButton = itemElement.querySelector('.buy-button');
-            buyButton.addEventListener('click', () => {
-                this.buyItem(item.id);
-            });
+            if (!buyDisabled) {
+                buyButton.addEventListener('click', () => {
+                    this.buyItem(item.id);
+                });
+            }
             
             container.appendChild(itemElement);
         });
@@ -520,6 +536,16 @@ export class Store {
         
         const item = this.items.find(i => i.id === itemId);
         if (!item) return;
+
+        // Check if maxed
+        if (itemId === 'shield' && this.currentTank.shieldDurability >= this.currentTank.maxHealth * 2) {
+            this.showMessage("Shield already at max!");
+            return;
+        }
+        if (itemId === 'parachute' && this.currentTank.parachuteDurability >= this.currentTank.maxHealth * 2) {
+            this.showMessage("Parachute already at max!");
+            return;
+        }
         
         if (this.currentTank.currency >= item.price) {
             // Deduct the price
@@ -536,7 +562,7 @@ export class Store {
                 }
 
                 if (itemId === 'shield') {
-                    this.currentTank.shielded = true;
+                    this.currentTank.shieldDurability = this.currentTank.maxHealth * 2;
                     this.showMessage("Shield Active!");
                 } else {
                     this.currentTank.parachuteDurability = this.currentTank.maxHealth * 2;

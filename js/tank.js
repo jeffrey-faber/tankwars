@@ -44,13 +44,19 @@ function applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, 
                 effectiveDamage += 25;
             }
             
-            if (otherTank.shielded) {
-                otherTank.shielded = false;
-                if (tankIndex !== sourcePlayerId) {
-                    tanks[sourcePlayerId].score += 0.5;
-                    tanks[sourcePlayerId].currency += 5;
+            if (otherTank.shieldDurability > 0) {
+                const absorbed = Math.min(effectiveDamage, otherTank.shieldDurability);
+                otherTank.shieldDurability -= absorbed;
+                effectiveDamage -= absorbed;
+                
+                // Partial score for damaging shield
+                if (tankIndex !== sourcePlayerId && absorbed > 0) {
+                    state.tanks[sourcePlayerId].score += 0.2;
+                    state.tanks[sourcePlayerId].currency += 2;
                 }
-            } else {
+            }
+
+            if (effectiveDamage > 0) {
                 otherTank.health -= effectiveDamage;
                 if (otherTank.health <= 0) {
                     otherTank.die(sourcePlayerId);
@@ -80,7 +86,7 @@ export class Tank {
         this.alive = true;
         this.maxHealth = 100;
         this.health = this.maxHealth;
-        this.shielded = false;
+        this.shieldDurability = 0; // Durability in HP points
         this.inventory = [];
         this.selectedWeapon = 'default';
         this.vy = 0; // Vertical velocity for falling
@@ -279,11 +285,18 @@ export class Tank {
         ctx.stroke();
         ctx.lineWidth = 1;
         
-        if (this.shielded) {
+        if (this.shieldDurability > 0) {
             ctx.beginPath();
             ctx.arc(this.x + this.width / 2, this.y - this.height / 2, 15, 0, Math.PI * 2);
             ctx.strokeStyle = '#00f7ff';
+            ctx.globalAlpha = 0.3 + (this.shieldDurability / (this.maxHealth * 2)) * 0.7;
             ctx.stroke();
+            ctx.globalAlpha = 1.0;
+            
+            // Show shield value
+            ctx.fillStyle = '#00f7ff';
+            ctx.font = '6px Arial';
+            ctx.fillText(`${Math.ceil(this.shieldDurability)}`, this.x + this.width + 2, this.y - this.height / 2);
         }
         
         const healthBarWidth = this.width;
