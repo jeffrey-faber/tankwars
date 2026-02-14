@@ -46,10 +46,10 @@ describe('AI Controllers', () => {
     });
 
     describe('SniperAI', () => {
-        it('should return low angles', () => {
+        it('should return high power results', () => {
             const controller = new SniperAI();
             const result = controller.calculateShot(mockTank, mockTarget, env);
-            expect(result.angle).toBeLessThan(Math.PI / 3); // < 60 degrees usually
+            expect(result.power).toBeGreaterThanOrEqual(70);
         });
     });
 

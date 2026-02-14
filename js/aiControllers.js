@@ -14,7 +14,7 @@ export function detectClumping(target, allTanks) {
 }
 
 // Helper to simulate shots and find the best parameters within constraints
-function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, initialAngleStep = Math.PI / 45, initialPowerStep = 2) {
+function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, preference = 'any', initialAngleStep = Math.PI / 45, initialPowerStep = 2) {
     const g = env.gravity;
     const physicsScale = 0.2; 
     const barrelLength = 30;
@@ -25,20 +25,43 @@ function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powe
     let bestAngle = null;
     let bestPower = null;
     let minError = Infinity;
+    let bestCriteria = (preference === 'steepest' ? -Infinity : Infinity);
+
+    const checkBetter = (error, angle, peakY) => {
+        if (error > 20) return false; // Must be reasonably close to be considered a "hit"
+        
+        if (preference === 'any') {
+            return error < minError;
+        }
+        
+        // If error is significantly better, always take it
+        if (error < minError - 5) return true;
+        // If errors are similar, use preference
+        if (Math.abs(error - minError) <= 5) {
+            if (preference === 'flattest') {
+                return peakY > bestCriteria; // higher Y value means lower peak height
+            }
+            if (preference === 'steepest') {
+                return peakY < bestCriteria; // lower Y value means higher peak height
+            }
+        }
+        return false;
+    };
 
     // Phase 1: Coarse Search
     for (let power = powerMin; power <= powerMax; power += initialPowerStep) {
         for (let angle = angleMin; angle <= angleMax; angle += initialAngleStep) {
             const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty);
-            if (res.hitX && res.error < minError) {
+            if (res.hitX && checkBetter(res.error, angle, res.peakY)) {
                 minError = res.error;
                 bestAngle = angle;
                 bestPower = power;
+                bestCriteria = res.peakY;
             }
         }
     }
 
-    // Phase 2: Refined Search around the best coarse result
+    // Phase 2: Refined Search
     if (bestAngle !== null) {
         const refineAngleRange = initialAngleStep;
         const refinePowerRange = initialPowerStep;
@@ -66,10 +89,13 @@ function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsSca
     let vy = -power * Math.sin(angle) * physicsScale;
     
     const dxInitial = tx - (tank.x + tank.width / 2);
+    let peakY = y;
 
     for(let t = 0; t < 500; t++) {
         vy += g;
         vx += env.wind;
+        
+        if (y < peakY) peakY = y;
 
         const speed = Math.sqrt(vx*vx + vy*vy);
         const steps = Math.ceil(speed / 2);
@@ -86,7 +112,7 @@ function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsSca
 
         const crossedX = (dxInitial > 0 && x >= tx) || (dxInitial < 0 && x <= tx);
         if (crossedX) {
-            return { hitX: true, error: Math.abs(y - ty) };
+            return { hitX: true, error: Math.abs(y - ty), peakY };
         }
         if (y > 1500) break; 
     }
@@ -165,8 +191,12 @@ export class StandardAI extends AIController {
 
         // Hard/Medium buying logic
         if (this.difficulty === 'hard') {
-            if (tank.currency >= 110 && Math.random() < 0.3) {
+            if (tank.currency >= 350 && Math.random() < 0.3) {
                 store.buyItem('earthquake_l');
+                return;
+            }
+            if (tank.currency >= 150 && Math.random() < 0.2) {
+                store.buyItem('blockbuster');
                 return;
             }
             if (tank.currency >= 50 && Math.random() < 0.5) {
@@ -175,9 +205,15 @@ export class StandardAI extends AIController {
             }
         }
         
-        if (this.difficulty === 'medium' && tank.currency >= 50 && Math.random() < 0.2) {
-            store.buyItem('heavy');
-            return;
+        if (this.difficulty === 'medium') {
+            if (tank.currency >= 150 && Math.random() < 0.1) {
+                store.buyItem('blockbuster');
+                return;
+            }
+            if (tank.currency >= 50 && Math.random() < 0.2) {
+                store.buyItem('heavy');
+                return;
+            }
         }
 
         // Random otherwise
@@ -189,10 +225,13 @@ export class StandardAI extends AIController {
         // Hard bots use best available
         if (this.difficulty === 'hard') {
             if (tank.inventory.find(i => i.id === 'earthquake_l')) return 'earthquake_l';
+            if (tank.inventory.find(i => i.id === 'titan_shell')) return 'titan_shell';
+            if (tank.inventory.find(i => i.id === 'blockbuster')) return 'blockbuster';
             if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
         }
-        // Medium bots use heavy if available
+        // Medium bots use good available
         if (this.difficulty === 'medium') {
+            if (tank.inventory.find(i => i.id === 'blockbuster')) return 'blockbuster';
             if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
         }
         return 'default';
@@ -274,8 +313,14 @@ export class LobberAI extends AIController {
         // Lobber loves Big Bombs
         if (tank.currency >= 500) {
             store.buyItem('mega_nuke');
+        } else if (tank.currency >= 350) {
+            store.buyItem('earthquake_l');
+        } else if (tank.currency >= 300) {
+            store.buyItem('titan_shell');
         } else if (tank.currency >= 150) {
-            store.buyItem('cluster_bomb');
+            store.buyItem('blockbuster');
+        } else if (tank.currency >= 120) {
+            store.buyItem('earthquake_m');
         } else if (tank.currency >= 50) {
             store.buyItem('heavy');
         } else if (tank.currency >= 35) {
@@ -285,7 +330,9 @@ export class LobberAI extends AIController {
 
     chooseWeapon(tank, target, allTanks) {
         if (tank.inventory.find(i => i.id === 'mega_nuke')) return 'mega_nuke';
-        if (tank.inventory.find(i => i.id === 'cluster_bomb')) return 'cluster_bomb';
+        if (tank.inventory.find(i => i.id === 'titan_shell')) return 'titan_shell';
+        if (tank.inventory.find(i => i.id === 'earthquake_l')) return 'earthquake_l';
+        if (tank.inventory.find(i => i.id === 'blockbuster')) return 'blockbuster';
         if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
         if (tank.inventory.find(i => i.id === 'dirtball')) return 'dirtball';
         return 'default';
@@ -301,8 +348,8 @@ export class LobberAI extends AIController {
             minA = 92 * Math.PI / 180;
             maxA = 120 * Math.PI / 180;
         }
-        // Lobber locked to high angles
-        const result = findBestShot(tank, target, env, minA, maxA, 20, 100);
+        // Lobber locked to high angles and prefers STEEPEST
+        const result = findBestShot(tank, target, env, minA, maxA, 20, 100, 'steepest');
         const history = this.getShotHistory(target);
         const learningFactor = Math.max(0.1, 1.0 - (history * 0.2));
         const noise = (Math.random() * 2 - 1) * 2 * learningFactor;
@@ -332,27 +379,17 @@ export class SniperAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
-        const dx = target.x - tank.x;
-        let minA, maxA;
-        if (dx > 0) {
-            minA = 0;
-            maxA = 25 * Math.PI / 180;
-        } else {
-            minA = 155 * Math.PI / 180;
-            maxA = 180 * Math.PI / 180;
-        }
+        // Sniper prefers FLATTEST shots across the full viable range
+        const result = findBestShot(tank, target, env, 5 * Math.PI / 180, 175 * Math.PI / 180, 70, 100, 'flattest');
         
-        // Sniper locked to HIGH POWER (70-100) and LOW ANGLE
-        const result = findBestShot(tank, target, env, minA, maxA, 70, 100);
-        
-        // If Sniper's best direct shot is blocked, try to use shovel to clear a path
+        // If Sniper's best shot is blocked, try to use shovel to clear a path
         if (result.angle === null && tank.inventory.find(i => i.id === 'shovel')) {
             const hasShovel = tank.useItem('shovel');
             if (hasShovel) {
                 // Aim shovel at the blocking terrain
-                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, minA, maxA, 30, 60);
+                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, 5 * Math.PI / 180, 175 * Math.PI / 180, 30, 60, 'flattest');
                 return {
-                    angle: shovelResult.angle || (minA + maxA) / 2,
+                    angle: shovelResult.angle || (Math.PI / 4),
                     power: (shovelResult.power || 50)
                 };
             }
@@ -361,9 +398,13 @@ export class SniperAI extends AIController {
         const history = this.getShotHistory(target);
         const learningFactor = Math.max(0.05, 0.8 - (history * 0.4)); 
         const noise = (Math.random() * 2 - 1) * 1 * learningFactor;
+        
+        const minA = 5 * Math.PI / 180;
+        const maxA = 175 * Math.PI / 180;
+
         return {
             angle: (result.angle || (minA + maxA)/2) + (noise * Math.PI / 180),
-            power: Math.max(10, Math.min(100, (result.power || 80) + noise))
+            power: Math.max(70, Math.min(100, (result.power || 85) + noise))
         };
     }
 }
@@ -398,33 +439,80 @@ export class MastermindAI extends AIController {
         // Priority 4: Tactical Arsenal
         if (tank.currency >= 500) {
             store.buyItem('mega_nuke');
+        } else if (tank.currency >= 350) {
+            store.buyItem('earthquake_l');
         } else if (tank.currency >= 150) {
             store.buyItem('cluster_bomb');
-        } else if (tank.currency >= 110) {
-            store.buyItem('earthquake_l');
+        } else if (tank.currency >= 120) {
+            store.buyItem('earthquake_m');
         } else if (tank.currency >= 50) {
             store.buyItem('heavy');
         }
     }
 
     chooseWeapon(tank, target, allTanks) {
-        const isClumped = detectClumping(target, allTanks);
+        if (!tank.inventory || tank.inventory.length === 0) return 'default';
+
+        const weapons = tank.inventory.filter(i => i.effect.type === 'weapon');
+        if (weapons.length === 0) return 'default';
+
+        // 1. Group unique weapons to avoid redundant simulations
+        const uniqueWeapons = Array.from(new Map(weapons.map(w => [w.id, w])).values());
         
-        // 1. If enemies are clumped, use MASSIVE AoE
-        if (isClumped) {
-            if (tank.inventory.find(i => i.id === 'mega_nuke')) return 'mega_nuke';
-            if (tank.inventory.find(i => i.id === 'cluster_bomb')) return 'cluster_bomb';
-            if (tank.inventory.find(i => i.id === 'earthquake_l')) return 'earthquake_l';
+        // 2. Tactical Analysis: Evaluate every weapon's Expected Value (EV)
+        let bestWeaponId = 'default';
+        let highestScore = -Infinity;
+
+        // Add 'default' to the options
+        const options = [{ id: 'default', effect: { radius: 15, damage: 50 }, price: 0 }, ...uniqueWeapons];
+
+        for (const weapon of options) {
+            const radius = weapon.effect.radius || 15;
+            const damage = weapon.effect.damage || 50;
+            const cost = weapon.price || 1; // Avoid div by zero for default
+
+            // Simulate the shot to get predicted impact
+            const env = { wind: state.wind, gravity: state.gravity, checkTerrain: (x, y) => state.terrain.checkCollision(x, y) };
+            const shot = this.calculateShot(tank, target, env);
+            
+            // Very basic trajectory prediction for ROI calculation
+            // In a real duel, we'd use the simulated impact point
+            const tx = target.x + target.width / 2;
+            const ty = target.y - target.height / 2;
+
+            let weaponScore = 0;
+            
+            // Calculate Damage ROI against ALL tanks
+            for (const other of allTanks) {
+                if (!other.alive) continue;
+                
+                const ox = other.x + other.width / 2;
+                const oy = other.y - other.height / 2;
+                const dist = Math.sqrt((tx - ox)**2 + (ty - oy)**2);
+
+                if (dist < radius) {
+                    const factor = 1 - (dist / radius);
+                    const predictedDamage = damage * factor;
+                    
+                    if (other === tank) {
+                        weaponScore -= predictedDamage * 2; // High penalty for self-harm
+                    } else {
+                        weaponScore += predictedDamage;
+                        if (predictedDamage >= other.health) weaponScore += 100; // Kill bonus
+                    }
+                }
+            }
+
+            // Normalize by cost (Expensive weapons need to deal more damage to be worth it)
+            const roi = weaponScore / (cost + 10); 
+            
+            if (roi > highestScore) {
+                highestScore = roi;
+                bestWeaponId = weapon.id;
+            }
         }
 
-        // 2. Efficiency calculation for high-cost items
-        const nuke = tank.inventory.find(i => i.id === 'mega_nuke');
-        if (nuke && target.health > 80) return 'mega_nuke'; // Use big guns for healthy targets
-
-        // 3. Prefer Heavy over Default if available
-        if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
-
-        return 'default';
+        return bestWeaponId;
     }
 
     onShotResult(target, impactX, impactY) {
@@ -453,31 +541,35 @@ export class MastermindAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
-        // 1. Calculate Baseline (Best guess)
-        // Mastermind is allowed to switch between direct and lob
-        let baseResult = findBestShot(tank, target, env, 0, Math.PI, 10, 100);
+        // 1. Dual-Trajectory Intelligence: Evaluate Direct and Lob options
+        const directResult = findBestShot(tank, target, env, 0, Math.PI, 10, 100);
+        const lobResult = findBestShot(tank, target, env, Math.PI / 4, 3 * Math.PI / 4, 20, 100, 'steepest');
         
-        let angle = baseResult.angle || Math.PI/4;
-        let idealPower = baseResult.power || 70;
+        let best = directResult;
+        
+        // If direct is blocked or risky, prefer the lob
+        if (directResult.angle === null || (lobResult.angle !== null && lobResult.error < directResult.error)) {
+            best = lobResult;
+        }
 
-        // 2. Interpolate from History
+        let angle = best.angle || Math.PI/4;
+        let idealPower = best.power || 70;
+
+        // 2. Predictive History Interpolation
         const history = this.shotHistoryMap.get(target.name) || [];
         if (history.length >= 1) {
-            // Determine direction: 1 for right, -1 for left
             const direction = Math.cos(angle) >= 0 ? 1 : -1;
             
             if (history.length >= 2) {
                 const sorted = [...history].sort((a, b) => Math.abs(a.error) - Math.abs(b.error));
-                const best = sorted[0];
-                const bracket = sorted.find(s => Math.sign(s.error) !== Math.sign(best.error));
+                const bestHistoric = sorted[0];
+                const bracket = sorted.find(s => Math.sign(s.error) !== Math.sign(bestHistoric.error));
                 
                 if (bracket) {
-                    const t = (0 - best.error) / (bracket.error - best.error);
-                    idealPower = best.power + (bracket.power - best.power) * t;
+                    const t = (0 - bestHistoric.error) / (bracket.error - bestHistoric.error);
+                    idealPower = bestHistoric.power + (bracket.power - bestHistoric.power) * t;
                 } else {
                     const last = history[history.length - 1];
-                    // Correct sign: if error is in direction of fire, we overshot -> decrease power
-                    // Correction = error * direction * Kp
                     const Kp = Math.abs(Math.cos(angle)) * 0.2 + 0.1;
                     idealPower = last.power - (last.error * direction * Kp);
                 }
@@ -490,41 +582,15 @@ export class MastermindAI extends AIController {
 
         idealPower = Math.max(10, Math.min(100, idealPower));
 
-        // 3. Self-Harm Detection
-        // Simulate first 100ms of flight to see if we hit immediate terrain
-        if (this.detectSelfHarm(tank, env, angle, idealPower)) {
-            // Try to increase angle to clear local obstacle
-            angle += (Math.PI / 18) * (Math.cos(angle) > 0 ? 1 : -1); // 10 degree nudge up
-            // Re-simulate to see if we cleared it
-            if (this.detectSelfHarm(tank, env, angle, idealPower)) {
-                 angle += (Math.PI / 18) * (Math.cos(angle) > 0 ? 1 : -1); // Another 10
-            }
+        // 3. Recursive Safety Check: Nudge angle until shot is clear
+        let safetyIterations = 0;
+        while (this.detectSelfHarm(tank, env, angle, idealPower) && safetyIterations < 5) {
+            angle += (Math.PI / 36) * (Math.cos(angle) > 0 ? 1 : -1); // 5 degree nudge
+            safetyIterations++;
         }
 
         this.pendingPower = idealPower;
-
-        // 4. Anti-Stagnation
-        // If we've fired 3+ times at the same target and aren't hitting, 
-        // and our power adjustment is barely changing, try a different angle search.
-        if (history.length >= 3) {
-            const lastThree = history.slice(-3);
-            const errorDiff = Math.abs(lastThree[0].error - lastThree[2].error);
-            if (errorDiff < 5) { // Error is stuck
-                // Force a lob if we weren't lobbing, or vice versa
-                if (angle < Math.PI / 3 || angle > 2 * Math.PI / 3) {
-                    const lobResult = findBestShot(tank, target, env, Math.PI / 3, 2 * Math.PI / 3, 10, 100);
-                    if (lobResult.angle !== null) {
-                        angle = lobResult.angle;
-                        idealPower = lobResult.power;
-                    }
-                }
-            }
-        }
-
-        return {
-            angle: angle,
-            power: idealPower
-        };
+        return { angle, power: idealPower };
     }
 
     detectSelfHarm(tank, env, angle, power) {
