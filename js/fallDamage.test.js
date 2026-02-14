@@ -28,14 +28,14 @@ describe('Fall Damage Logic', () => {
     });
 
     it('should apply damage after a long fall', () => {
-        // Fall 100px (Safe is 50px). Damage = (100 - 50) * 0.5 = 25
+        // Fall 100px (Safe is 40px). Damage = (100 - 40) * 1.5 = 90
         tank.y = 100;
         tank.updateFallTracking(true); // Ground at 100
         
         tank.y = 200; // Land at 200
         tank.handleLanding(200); // We'll need this method
         
-        expect(tank.health).toBe(tank.maxHealth - 25);
+        expect(tank.health).toBe(tank.maxHealth - 90);
     });
 
     it('should not apply damage for short falls', () => {

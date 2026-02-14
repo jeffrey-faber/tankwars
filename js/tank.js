@@ -92,8 +92,8 @@ export class Tank {
         this.vy = 0; // Vertical velocity for falling
         
         // Fall Damage Properties
-        this.safeFallHeight = 50; // px
-        this.fallDamageMultiplier = 0.5; // damage per px over limit
+        this.safeFallHeight = 40; // px
+        this.fallDamageMultiplier = 1.5; // damage per px over limit
         this.lastSolidY = this.y;
         this.isInitialSpawn = true;
         this.parachuteDurability = 0; // Durability in HP points
@@ -376,7 +376,7 @@ export class Tank {
 
                                 // Create several cracks starting from impact
                                 // Scale length with intensity
-                                const baseLength = 20 + (intensity * 3);
+                                const baseLength = 15 + (intensity * 4);
                                 for (let i = 0; i < intensity; i++) {
                                     state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
                                 }
@@ -384,7 +384,7 @@ export class Tank {
                                 // Unfreeze after cracks propagate
                                 setTimeout(() => {
                                     state.terrain.freezeGravity = false;
-                                }, 1500);
+                                }, 800);
                             }
                         } else {
                             if (state.terrain.explode) {
@@ -457,15 +457,15 @@ export class Tank {
         const canvasHeight = state.canvas?.height || 800;
         const checkPoints = [leftX, centerX, rightX];
         
+        let highestGround = canvasHeight;
         let highestStableGround = canvasHeight;
+
         for (let x of checkPoints) {
             for (let y = 0; y < canvasHeight; y++) {
                 if (terrain.isSolid(x, y)) {
-                    // A pixel is 'stable' if it's at the bottom or has solid terrain beneath it
-                    const isAtBottom = (y === canvasHeight - 1);
-                    const hasSupport = terrain.isSolid(x, y + 1);
+                    if (y < highestGround) highestGround = y;
                     
-                    if (isAtBottom || hasSupport) {
+                    if (terrain.isPixelStable && terrain.isPixelStable(x, y)) {
                         if (y < highestStableGround) highestStableGround = y;
                         break;
                     }
@@ -474,16 +474,17 @@ export class Tank {
         }
         
         const bottomLimit = canvasHeight - this.height - 5;
-        const finalGroundY = Math.min(highestStableGround, bottomLimit);
+        const finalGroundY = Math.min(highestGround, bottomLimit);
+        const finalStableY = Math.min(highestStableGround, bottomLimit);
         
-        if (this.y < finalGroundY) {
-            // IN AIR: Apply gravity
+        if (this.y < finalStableY) {
+            // IN AIR relative to stable ground: Apply gravity
             this.vy += state.gravity;
             this.y += this.vy;
             
             // Sub-pixel safety: if we crossed stable ground, land
-            if (this.y >= finalGroundY) {
-                this.y = finalGroundY;
+            if (this.y >= finalStableY) {
+                this.y = finalStableY;
                 this.vy = 0;
                 this.handleLanding(this.y);
             }
