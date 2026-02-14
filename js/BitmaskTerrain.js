@@ -85,6 +85,20 @@ export class BitmaskTerrain {
         return this.isSolid(Math.floor(x), Math.floor(y));
     }
 
+    isPixelStable(x, y) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        if (!this.isSolid(x, y)) return false;
+        
+        // A pixel is stable if there is solid terrain all the way to the bottom
+        // (Simplified for performance: just check 5 pixels down or bedrock)
+        for (let i = 1; i <= 5; i++) {
+            if (y + i >= this.height) return true; // Bedrock
+            if (!this.isSolid(x, y + i)) return false; // Gap below
+        }
+        return true; // Likely part of a stable stack
+    }
+
     explode(centerX, centerY, radius) {
         const r2 = radius * radius;
         const xMin = Math.max(0, Math.floor(centerX - radius));
@@ -173,6 +187,10 @@ export class BitmaskTerrain {
         }
     }
 
+    updateCanvas() {
+        this.ctx.putImageData(this.imageData, 0, 0);
+    }
+
     createCracks(startX, startY, length, angle, depth = 0) {
         // Increase max depth for more complex patterns
         if (depth > 8 || length < 3) return;
@@ -183,7 +201,6 @@ export class BitmaskTerrain {
         // Rasterize line with some thickness based on depth
         const steps = Math.ceil(length);
         const thickness = depth < 3 ? 2 : 1; // Thicker at the start/core
-        let changed = false;
         
         for (let i = 0; i <= steps; i++) {
             const px = Math.floor(startX + (endX - startX) * (i / steps));
@@ -194,14 +211,9 @@ export class BitmaskTerrain {
                 for (let ty = -thickness; ty <= thickness; ty++) {
                     if (this.isSolid(px + tx, py + ty)) {
                         this.setSolid(px + tx, py + ty, false);
-                        changed = true;
                     }
                 }
             }
-        }
-        
-        if (changed) {
-            this.ctx.putImageData(this.imageData, 0, 0);
         }
 
         // Branching logic: more branches at early stages

@@ -48,8 +48,9 @@ export function isSettling() {
     // 1. Projectiles in flight?
     if (state.projectiles.length > 0) return true;
     
-    // 2. Terrain frozen (Earthquake sequence)?
+    // 2. Terrain frozen or Tank gravity frozen (Earthquake sequence)?
     if (state.terrain && state.terrain.freezeGravity) return true;
+    if (state.freezeTankGravity) return true;
     
     // 3. Any tanks still falling?
     const fallingTank = state.tanks.find(t => t.alive && Math.abs(t.vy) > 0.1);

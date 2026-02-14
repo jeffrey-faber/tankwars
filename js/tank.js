@@ -223,6 +223,8 @@ export class Tank {
                         state.terrain.createCracks(centerX, centerY, baseLength, (i / intensity) * Math.PI * 2);
                     }
                     
+                    state.terrain.updateCanvas();
+                    
                     setTimeout(() => { state.terrain.freezeGravity = false; }, 800);
                     setTimeout(() => { state.freezeTankGravity = false; }, 2800);
                 }
@@ -556,10 +558,14 @@ export class Tank {
                 const weaponItem = this.inventory.find(i => i.id === type) || { effect: { intensity: 8 } };
                 const intensity = weaponItem.effect.intensity || 8;
                 const baseLength = 15 + (intensity * 4);
-                for (let i = 0; i < intensity; i++) {
-                    state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
-                }
-                setTimeout(() => { state.terrain.freezeGravity = false; }, 800);
+                                for (let i = 0; i < intensity; i++) {
+                                    state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
+                                }
+                
+                                state.terrain.updateCanvas();
+                                
+                                setTimeout(() => { state.terrain.freezeGravity = false; }, 800);
+                
                 setTimeout(() => { state.freezeTankGravity = false; }, 2800);
             }
         } else {
