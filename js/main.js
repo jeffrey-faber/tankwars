@@ -105,6 +105,7 @@ function initGameFromConfig(config) {
     state.totalGames = config.totalGames;
     state.winCondition = config.winCondition;
     state.startingCash = config.startingCash;
+    state.deathTriggerChance = config.deathTriggerChance !== undefined ? config.deathTriggerChance : 0.1;
     state.playerRosterConfig = config.players;
     state.currentGameIndex = 0;
     state.numPlayers = config.players.length;

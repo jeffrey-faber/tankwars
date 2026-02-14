@@ -164,6 +164,24 @@ input[type="submit"] {
     gap: 10px;
 }
 
+.range-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.range-group input[type="range"] {
+    flex: 1;
+    cursor: pointer;
+}
+
+.range-group span {
+    font-size: 14px;
+    color: #ff00ff;
+    min-width: 50px;
+    text-align: right;
+}
+
 .toggle-group input[type="checkbox"] {
     width: 20px;
     height: 20px;

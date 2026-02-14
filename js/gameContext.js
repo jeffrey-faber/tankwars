@@ -20,6 +20,7 @@ export const state = {
     currentGameIndex: 0,
     winCondition: 'score', // 'score' or 'wins'
     startingCash: 100,
+    deathTriggerChance: 0.1, // Default 10%
     playerRosterConfig: [],
     // Visual Effects
     screenShake: { intensity: 0, startTime: 0, duration: 0 }

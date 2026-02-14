@@ -6,6 +6,8 @@ export class MatchSetup {
         this.addPlayerBtn = document.getElementById('addPlayerButton');
         this.timerToggle = document.getElementById('timerToggle');
         this.timerSeconds = document.getElementById('timerSeconds');
+        this.deathTriggerSlider = document.getElementById('deathTriggerChance');
+        this.deathTriggerDisplay = document.getElementById('deathTriggerValue');
         this.maxPlayers = 8;
         
         this.players = [];
@@ -19,6 +21,15 @@ export class MatchSetup {
         this.timerToggle.addEventListener('change', (e) => {
             this.timerSeconds.disabled = !e.target.checked;
         });
+
+        if (this.deathTriggerSlider) {
+            // Set initial value
+            this.deathTriggerDisplay.textContent = this.deathTriggerSlider.value + '%';
+            
+            this.deathTriggerSlider.addEventListener('input', () => {
+                this.deathTriggerDisplay.textContent = this.deathTriggerSlider.value + '%';
+            });
+        }
 
         // Add default players
         this.addPlayer('Player 1', 'human');
@@ -103,6 +114,7 @@ export class MatchSetup {
             totalGames: parseInt(document.getElementById('matchGames').value),
             winCondition: document.getElementById('winCondition').value,
             startingCash: parseInt(document.getElementById('startingCash').value),
+            deathTriggerChance: parseInt(this.deathTriggerSlider.value) / 100,
             windIntensity: document.getElementById('windIntensity').value,
             mapStyle: document.getElementById('mapStyle').value,
             turnTimer: {
