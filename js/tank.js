@@ -686,6 +686,16 @@ export class Tank {
         this.power = shot.power;
         this.aiController.recordShot(targetTank);
 
+        // Weapon Selection
+        if (this.aiController.chooseWeapon) {
+            const weaponId = this.aiController.chooseWeapon(this, targetTank, state.tanks);
+            if (weaponId && weaponId !== 'default') {
+                this.useItem(weaponId);
+            } else {
+                this.selectedWeapon = 'default';
+            }
+        }
+
         setTimeout(() => {
             this.fire();
             state.aiReadyToFire = true;

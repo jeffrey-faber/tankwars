@@ -1,3 +1,17 @@
+export function detectClumping(target, allTanks) {
+    const radius = 100;
+    const tx = target.x + target.width / 2;
+    const ty = target.y - target.height / 2;
+
+    const enemiesNearTarget = allTanks.filter(t => {
+        if (!t.alive || t === target) return false;
+        const dx = (t.x + t.width / 2) - tx;
+        const dy = (t.y - t.height / 2) - ty;
+        return Math.sqrt(dx * dx + dy * dy) < radius;
+    });
+
+    return enemiesNearTarget.length >= 2;
+}
 
 // Helper to simulate shots and find the best parameters within constraints
 function findBestShot(tank, target, env, angleMin, angleMax, initialAngleStep = Math.PI / 45, initialPowerStep = 2) {
@@ -143,6 +157,12 @@ export class StandardAI extends AIController {
             }
         }
 
+        // Proactive Parachute
+        if (tank.currency >= 40 && tank.parachuteDurability === 0 && Math.random() < 0.1) {
+            store.buyItem('parachute');
+            return;
+        }
+
         // Random otherwise
         const item = affordable[Math.floor(Math.random() * affordable.length)];
         store.buyItem(item.id);
@@ -204,11 +224,12 @@ export class StupidAI extends AIController {
 
 export class LobberAI extends AIController {
     shop(store, tank) {
-        // Lobber loves Nukes (radius)
+        // Lobber loves Nukes and Dirt Balls
         if (tank.currency >= 50) {
             store.buyItem('nuke');
+        } else if (tank.currency >= 35) {
+            store.buyItem('dirtball');
         } else if (Math.random() < 0.3) {
-            // Or save up / buy cheap stuff
             const affordable = store.items.filter(i => i.price <= tank.currency);
             if (affordable.length > 0) {
                 store.buyItem(affordable[0].id);
@@ -239,9 +260,11 @@ export class LobberAI extends AIController {
 
 export class SniperAI extends AIController {
     shop(store, tank) {
-        // Sniper loves Lasers
-        if (tank.currency >= 40) {
+        // Sniper loves Lasers and needs Shovel to clear paths
+        if (tank.currency >= 40 && !tank.inventory.find(i => i.id === 'laser')) {
             store.buyItem('laser');
+        } else if (tank.currency >= 20 && !tank.inventory.find(i => i.id === 'shovel')) {
+            store.buyItem('shovel');
         }
     }
 
@@ -255,7 +278,22 @@ export class SniperAI extends AIController {
             minA = 155 * Math.PI / 180;
             maxA = 180 * Math.PI / 180;
         }
+        
         const result = findBestShot(tank, target, env, minA, maxA);
+        
+        // If Sniper's best direct shot is blocked, try to use shovel to clear a path
+        if (result.angle === null && tank.inventory.find(i => i.id === 'shovel')) {
+            const hasShovel = tank.useItem('shovel');
+            if (hasShovel) {
+                // Aim shovel at the blocking terrain (simplified: aim halfway between self and target)
+                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, minA, maxA);
+                return {
+                    angle: shovelResult.angle || (minA + maxA) / 2,
+                    power: (shovelResult.power || 50) * 0.6 // Close range digging
+                };
+            }
+        }
+
         const history = this.getShotHistory(target);
         const learningFactor = Math.max(0.05, 0.8 - (history * 0.4)); 
         const noise = (Math.random() * 2 - 1) * 1 * learningFactor;
@@ -266,69 +304,66 @@ export class SniperAI extends AIController {
     }
 }
 
-    export class MastermindAI extends AIController {
+export class MastermindAI extends AIController {
+    constructor() {
+        super();
+        this.currentTarget = null;
+        this.shotHistoryMap = new Map(); // targetName -> [{power, errorX}]
+        this.pendingPower = 0;
+    }
 
-        constructor() {
-
-            super();
-
-            this.currentTarget = null;
-
-            this.shotHistoryMap = new Map(); // targetName -> [{power, errorX}]
-
-            this.pendingPower = 0;
-
+    shop(store, tank) {
+        // Priority 1: Survival
+        if (tank.health < 40 && tank.currency >= 25) {
+            store.buyItem('health');
+            return;
         }
 
-
-
-        shop(store, tank) {
-
-            // Priority 1: Survival
-
-            if (tank.health < 40 && tank.currency >= 25) {
-
-                store.buyItem('health');
-
-                return;
-
-            }
-
-
-
-            // Priority 2: Defense if rich
-
-            if (tank.currency >= 100 && !tank.shielded) {
-
-                store.buyItem('shield');
-
-                return;
-
-            }
-
-
-
-            // Priority 3: Offense
-
-            // Buy Nuke for groups (simplified check) or Laser for long range?
-
-            // Mastermind is rich, buy best available
-
-            if (tank.currency >= 50) {
-
-                store.buyItem('nuke');
-
-            } else if (tank.currency >= 40) {
-
-                store.buyItem('laser');
-
-            }
-
+        // Priority 2: Defense
+        if (tank.currency >= 100 && tank.shieldDurability === 0) {
+            store.buyItem('shield');
+            return;
         }
 
+        // Priority 3: Fall Protection
+        if (tank.currency >= 50 && tank.parachuteDurability === 0) {
+            store.buyItem('parachute');
+            return;
+        }
 
+        // Priority 4: Tactical Arsenal
+        if (tank.currency >= 500) {
+            store.buyItem('mega_nuke');
+        } else if (tank.currency >= 150) {
+            store.buyItem('cluster_bomb');
+        } else if (tank.currency >= 110) {
+            store.buyItem('earthquake_l');
+        } else if (tank.currency >= 50) {
+            store.buyItem('heavy');
+        }
+    }
 
-        onShotResult(target, impactX, impactY) {
+    chooseWeapon(tank, target, allTanks) {
+        const isClumped = detectClumping(target, allTanks);
+        
+        // 1. If enemies are clumped, use MASSIVE AoE
+        if (isClumped) {
+            if (tank.inventory.find(i => i.id === 'mega_nuke')) return 'mega_nuke';
+            if (tank.inventory.find(i => i.id === 'cluster_bomb')) return 'cluster_bomb';
+            if (tank.inventory.find(i => i.id === 'earthquake_l')) return 'earthquake_l';
+        }
+
+        // 2. Efficiency calculation for high-cost items
+        const nuke = tank.inventory.find(i => i.id === 'mega_nuke');
+        if (nuke && target.health > 80) return 'mega_nuke'; // Use big guns for healthy targets
+
+        // 3. Prefer Heavy over Default if available
+        if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
+
+        return 'default';
+    }
+
+    onShotResult(target, impactX, impactY) {
 
 
         const tx = target.x + target.width / 2;
