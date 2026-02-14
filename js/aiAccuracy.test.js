@@ -177,6 +177,34 @@ describe('AI Accuracy Benchmark', () => {
         expect(result).toBeGreaterThan(0);
     });
 
+    it('Sniper: Deadly accuracy from high ground', () => {
+        const highGroundEnv = {
+            wind: 0,
+            gravity: 0.1,
+            checkTerrain: (x, y) => {
+                if (x < 300) return y > 200; // High plateau
+                return y > 500; // Low ground
+            }
+        };
+        // Source at 100, 200 (High). Target at 700, 500 (Low).
+        const ai = new SniperAI();
+        const source = createTank(100, 200);
+        const target = createTarget(700, 500);
+        
+        let hit = false;
+        for (let i = 0; i < 5; i++) {
+            const shot = ai.calculateShot(source, target, highGroundEnv);
+            const res = simulateShot(shot, source, target, highGroundEnv);
+            if (res.hit) {
+                hit = true;
+                break;
+            }
+            ai.recordShot(target);
+            ai.onShotResult(target, res.x, res.y);
+        }
+        expect(hit).toBe(true);
+    });
+
     it('Lobber: Must always lob', () => {
         const lobber = new LobberAI();
         const source = createTank(100, 500);
