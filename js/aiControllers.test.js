@@ -8,7 +8,7 @@ describe('AI Controllers', () => {
     let env = { wind: 0.05, gravity: 0.1 };
 
     beforeEach(() => {
-        mockTank = { x: 100, y: 500, width: 20, height: 10, name: 'AI' };
+        mockTank = { x: 100, y: 500, width: 20, height: 10, name: 'AI', inventory: [], selectedWeapon: 'default' };
         mockTarget = { x: 400, y: 500, width: 20, height: 10, name: 'Target' };
     });
 

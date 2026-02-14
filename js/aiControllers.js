@@ -14,7 +14,7 @@ export function detectClumping(target, allTanks) {
 }
 
 // Helper to simulate shots and find the best parameters within constraints
-function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, preference = 'any', initialAngleStep = Math.PI / 45, initialPowerStep = 2) {
+function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, preference = 'any', weaponRadius = 15, initialAngleStep = Math.PI / 60, initialPowerStep = 1) {
     const g = env.gravity;
     const physicsScale = 0.2; 
     const barrelLength = 30;
@@ -27,32 +27,34 @@ function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powe
     let minError = Infinity;
     let bestCriteria = (preference === 'steepest' ? -Infinity : Infinity);
 
-    const checkBetter = (error, angle, peakY) => {
-        if (error > 20) return false; // Must be reasonably close to be considered a "hit"
-        
-        if (preference === 'any') {
-            return error < minError;
-        }
-        
-        // If error is significantly better, always take it
+    const checkBetter = (error, angle, peakY, power) => {
+        // PRIORITY 1: Accuracy (Always prefer hits that are closer to the target center)
+        // If the new error is significantly better (e.g., 5px closer), take it immediately.
         if (error < minError - 5) return true;
-        // If errors are similar, use preference
+
+        // PRIORITY 2: Character Preference (Only if accuracy is already 'good enough' or similar)
         if (Math.abs(error - minError) <= 5) {
             if (preference === 'flattest') {
-                return peakY > bestCriteria; // higher Y value means lower peak height
+                // If it's a sniper shot, favor lower power first (less overshoot risk) then height
+                if (power < bestPower - 10) return true;
+                return peakY > bestCriteria; 
             }
             if (preference === 'steepest') {
-                return peakY < bestCriteria; // lower Y value means higher peak height
+                return peakY < bestCriteria;
             }
+            
+            // If no specific preference, prefer lower power for efficiency
+            if (power < bestPower - 10) return true;
         }
-        return false;
+
+        return error < minError;
     };
 
     // Phase 1: Coarse Search
     for (let power = powerMin; power <= powerMax; power += initialPowerStep) {
         for (let angle = angleMin; angle <= angleMax; angle += initialAngleStep) {
-            const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty);
-            if (res.hitX && checkBetter(res.error, angle, res.peakY)) {
+            const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty, weaponRadius);
+            if (res.hitX && checkBetter(res.error, angle, res.peakY, power)) {
                 minError = res.error;
                 bestAngle = angle;
                 bestPower = power;
@@ -65,15 +67,16 @@ function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powe
     if (bestAngle !== null) {
         const refineAngleRange = initialAngleStep;
         const refinePowerRange = initialPowerStep;
-        const refineSteps = 5;
+        const refineSteps = 10; 
 
         for (let power = Math.max(powerMin, bestPower - refinePowerRange); power <= Math.min(powerMax, bestPower + refinePowerRange); power += refinePowerRange / refineSteps) {
             for (let angle = Math.max(angleMin, bestAngle - refineAngleRange); angle <= Math.min(angleMax, bestAngle + refineAngleRange); angle += refineAngleRange / refineSteps) {
-                const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty);
-                if (res.hitX && res.error < minError) {
+                const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty, weaponRadius);
+                if (res.hitX && checkBetter(res.error, angle, res.peakY, power)) {
                     minError = res.error;
                     bestAngle = angle;
                     bestPower = power;
+                    bestCriteria = res.peakY;
                 }
             }
         }
@@ -82,23 +85,38 @@ function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powe
     return { angle: bestAngle, power: bestPower, error: minError };
 }
 
-function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty) {
+function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty, weaponRadius = 15) {
     let x = tank.x + tank.width / 2 + barrelLength * Math.cos(angle);
     let y = tank.y - tank.height - barrelLength * Math.sin(angle);
+    
+    // SYNC WITH GAME PHYSICS: Apply safe starting distance "teleport"
+    const safeStartingDistance = weaponRadius + 20;
+    const tankCenterX = tank.x + tank.width/2;
+    const tankCenterY = tank.y - tank.height/2;
+    const distanceFromTankCenterToProjectile = Math.sqrt(
+        (x - tankCenterX)**2 + (y - tankCenterY)**2
+    );
+    
+    if (distanceFromTankCenterToProjectile < safeStartingDistance) {
+        const safetyFactor = safeStartingDistance / distanceFromTankCenterToProjectile;
+        x = tankCenterX + (x - tankCenterX) * safetyFactor;
+        y = tankCenterY + (y - tankCenterY) * safetyFactor;
+    }
+
     let vx = power * Math.cos(angle) * physicsScale;
     let vy = -power * Math.sin(angle) * physicsScale;
     
     const dxInitial = tx - (tank.x + tank.width / 2);
     let peakY = y;
 
-    for(let t = 0; t < 500; t++) {
+    for(let t = 0; t < 1000; t++) {
         vy += g;
         vx += env.wind;
         
         if (y < peakY) peakY = y;
 
         const speed = Math.sqrt(vx*vx + vy*vy);
-        const steps = Math.ceil(speed / 2);
+        const steps = Math.ceil(speed / 2); // MATCH GAME PHYSICS (2px steps)
         const stepX = vx / steps;
         const stepY = vy / steps;
         
@@ -106,7 +124,7 @@ function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsSca
             x += stepX;
             y += stepY;
             if (env.checkTerrain && env.checkTerrain(x, y)) {
-                return { hitX: false }; // Hit terrain
+                return { hitX: false }; 
             }
         }
 
@@ -114,7 +132,7 @@ function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsSca
         if (crossedX) {
             return { hitX: true, error: Math.abs(y - ty), peakY };
         }
-        if (y > 1500) break; 
+        if (y > 2000) break; 
     }
     return { hitX: false };
 }
@@ -247,7 +265,11 @@ export class StandardAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
-        const result = findBestShot(tank, target, env, 5 * Math.PI/180, 175 * Math.PI/180, 10, 100);
+        // Get radius for simulation sync
+        const weaponItem = tank.inventory.find(i => i.id === tank.selectedWeapon);
+        const weaponRadius = weaponItem?.effect?.radius || 15;
+
+        const result = findBestShot(tank, target, env, 5 * Math.PI/180, 175 * Math.PI/180, 10, 100, 'any', weaponRadius);
         
         let bestAngle = result.angle || Math.PI / 4;
         let bestPower = result.power || 70;
@@ -339,6 +361,10 @@ export class LobberAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
+        // Get radius for simulation sync
+        const weaponItem = tank.inventory.find(i => i.id === tank.selectedWeapon);
+        const weaponRadius = weaponItem?.effect?.radius || 15;
+
         const dx = target.x - tank.x;
         let minA, maxA;
         if (dx > 0) {
@@ -349,7 +375,7 @@ export class LobberAI extends AIController {
             maxA = 120 * Math.PI / 180;
         }
         // Lobber locked to high angles and prefers STEEPEST
-        const result = findBestShot(tank, target, env, minA, maxA, 20, 100, 'steepest');
+        const result = findBestShot(tank, target, env, minA, maxA, 20, 100, 'steepest', weaponRadius);
         const history = this.getShotHistory(target);
         const learningFactor = Math.max(0.1, 1.0 - (history * 0.2));
         const noise = (Math.random() * 2 - 1) * 2 * learningFactor;
@@ -379,15 +405,20 @@ export class SniperAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
-        // Sniper prefers FLATTEST shots across the full viable range
-        const result = findBestShot(tank, target, env, 5 * Math.PI / 180, 175 * Math.PI / 180, 70, 100, 'flattest');
+        // Get radius for simulation sync
+        const weaponItem = tank.inventory.find(i => i.id === tank.selectedWeapon);
+        const weaponRadius = weaponItem?.effect?.radius || 15;
+
+        // Sniper prefers FLATTEST shots across the full viable range (can shoot up hills)
+        // But strictly stays in HIGH POWER (70-100) to maintain directness.
+        const result = findBestShot(tank, target, env, 5 * Math.PI / 180, 175 * Math.PI / 180, 70, 100, 'flattest', weaponRadius);
         
-        // If Sniper's best shot is blocked, try to use shovel to clear a path
+        // If Sniper's best direct shot is blocked, it doesn't lob. It tries to use shovel or shoots the obstruction.
         if (result.angle === null && tank.inventory.find(i => i.id === 'shovel')) {
             const hasShovel = tank.useItem('shovel');
             if (hasShovel) {
                 // Aim shovel at the blocking terrain
-                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, 5 * Math.PI / 180, 175 * Math.PI / 180, 30, 60, 'flattest');
+                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, 5 * Math.PI / 180, 175 * Math.PI / 180, 30, 60, 'flattest', 40);
                 return {
                     angle: shovelResult.angle || (Math.PI / 4),
                     power: (shovelResult.power || 50)
@@ -456,10 +487,8 @@ export class MastermindAI extends AIController {
         const weapons = tank.inventory.filter(i => i.effect.type === 'weapon');
         if (weapons.length === 0) return 'default';
 
-        // 1. Group unique weapons to avoid redundant simulations
         const uniqueWeapons = Array.from(new Map(weapons.map(w => [w.id, w])).values());
         
-        // 2. Tactical Analysis: Evaluate every weapon's Expected Value (EV)
         let bestWeaponId = 'default';
         let highestScore = -Infinity;
 
@@ -469,20 +498,23 @@ export class MastermindAI extends AIController {
         for (const weapon of options) {
             const radius = weapon.effect.radius || 15;
             const damage = weapon.effect.damage || 50;
-            const cost = weapon.price || 1; // Avoid div by zero for default
+            const cost = weapon.price || 0; 
 
-            // Simulate the shot to get predicted impact
+            // Temporary swap to weapon so calculateShot knows the radius
+            const originalWeapon = tank.selectedWeapon;
+            tank.selectedWeapon = weapon.id;
+            
             const env = { wind: state.wind, gravity: state.gravity, checkTerrain: (x, y) => state.terrain.checkCollision(x, y) };
             const shot = this.calculateShot(tank, target, env);
             
-            // Very basic trajectory prediction for ROI calculation
-            // In a real duel, we'd use the simulated impact point
+            // Restore weapon
+            tank.selectedWeapon = originalWeapon;
+            
             const tx = target.x + target.width / 2;
             const ty = target.y - target.height / 2;
 
             let weaponScore = 0;
             
-            // Calculate Damage ROI against ALL tanks
             for (const other of allTanks) {
                 if (!other.alive) continue;
                 
@@ -495,16 +527,20 @@ export class MastermindAI extends AIController {
                     const predictedDamage = damage * factor;
                     
                     if (other === tank) {
-                        weaponScore -= predictedDamage * 2; // High penalty for self-harm
+                        weaponScore -= predictedDamage * 5; // MASSIVE penalty for self-harm
                     } else {
                         weaponScore += predictedDamage;
-                        if (predictedDamage >= other.health) weaponScore += 100; // Kill bonus
+                        // Heavy reward for killing blow
+                        if (predictedDamage >= other.health) weaponScore += 250; 
                     }
                 }
             }
 
-            // Normalize by cost (Expensive weapons need to deal more damage to be worth it)
-            const roi = weaponScore / (cost + 10); 
+            // Tactical aggressive tuning:
+            // Expensive weapons should be used if they secure a kill or hit multiple targets.
+            // Cost penalty is now logarithmic to reduce its damping effect on super-weapons.
+            const costPenalty = Math.log10(cost + 1) * 20;
+            const roi = weaponScore - costPenalty;
             
             if (roi > highestScore) {
                 highestScore = roi;
@@ -541,9 +577,13 @@ export class MastermindAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
+        // Get radius for simulation sync
+        const weaponItem = tank.inventory.find(i => i.id === tank.selectedWeapon);
+        const weaponRadius = weaponItem?.effect?.radius || 15;
+
         // 1. Dual-Trajectory Intelligence: Evaluate Direct and Lob options
-        const directResult = findBestShot(tank, target, env, 0, Math.PI, 10, 100);
-        const lobResult = findBestShot(tank, target, env, Math.PI / 4, 3 * Math.PI / 4, 20, 100, 'steepest');
+        const directResult = findBestShot(tank, target, env, 0, Math.PI, 10, 100, 'any', weaponRadius);
+        const lobResult = findBestShot(tank, target, env, Math.PI / 4, 3 * Math.PI / 4, 20, 100, 'steepest', weaponRadius);
         
         let best = directResult;
         
