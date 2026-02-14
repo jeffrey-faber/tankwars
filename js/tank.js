@@ -368,23 +368,29 @@ export class Tank {
                             }
                         } else if (state.projectile.type.startsWith('earthquake')) {
                             if (state.terrain.createCracks) {
+                                // 1. Freeze EVERYTHING
                                 state.terrain.freezeGravity = true;
+                                state.freezeTankGravity = true;
                                 
                                 // Get intensity from item if possible
                                 const weaponItem = this.inventory.find(i => i.id === state.projectile.type) || { effect: { intensity: 8 } };
                                 const intensity = weaponItem.effect.intensity || 8;
 
-                                // Create several cracks starting from impact
-                                // Scale length with intensity
+                                // 2. Create Cracks
                                 const baseLength = 15 + (intensity * 4);
                                 for (let i = 0; i < intensity; i++) {
                                     state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
                                 }
                                 
-                                // Unfreeze after cracks propagate
+                                // 3. Unfreeze Dirt after cracks propagate (visual delay)
                                 setTimeout(() => {
                                     state.terrain.freezeGravity = false;
                                 }, 800);
+
+                                // 4. Unfreeze Tanks 2 seconds later (so they fall AFTER dirt clears)
+                                setTimeout(() => {
+                                    state.freezeTankGravity = false;
+                                }, 2800);
                             }
                         } else {
                             if (state.terrain.explode) {
@@ -450,6 +456,9 @@ export class Tank {
     }
     
     applyGravity(terrain) {
+        // If tank gravity is frozen (e.g. during earthquake), skip physics
+        if (state.freezeTankGravity) return;
+
         const leftX = Math.floor(this.x);
         const centerX = Math.floor(this.x + this.width / 2);
         const rightX = Math.floor(this.x + this.width);

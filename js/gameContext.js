@@ -3,6 +3,7 @@ export const state = {
     gameState: 'LOBBY', // Options: 'LOBBY', 'LOBBY_SHOPPING', 'PLAYING'
     wind: 0,
     gravity: 0.1,
+    freezeTankGravity: false, // New flag for Earthquake effect
     projectile: { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 30 },
     isGameOver: false,
     needsRedraw: true,
