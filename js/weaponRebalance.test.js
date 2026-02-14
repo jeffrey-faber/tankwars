@@ -31,7 +31,7 @@ describe('Weapon Rebalance and Store Updates', () => {
         state.ctx = mockCtx;
         state.canvas = { width: 800, height: 600 };
         state.tanks = [];
-        state.projectile = { flying: false };
+        state.projectiles = [];
         state.terrain = { 
             draw: vi.fn(),
             checkCollision: vi.fn(() => false)
@@ -45,9 +45,9 @@ describe('Weapon Rebalance and Store Updates', () => {
 
     it('should have reduced default weapon radius (15)', () => {
         tank.selectedWeapon = 'default';
-        // Mock fire to see what it sets in state.projectile
+        // Mock fire to see what it sets in state.projectiles
         tank.fire();
-        expect(state.projectile.explosionRadius).toBe(15);
+        expect(state.projectiles[0].explosionRadius).toBe(15);
     });
 
     it('should have heavy weapon with radius 30 and damage 60', () => {
@@ -55,16 +55,16 @@ describe('Weapon Rebalance and Store Updates', () => {
         tank.inventory.push({ id: 'heavy', effect: { type: 'weapon', radius: 30, damage: 60 } });
         tank.selectedWeapon = 'heavy';
         tank.fire();
-        expect(state.projectile.explosionRadius).toBe(30);
-        expect(state.projectile.damage).toBe(60);
+        expect(state.projectiles[0].explosionRadius).toBe(30);
+        expect(state.projectiles[0].damage).toBe(60);
     });
 
     it('should have mega_nuke with radius 150 and damage 200', () => {
         tank.inventory.push({ id: 'mega_nuke', effect: { type: 'weapon', radius: 150, damage: 200 } });
         tank.selectedWeapon = 'mega_nuke';
         tank.fire();
-        expect(state.projectile.explosionRadius).toBe(150);
-        expect(state.projectile.damage).toBe(200);
+        expect(state.projectiles[0].explosionRadius).toBe(150);
+        expect(state.projectiles[0].damage).toBe(200);
     });
 
     it('should buy heavy weapon in pack of 5', () => {

@@ -19,10 +19,10 @@ describe('Store Purchase Logic', () => {
     });
 
     it('should increment inventory for non-healing items', () => {
-        store.buyItem('nuke');
+        store.buyItem('mega_nuke');
         expect(tank.inventory.length).toBe(1);
-        expect(tank.inventory[0].id).toBe('nuke');
-        expect(tank.currency).toBe(950);
+        expect(tank.inventory[0].id).toBe('mega_nuke');
+        expect(tank.currency).toBe(500);
     });
 
     it('should NOT increment inventory for healing items (used immediately)', () => {
@@ -36,6 +36,6 @@ describe('Store Purchase Logic', () => {
         store.buyItem('shield');
         expect(tank.inventory.length).toBe(1);
         expect(tank.inventory[0].id).toBe('shield');
-        expect(tank.currency).toBe(970);
+        expect(tank.currency).toBe(900);
     });
 });

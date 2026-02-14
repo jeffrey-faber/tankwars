@@ -318,12 +318,14 @@ export class Tank {
     }
 
     fire() {
-        if (state.projectile.flying) return;
+        // Prevent firing if any projectiles are still active (standard turn-based rule)
+        if (state.projectiles.length > 0) return;
         
         let explosionRadius = 15; // Default reduced to 15
         let damage = 50; // Default reduced to 50
         let projectileColor = 'black';
         let extraDistance = 0;
+        let special = null;
         
         let vx = this.power * Math.cos(this.angle) * 0.2;
         let vy = -this.power * Math.sin(this.angle) * 0.2;
@@ -341,6 +343,7 @@ export class Tank {
             explosionRadius = 20; // Radius of sub-munitions
             damage = 30; // Damage of sub-munitions
             projectileColor = '#ff00ff';
+            special = 'cluster';
         } else if (this.selectedWeapon === 'laser') {
             vx *= 2;
             vy *= 2;
@@ -350,30 +353,39 @@ export class Tank {
             explosionRadius = 30;
             damage = 10;
             projectileColor = '#3d2b1f';
+            special = 'add_terrain';
         } else if (this.selectedWeapon === 'shovel') {
             explosionRadius = 40;
             damage = 0;
             projectileColor = '#aaaaaa';
+            special = 'remove_terrain_cone';
         } else if (this.selectedWeapon.startsWith('earthquake')) {
             const weaponItem = this.inventory.find(i => i.id === this.selectedWeapon);
             explosionRadius = weaponItem?.effect?.radius || 100;
             damage = weaponItem?.effect?.damage || 20;
             projectileColor = '#555555';
+            special = 'earthquake';
         }
         
         const barrelLength = 30 + extraDistance;
         let x = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
         let y = this.y - this.height - barrelLength * Math.sin(this.angle);
         
-        state.projectile.flying = true;
-        state.projectile.type = this.selectedWeapon;
-        state.projectile.damage = damage;
-        state.projectile.explosionRadius = explosionRadius;
-        state.projectile.color = projectileColor;
-        state.projectile.sourcePlayerId = state.tanks.indexOf(this);
-        state.projectile.sourceTank = this;
-        state.projectile.x = x;
-        state.projectile.y = y;
+        const initialProjectile = {
+            x, y, vx, vy,
+            type: this.selectedWeapon,
+            damage,
+            explosionRadius,
+            color: projectileColor,
+            special,
+            sourcePlayerId: state.tanks.indexOf(this),
+            sourceTank: this,
+            isSubMunition: false,
+            hasSplit: false,
+            turnStartTime: Date.now()
+        };
+
+        state.projectiles.push(initialProjectile);
         
         draw();
         
@@ -381,149 +393,170 @@ export class Tank {
         const tankCenterX = this.x + this.width/2;
         const tankCenterY = this.y - this.height/2;
         const distanceFromTankCenterToProjectile = Math.sqrt(
-            (x - tankCenterX)**2 + (y - tankCenterY)**2
+            (initialProjectile.x - tankCenterX)**2 + (initialProjectile.y - tankCenterY)**2
         );
-        
-        const immunityTime = 200;
-        const maxTurnTime = 10000;
-        const turnStartTime = Date.now();
         
         if (distanceFromTankCenterToProjectile < safeStartingDistance) {
             const safetyFactor = safeStartingDistance / distanceFromTankCenterToProjectile;
-            x = tankCenterX + (x - tankCenterX) * safetyFactor;
-            y = tankCenterY + (y - tankCenterY) * safetyFactor;
-            state.projectile.x = x;
-            state.projectile.y = y;
+            initialProjectile.x = tankCenterX + (initialProjectile.x - tankCenterX) * safetyFactor;
+            initialProjectile.y = tankCenterY + (initialProjectile.y - tankCenterY) * safetyFactor;
         }
         
-        setTimeout(() => {
-            const moveProjectile = () => {
-                // Apply gravity to velocity first
-                vy += state.gravity;
-                vx += state.wind;
+        const immunityTime = 200;
+        const maxTurnTime = 10000;
 
-                // Sub-stepping to prevent tunneling
-                const speed = Math.sqrt(vx*vx + vy*vy);
-                const steps = Math.ceil(speed / 2); // Check every 2 pixels roughly
-                const stepX = vx / steps;
-                const stepY = vy / steps;
+        const moveProjectiles = () => {
+            if (state.projectiles.length === 0) {
+                state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
+                
+                if (this.selectedWeapon !== 'default') {
+                    const index = this.inventory.findIndex(item => item.id === this.selectedWeapon);
+                    if (index !== -1) {
+                        this.inventory.splice(index, 1);
+                    }
+                    this.selectedWeapon = 'default';
+                    if (state.store) {
+                        state.store.updateWeaponSelector(this);
+                    }
+                }
+                return;
+            }
+
+            const toRemove = [];
+            const toAdd = [];
+
+            state.projectiles.forEach((proj, index) => {
+                // Apply physics
+                proj.vy += state.gravity;
+                proj.vx += state.wind;
+
+                // Sub-stepping
+                const speed = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
+                const steps = Math.ceil(speed / 2);
+                const stepX = proj.vx / steps;
+                const stepY = proj.vy / steps;
                 
                 let hit = false;
 
                 for (let s = 0; s < steps; s++) {
-                    x += stepX;
-                    y += stepY;
+                    proj.x += stepX;
+                    proj.y += stepY;
                     
-                    const elapsedTime = Date.now() - turnStartTime;
+                    const elapsedTime = Date.now() - proj.turnStartTime;
                     const excludeSourcePlayer = elapsedTime < immunityTime;
                     
-                    if (elapsedTime < immunityTime) {
-                        hit = checkTerrainAndBounds(x, y, state.terrain, state.canvas);
+                    const directHitTank = checkDirectHit(proj.x, proj.y, state.tanks, proj.sourceTank, excludeSourcePlayer);
+                    if (directHitTank) {
+                        hit = true;
+                        proj.directHitTank = directHitTank;
                     } else {
-                        const directHitTank = checkDirectHit(x, y, state.tanks, this, excludeSourcePlayer);
-                        if (directHitTank) {
-                            hit = true;
-                            this.directHitTank = directHitTank;
-                        } else {
-                            hit = checkTerrainAndBounds(x, y, state.terrain, state.canvas);
-                        }
+                        hit = checkTerrainAndBounds(proj.x, proj.y, state.terrain, state.canvas);
                     }
                     
-                    if (hit) break; // Stop stepping if hit
+                    if (hit) break;
                 }
-                
-                state.projectile.x = x;
-                state.projectile.y = y;
-                
-                draw();
-                
-                const elapsedTime = Date.now() - turnStartTime;
-                if (elapsedTime >= maxTurnTime) hit = true;
-                
-                if (!hit) {
-                    requestAnimationFrame(moveProjectile);
-                } else {
-                    // IMMEDIATELY nullify projectile coordinates so it stops rendering during explosion animation
-                    state.projectile.x = null;
-                    state.projectile.y = null;
 
-                    // Inform controller of the result (do this BEFORE next player logic)
-                    if (this.isAI && this.aiController && this.currentTarget) {
-                        this.aiController.onShotResult(this.currentTarget, x, y);
+                // Check for Cluster Split at apex
+                if (proj.special === 'cluster' && !proj.isSubMunition && !proj.hasSplit && proj.vy > 0) {
+                    proj.hasSplit = true;
+                    // Spawn 5 sub-munitions
+                    for (let i = 0; i < 5; i++) {
+                        const spreadX = (Math.random() - 0.5) * 4;
+                        const spreadY = (Math.random() - 0.5) * 2;
+                        toAdd.push({
+                            ...proj,
+                            vx: proj.vx + spreadX,
+                            vy: proj.vy + spreadY,
+                            isSubMunition: true,
+                            special: null, // Sub-munitions are normal explosives
+                            x: proj.x,
+                            y: proj.y
+                        });
                     }
-
-                    if (y >= 0 && y <= (state.canvas?.height || 400)) {
-                        if (state.projectile.type === 'dirtball') {
-                            if (state.terrain.addTerrain) {
-                                state.terrain.addTerrain(x, y, state.projectile.explosionRadius);
-                            }
-                        } else if (state.projectile.type === 'shovel') {
-                            if (state.terrain.removeTerrainCone) {
-                                // Shovel removes in a cone pointing away from the shooter
-                                const angle = Math.atan2(-(y - (this.y - this.height)), x - (this.x + this.width / 2));
-                                state.terrain.removeTerrainCone(x, y, state.projectile.explosionRadius, angle, Math.PI / 2);
-                            }
-                        } else if (state.projectile.type.startsWith('earthquake')) {
-                            if (state.terrain.createCracks) {
-                                // 1. Freeze EVERYTHING
-                                state.terrain.freezeGravity = true;
-                                state.freezeTankGravity = true;
-                                
-                                // Get intensity from item if possible
-                                const weaponItem = this.inventory.find(i => i.id === state.projectile.type) || { effect: { intensity: 8 } };
-                                const intensity = weaponItem.effect.intensity || 8;
-
-                                // 2. Create Cracks
-                                const baseLength = 15 + (intensity * 4);
-                                for (let i = 0; i < intensity; i++) {
-                                    state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
-                                }
-                                
-                                // 3. Unfreeze Dirt after cracks propagate (visual delay)
-                                setTimeout(() => {
-                                    state.terrain.freezeGravity = false;
-                                }, 800);
-
-                                // 4. Unfreeze Tanks 2 seconds later (so they fall AFTER dirt clears)
-                                setTimeout(() => {
-                                    state.freezeTankGravity = false;
-                                }, 2800);
-                            }
-                        } else {
-                            if (state.terrain.explode) {
-                                state.terrain.explode(x, y, state.projectile.explosionRadius);
-                            }
-                        }
-                        
-                        if (state.ctx && state.canvas && draw) {
-                            const color = state.projectile.type === 'dirtball' ? '#3d2b1f' : (state.projectile.type === 'shovel' ? '#aaaaaa' : null);
-                            createExplosion(x, y, state.projectile.explosionRadius, state.ctx, state.canvas, draw, color);
-                        }
-                        
-                        applyExplosionDamage(x, y, state.tanks, state.projectile.explosionRadius, state.projectile.damage, state.projectile.sourcePlayerId, this.directHitTank);
-                        this.directHitTank = null;
-                    }
-                    
-                    state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
-                    state.projectile.flying = false;
-                    
-                    if (this.selectedWeapon !== 'default') {
-                        const index = this.inventory.findIndex(item => item.id === this.selectedWeapon);
-                        if (index !== -1) {
-                            this.inventory.splice(index, 1);
-                        }
-                        this.selectedWeapon = 'default';
-                        
-                        // Update UI to reflect consumed item
-                        if (state.store) {
-                            state.store.updateWeaponSelector(this);
-                        }
-                    }
+                    toRemove.push(index);
+                    return;
                 }
-            };
+
+                const totalElapsedTime = Date.now() - proj.turnStartTime;
+                if (totalElapsedTime >= maxTurnTime) hit = true;
+
+                if (hit) {
+                    // Impact logic
+                    if (proj.y >= 0 && proj.y <= (state.canvas?.height || 400)) {
+                        this.handleProjectileImpact(proj);
+                    }
+                    toRemove.push(index);
+                }
+            });
+
+            // Clean up finished projectiles and add new ones (clusters)
+            toRemove.sort((a, b) => b - a).forEach(idx => state.projectiles.splice(idx, 1));
+            toAdd.forEach(p => state.projectiles.push(p));
+
+            draw();
             
-            moveProjectile();
-        }, 10);
+            if (state.projectiles.length > 0 || toAdd.length > 0) {
+                requestAnimationFrame(moveProjectiles);
+            } else {
+                // All projectiles done
+                state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
+                if (this.selectedWeapon !== 'default') {
+                    const index = this.inventory.findIndex(item => item.id === this.selectedWeapon);
+                    if (index !== -1) {
+                        this.inventory.splice(index, 1);
+                    }
+                    this.selectedWeapon = 'default';
+                    if (state.store) {
+                        state.store.updateWeaponSelector(this);
+                    }
+                }
+            }
+        };
+
+        setTimeout(moveProjectiles, 10);
+    }
+
+    handleProjectileImpact(proj) {
+        const { x, y, type, explosionRadius, damage, sourcePlayerId, special, directHitTank } = proj;
+
+        if (this.isAI && this.aiController && this.currentTarget && !proj.isSubMunition) {
+            this.aiController.onShotResult(this.currentTarget, x, y);
+        }
+
+        if (special === 'add_terrain') {
+            if (state.terrain.addTerrain) {
+                state.terrain.addTerrain(x, y, explosionRadius);
+            }
+        } else if (special === 'remove_terrain_cone') {
+            if (state.terrain.removeTerrainCone) {
+                const angle = Math.atan2(-(y - (this.y - this.height)), x - (this.x + this.width / 2));
+                state.terrain.removeTerrainCone(x, y, explosionRadius, angle, Math.PI / 2);
+            }
+        } else if (special === 'earthquake') {
+            if (state.terrain.createCracks) {
+                state.terrain.freezeGravity = true;
+                state.freezeTankGravity = true;
+                const weaponItem = this.inventory.find(i => i.id === type) || { effect: { intensity: 8 } };
+                const intensity = weaponItem.effect.intensity || 8;
+                const baseLength = 15 + (intensity * 4);
+                for (let i = 0; i < intensity; i++) {
+                    state.terrain.createCracks(x, y, baseLength, (i / intensity) * Math.PI * 2);
+                }
+                setTimeout(() => { state.terrain.freezeGravity = false; }, 800);
+                setTimeout(() => { state.freezeTankGravity = false; }, 2800);
+            }
+        } else {
+            if (state.terrain.explode) {
+                state.terrain.explode(x, y, explosionRadius);
+            }
+        }
+
+        if (state.ctx && state.canvas && draw) {
+            const color = special === 'add_terrain' ? '#3d2b1f' : (special === 'remove_terrain_cone' ? '#aaaaaa' : null);
+            createExplosion(x, y, explosionRadius, state.ctx, state.canvas, draw, color);
+        }
+
+        applyExplosionDamage(x, y, state.tanks, explosionRadius, damage, sourcePlayerId, directHitTank);
     }
     
     useItem(itemId) {
@@ -536,19 +569,9 @@ export class Tank {
             // Select the weapon
             this.selectedWeapon = item.id;
             return true;
-        } else if (item.effect.type === 'defense' && item.id === 'shield') {
-            // Activate shield
-            this.shielded = true;
-            // Remove from inventory after use
-            this.inventory.splice(index, 1);
-            return true;
-        } else if (item.effect.type === 'defense' && item.id === 'parachute') {
-            // Can only have 1 active parachute
-            this.parachuteDurability = this.maxHealth * 2;
-            this.inventory.splice(index, 1);
-            return true;
         }
         
+        // defense items are now auto-active on purchase/landing logic
         return false;
     }
     

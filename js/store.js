@@ -525,31 +525,50 @@ export class Store {
             // Deduct the price
             this.currentTank.currency -= item.price;
             
-            // Copy the item to the tank's inventory
-            if (!this.currentTank.inventory) {
-                this.currentTank.inventory = [];
-            }
-            
-            // Create copies of the item for the inventory based on pack size
-            const numToBuy = item.packSize || 1;
-            for (let k = 0; k < numToBuy; k++) {
-                const inventoryItem = JSON.parse(JSON.stringify(item));
-                this.currentTank.inventory.push(inventoryItem);
-            }
-            
-            // Special case for healing items - use immediately
-            if (item.effect.type === 'healing') {
-                this.currentTank.health = Math.min(this.currentTank.maxHealth, this.currentTank.health + item.effect.amount);
-                // Remove from inventory (buyItem added them, but healing is instant)
-                for (let k = 0; k < numToBuy; k++) {
-                    const index = this.currentTank.inventory.findIndex(i => i.id === itemId);
-                    if (index !== -1) {
-                        this.currentTank.inventory.splice(index, 1);
-                    }
+            // Special handling for auto-active single-slot items
+            if (itemId === 'shield' || itemId === 'parachute') {
+                if (!this.currentTank.inventory) this.currentTank.inventory = [];
+                
+                // Add to inventory only if not already present
+                const existing = this.currentTank.inventory.find(i => i.id === itemId);
+                if (!existing) {
+                    this.currentTank.inventory.push(JSON.parse(JSON.stringify(item)));
                 }
-                this.showMessage(`Healed +${item.effect.amount} HP!`);
+
+                if (itemId === 'shield') {
+                    this.currentTank.shielded = true;
+                    this.showMessage("Shield Active!");
+                } else {
+                    this.currentTank.parachuteDurability = this.currentTank.maxHealth * 2;
+                    this.showMessage("Parachute Ready!");
+                }
             } else {
-                this.showMessage(`You bought ${item.name}!`);
+                // Standard pack/single item logic
+                if (!this.currentTank.inventory) {
+                    this.currentTank.inventory = [];
+                }
+                
+                // Create copies of the item for the inventory based on pack size
+                const numToBuy = item.packSize || 1;
+                for (let k = 0; k < numToBuy; k++) {
+                    const inventoryItem = JSON.parse(JSON.stringify(item));
+                    this.currentTank.inventory.push(inventoryItem);
+                }
+                
+                // Special case for healing items - use immediately
+                if (item.effect.type === 'healing') {
+                    this.currentTank.health = Math.min(this.currentTank.maxHealth, this.currentTank.health + item.effect.amount);
+                    // Remove from inventory
+                    for (let k = 0; k < numToBuy; k++) {
+                        const index = this.currentTank.inventory.findIndex(i => i.id === itemId);
+                        if (index !== -1) {
+                            this.currentTank.inventory.splice(index, 1);
+                        }
+                    }
+                    this.showMessage(`Healed +${item.effect.amount} HP!`);
+                } else {
+                    this.showMessage(`You bought ${item.name}!`);
+                }
             }
             
             // Update the store UI
@@ -582,39 +601,44 @@ export class Store {
         }, 2000);
     }
     
-    // AI will randomly buy items they can afford
-    aiPurchase(aiTank) {
-        if (!aiTank.isAI || !aiTank.alive) return;
-        
-        // AI has a chance to buy an item if they have enough currency
-        const affordableItems = this.items.filter(item => aiTank.currency >= item.price);
-        
-        if (affordableItems.length > 0 && Math.random() < 0.3) { // 30% chance to buy an item
-            const randomItem = affordableItems[Math.floor(Math.random() * affordableItems.length)];
+        // AI will randomly buy items they can afford
+    
+        aiPurchase(aiTank) {
+    
+            if (!aiTank.isAI || !aiTank.alive) return;
+    
             
-            // Deduct the price
-            aiTank.currency -= randomItem.price;
+    
+            // AI has a chance to buy an item if they have enough currency
+    
+            const affordableItems = this.items.filter(item => aiTank.currency >= item.price);
+    
             
-            // Add item to tank's inventory
-            if (!aiTank.inventory) {
-                aiTank.inventory = [];
+    
+            if (affordableItems.length > 0 && Math.random() < 0.3) { // 30% chance to buy an item
+    
+                const randomItem = affordableItems[Math.floor(Math.random() * affordableItems.length)];
+    
+                
+    
+                // Set as current tank temporarily to use buyItem logic
+    
+                const prevTank = this.currentTank;
+    
+                this.currentTank = aiTank;
+    
+                this.buyItem(randomItem.id);
+    
+                this.currentTank = prevTank;
+    
+                
+    
+                console.log(`AI ${aiTank.name} bought ${randomItem.name}`);
+    
             }
-            
-            // Create a copy of the item
-            const inventoryItem = JSON.parse(JSON.stringify(randomItem));
-            aiTank.inventory.push(inventoryItem);
-            
-            console.log(`AI ${aiTank.name} bought ${randomItem.name}`);
-            
-            // Special case for healing items - use immediately
-            if (randomItem.effect.type === 'healing') {
-                aiTank.health = Math.min(aiTank.maxHealth, aiTank.health + randomItem.effect.amount);
-                // Remove from inventory
-                const index = aiTank.inventory.findIndex(i => i.id === randomItem.id);
-                if (index !== -1) {
-                    aiTank.inventory.splice(index, 1);
-                }
-            }
+    
         }
+    
     }
-}
+    
+    

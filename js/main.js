@@ -7,7 +7,7 @@ import { LobbyManager } from './lobbyManager.js';
 import { ScoreManager } from './scoreManager.js';
 import { MatchSetup } from './matchSetup.js';
 import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
-import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD } from './gameContext.js';
+import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSettling } from './gameContext.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
@@ -215,7 +215,7 @@ function showMatchSummary() {
 function resetRound() {
     state.gameState = 'LOBBY';
     state.isGameOver = false;
-    state.projectile = { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 30 };
+    state.projectiles = []; // Clear all projectiles
     state.needsRedraw = true;
     state.currentPlayer = 0;
     state.wind = (Math.random() * 2 - 1) / 10;
@@ -260,22 +260,29 @@ function gameLoop() {
     }
 
     const aliveTanks = state.tanks.filter(tank => tank.alive);
+    
+    // Victory/Settlement Logic
     if (aliveTanks.length <= 1 && !state.isGameOver && state.gameState === 'PLAYING') {
-        state.isGameOver = true;
-        let winnerName = "No one";
-        if (aliveTanks.length > 0) {
-            const winner = aliveTanks[0];
-            winner.wins += 1;
-            winnerName = winner.name;
-        }
-        
-        state.currentGameIndex++;
-        
-        if (state.currentGameIndex >= state.totalGames) {
-            // Match is over
-            showMatchSummary();
-        } else {
-            showGameOverOverlay(`${winnerName} wins round ${state.currentGameIndex}!`);
+        // Only trigger victory overlay when all projectiles and falling dirt have settled
+        if (!isSettling()) {
+            state.isGameOver = true;
+            
+            let resultMessage = "DRAW!";
+            if (aliveTanks.length === 1) {
+                const winner = aliveTanks[0];
+                winner.wins += 1;
+                resultMessage = `${winner.name} wins the round!`;
+            } else if (aliveTanks.length === 0) {
+                resultMessage = "MUTUAL DESTRUCTION! (Draw)";
+            }
+            
+            state.currentGameIndex++;
+            
+            if (state.currentGameIndex >= state.totalGames) {
+                showMatchSummary();
+            } else {
+                showGameOverOverlay(resultMessage);
+            }
         }
     }
 
@@ -293,13 +300,13 @@ function gameLoop() {
 
         draw();
         
-        if (!state.projectile.flying) {
+        if (state.projectiles.length === 0) {
             state.tanks.forEach(tank => {
                 tank.applyGravity(state.terrain);
             });
         }
         
-        if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && !state.projectile.flying && state.tanks[state.currentPlayer].alive) {
+        if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && state.projectiles.length === 0 && state.tanks[state.currentPlayer].alive) {
             let targetTank;
             do {
                 targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
@@ -328,7 +335,7 @@ document.addEventListener('keydown', (event) => {
     }
 
     if (event.key === '/') {
-        state.projectile.flying = false;
+        state.projectiles = [];
         state.needsRedraw = true;
         state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
         if (state.store) {
@@ -346,11 +353,11 @@ document.addEventListener('keydown', (event) => {
             tank.power += 1;
         } else if (event.key === 'ArrowDown') {
             tank.power -= 1;
-        } else if (event.key === ' ' && !state.projectile.flying) {
+        } else if (event.key === ' ' && state.projectiles.length === 0) {
             event.preventDefault();
-            tank.fire(state.tanks, state.terrain, state.projectile, state.wind, state.canvas);
+            tank.fire();
         } else if (event.key === 's') { 
-            if (state.store && !state.projectile.flying && state.gameState === 'LOBBY') {
+            if (state.store && state.projectiles.length === 0 && state.gameState === 'LOBBY') {
                 state.store.open(tank);
             }
         } else if (event.key === 'g') {

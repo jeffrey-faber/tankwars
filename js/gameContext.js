@@ -4,7 +4,7 @@ export const state = {
     wind: 0,
     gravity: 0.1,
     freezeTankGravity: false, // New flag for Earthquake effect
-    projectile: { x: null, y: null, flying: false, type: 'default', damage: 100, explosionRadius: 30 },
+    projectiles: [], // Supported multiple active projectiles
     isGameOver: false,
     needsRedraw: true,
     aiReadyToFire: true,
@@ -42,6 +42,20 @@ export function getNextAliveTankIndex(startIndex) {
         }
     } while (nextIndex !== startIndex);
     return startIndex;
+}
+
+export function isSettling() {
+    // 1. Projectiles in flight?
+    if (state.projectiles.length > 0) return true;
+    
+    // 2. Terrain frozen (Earthquake sequence)?
+    if (state.terrain && state.terrain.freezeGravity) return true;
+    
+    // 3. Any tanks still falling?
+    const fallingTank = state.tanks.find(t => t.alive && Math.abs(t.vy) > 0.1);
+    if (fallingTank) return true;
+
+    return false;
 }
 
 export function showGameOverOverlay(message) {
@@ -105,15 +119,17 @@ export function draw() {
         
         drawHUD(); // Draw HUD on top, static
         
-        // Projectile should shake with the world
-        if (state.projectile.x !== null && state.projectile.y !== null) {
-            state.ctx.save();
-            state.ctx.translate(offsetX, offsetY);
-            state.ctx.beginPath();
-            state.ctx.arc(state.projectile.x, state.projectile.y, 3, 0, 2 * Math.PI);
-            state.ctx.fillStyle = state.projectile.color || 'black';
-            state.ctx.fill();
-            state.ctx.restore();
-        }
+        // Render all active projectiles
+        state.projectiles.forEach(proj => {
+            if (proj.x !== null && proj.y !== null) {
+                state.ctx.save();
+                state.ctx.translate(offsetX, offsetY);
+                state.ctx.beginPath();
+                state.ctx.arc(proj.x, proj.y, 3, 0, 2 * Math.PI);
+                state.ctx.fillStyle = proj.color || 'black';
+                state.ctx.fill();
+                state.ctx.restore();
+            }
+        });
     }
 }
