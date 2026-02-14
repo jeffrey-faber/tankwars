@@ -443,6 +443,10 @@ export class Tank {
                 if (!hit) {
                     requestAnimationFrame(moveProjectile);
                 } else {
+                    // IMMEDIATELY nullify projectile coordinates so it stops rendering during explosion animation
+                    state.projectile.x = null;
+                    state.projectile.y = null;
+
                     // Inform controller of the result (do this BEFORE next player logic)
                     if (this.isAI && this.aiController && this.currentTarget) {
                         this.aiController.onShotResult(this.currentTarget, x, y);
