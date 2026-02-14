@@ -14,7 +14,7 @@ export function detectClumping(target, allTanks) {
 }
 
 // Helper to simulate shots and find the best parameters within constraints
-function findBestShot(tank, target, env, angleMin, angleMax, initialAngleStep = Math.PI / 45, initialPowerStep = 2) {
+function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, initialAngleStep = Math.PI / 45, initialPowerStep = 2) {
     const g = env.gravity;
     const physicsScale = 0.2; 
     const barrelLength = 30;
@@ -27,7 +27,7 @@ function findBestShot(tank, target, env, angleMin, angleMax, initialAngleStep = 
     let minError = Infinity;
 
     // Phase 1: Coarse Search
-    for (let power = 10; power <= 100; power += initialPowerStep) {
+    for (let power = powerMin; power <= powerMax; power += initialPowerStep) {
         for (let angle = angleMin; angle <= angleMax; angle += initialAngleStep) {
             const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty);
             if (res.hitX && res.error < minError) {
@@ -44,8 +44,8 @@ function findBestShot(tank, target, env, angleMin, angleMax, initialAngleStep = 
         const refinePowerRange = initialPowerStep;
         const refineSteps = 5;
 
-        for (let power = bestPower - refinePowerRange; power <= bestPower + refinePowerRange; power += refinePowerRange / refineSteps) {
-            for (let angle = bestAngle - refineAngleRange; angle <= bestAngle + refineAngleRange; angle += refineAngleRange / refineSteps) {
+        for (let power = Math.max(powerMin, bestPower - refinePowerRange); power <= Math.min(powerMax, bestPower + refinePowerRange); power += refinePowerRange / refineSteps) {
+            for (let angle = Math.max(angleMin, bestAngle - refineAngleRange); angle <= Math.min(angleMax, bestAngle + refineAngleRange); angle += refineAngleRange / refineSteps) {
                 const res = simulateSingleTrajectory(tank, target, env, angle, power, g, physicsScale, barrelLength, tx, ty);
                 if (res.hitX && res.error < minError) {
                     minError = res.error;
@@ -208,7 +208,7 @@ export class StandardAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
-        const result = findBestShot(tank, target, env, 10 * Math.PI/180, 170 * Math.PI/180);
+        const result = findBestShot(tank, target, env, 5 * Math.PI/180, 175 * Math.PI/180, 10, 100);
         
         let bestAngle = result.angle || Math.PI / 4;
         let bestPower = result.power || 70;
@@ -262,10 +262,8 @@ export class StupidAI extends AIController {
     }
 
     calculateShot(tank, target, env) {
+        // Stupid: Random everything, no constraints
         let angle = Math.random() * Math.PI;
-        if (Math.random() < 0.1) {
-            angle = (Math.random() * 20 + 80) * (Math.PI / 180);
-        }
         const power = 10 + Math.random() * 90;
         return { angle, power };
     }
@@ -298,12 +296,13 @@ export class LobberAI extends AIController {
         let minA, maxA;
         if (dx > 0) {
             minA = 60 * Math.PI / 180;
-            maxA = 85 * Math.PI / 180;
+            maxA = 88 * Math.PI / 180;
         } else {
-            minA = 95 * Math.PI / 180;
+            minA = 92 * Math.PI / 180;
             maxA = 120 * Math.PI / 180;
         }
-        const result = findBestShot(tank, target, env, minA, maxA);
+        // Lobber locked to high angles
+        const result = findBestShot(tank, target, env, minA, maxA, 20, 100);
         const history = this.getShotHistory(target);
         const learningFactor = Math.max(0.1, 1.0 - (history * 0.2));
         const noise = (Math.random() * 2 - 1) * 2 * learningFactor;
@@ -343,17 +342,18 @@ export class SniperAI extends AIController {
             maxA = 180 * Math.PI / 180;
         }
         
-        const result = findBestShot(tank, target, env, minA, maxA);
+        // Sniper locked to HIGH POWER (70-100) and LOW ANGLE
+        const result = findBestShot(tank, target, env, minA, maxA, 70, 100);
         
         // If Sniper's best direct shot is blocked, try to use shovel to clear a path
         if (result.angle === null && tank.inventory.find(i => i.id === 'shovel')) {
             const hasShovel = tank.useItem('shovel');
             if (hasShovel) {
-                // Aim shovel at the blocking terrain (simplified: aim halfway between self and target)
-                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, minA, maxA);
+                // Aim shovel at the blocking terrain
+                const shovelResult = findBestShot(tank, target, { ...env, checkTerrain: null }, minA, maxA, 30, 60);
                 return {
                     angle: shovelResult.angle || (minA + maxA) / 2,
-                    power: (shovelResult.power || 50) * 0.6 // Close range digging
+                    power: (shovelResult.power || 50)
                 };
             }
         }
@@ -455,7 +455,7 @@ export class MastermindAI extends AIController {
     calculateShot(tank, target, env) {
         // 1. Calculate Baseline (Best guess)
         // Mastermind is allowed to switch between direct and lob
-        let baseResult = findBestShot(tank, target, env, 0, Math.PI);
+        let baseResult = findBestShot(tank, target, env, 0, Math.PI, 10, 100);
         
         let angle = baseResult.angle || Math.PI/4;
         let idealPower = baseResult.power || 70;
@@ -512,7 +512,7 @@ export class MastermindAI extends AIController {
             if (errorDiff < 5) { // Error is stuck
                 // Force a lob if we weren't lobbing, or vice versa
                 if (angle < Math.PI / 3 || angle > 2 * Math.PI / 3) {
-                    const lobResult = findBestShot(tank, target, env, Math.PI / 3, 2 * Math.PI / 3);
+                    const lobResult = findBestShot(tank, target, env, Math.PI / 3, 2 * Math.PI / 3, 10, 100);
                     if (lobResult.angle !== null) {
                         angle = lobResult.angle;
                         idealPower = lobResult.power;

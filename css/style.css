@@ -39,7 +39,63 @@ input[type="submit"] {
 .visible {
     display: block;
 }
-#gameOverOverlay, #storeOverlay, #lobbyOverlay, #matchSetupOverlay {
+#gameOverOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    color: white;
+    font-family: 'Press Start 2P', cursive;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    animation: fadeIn 0.5s ease-out;
+}
+
+#gameOverMessage {
+    font-size: 28px;
+    color: #00f7ff;
+    text-shadow: 0 0 15px #00f7ff;
+    margin-bottom: 40px;
+    line-height: 1.6;
+    text-align: center;
+    animation: slideDown 0.5s ease-out;
+}
+
+#gameOverOverlay button {
+    background: #ff00ff;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    margin: 10px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ff00ff;
+    transition: transform 0.2s, background 0.2s;
+}
+
+#gameOverOverlay button:hover {
+    transform: scale(1.1);
+    background: #ff33ff;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+#storeOverlay, #lobbyOverlay, #matchSetupOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -412,6 +468,12 @@ input[type="submit"] {
     border-color: #00ff00;
     background-color: #222;
     box-shadow: 0 0 15px #00ff00, inset 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.weapon-icon.is-ai {
+    filter: grayscale(0.8) opacity(0.7);
+    cursor: not-allowed;
+    border-color: #444;
 }
 
 .weapon-count {

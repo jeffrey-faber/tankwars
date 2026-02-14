@@ -363,7 +363,7 @@ export class Store {
         // Helper to create icon
         const createIcon = (id, name, count, isSelected, key, description) => {
             const icon = document.createElement('div');
-            icon.className = `weapon-icon ${isSelected ? 'selected' : ''}`;
+            icon.className = `weapon-icon ${isSelected ? 'selected' : ''} ${tank.isAI ? 'is-ai' : ''}`;
             icon.innerHTML = `
                 <span class="weapon-key">${key}</span>
                 ${this.getWeaponIcon(id)}
@@ -373,14 +373,17 @@ export class Store {
                     ${description}
                 </div>
             `;
-            icon.addEventListener('click', () => {
-                if (id === 'default') {
-                    tank.selectedWeapon = 'default';
-                } else {
-                    tank.useItem(id);
-                }
-                this.updateWeaponSelector(tank);
-            });
+            
+            if (!tank.isAI) {
+                icon.addEventListener('click', () => {
+                    if (id === 'default') {
+                        tank.selectedWeapon = 'default';
+                    } else {
+                        tank.useItem(id);
+                    }
+                    this.updateWeaponSelector(tank);
+                });
+            }
             return icon;
         };
 

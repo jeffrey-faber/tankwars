@@ -513,15 +513,19 @@ export class Tank {
             } else {
                 // All projectiles done
                 state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
+                
+                // Consumed current weapon if used
                 if (this.selectedWeapon !== 'default') {
                     const index = this.inventory.findIndex(item => item.id === this.selectedWeapon);
                     if (index !== -1) {
                         this.inventory.splice(index, 1);
                     }
                     this.selectedWeapon = 'default';
-                    if (state.store) {
-                        state.store.updateWeaponSelector(this);
-                    }
+                }
+
+                // Refresh selector for the NEW current player
+                if (state.store) {
+                    state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
                 }
             }
         };
