@@ -16,8 +16,8 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 - **Economic Strategy:** A persistent economy and pre-match shop system that rewards tactical spending across multiple battles.
 
 ## Core Features
-- **Sophisticated AI:** Distinct AI personalities (Mr. Stupid, Lobber, Sniper, Mastermind) with unique combat strategies, learning curves, and shopping behaviors.
-- **Arsenal Variety:** A diverse set of weapons including standard explosives, tactical lasers, and "Earth Shaper" tools (Dirt Ball, Shovel, Earthquake) for terrain manipulation.
+- **Tactical AI:** Advanced AI personalities (Mr. Stupid, Lobber, Sniper, Mastermind) with specialized roles (precision snipers, high-angle lobbers), clump detection, and tactical item utilization.
+- **Expanded Tactical Arsenal:** A multi-tiered weapon system (Standard, Heavy, Cluster, Mega Nuke) with pack-based economy and "auto-active" utility items (Shields, Parachutes) featuring durability tracking.
 - **Last Stand Dynamics:** Strategic risk where dying tanks always explode, with a configurable chance to trigger powerful chaotic items from their inventory.
 - **Physical Consequences:** A dynamic gravity and fall damage system that rewards tactical positioning and terrain destruction.
 - **Settled Victory Mechanics:** A fair conclusion system that ensures all physics, chain reactions, and item effects finish before declaring a winner or a draw.

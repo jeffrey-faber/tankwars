@@ -11,6 +11,7 @@ This document outlines the core technologies and architectural patterns used in 
 ## Architecture
 - **Client-Side Only:** A static web application that runs entirely in the user's browser without the need for a dedicated backend.
 - **Offscreen Canvas Caching:** Optimized rendering pipeline that caches terrain state to an offscreen buffer, supporting real-time destructive and constructive terrain manipulation (Earth Shapers).
+- **Multi-Projectile Management:** Refactored state engine supporting an array of active projectiles, enabling complex area-saturation weapons like Cluster Bombs.
 - **Velocity-Based Physics:** Realistic gravity system for tanks using vertical velocity and landing detection for physical impact calculation.
 - **Settlement-Aware Game Loop:** Intelligent round conclusion logic that monitors projectiles, terrain gravity, and timed effects to ensure fair victory/draw evaluation.
 - **Modular OOP:** The game is structured into discrete, object-oriented modules (e.g., `Tank`, `BitmaskTerrain`, `Store`, `ScoreManager`, `LobbyManager`, `MatchSetup`) to promote maintainability and scalability.
