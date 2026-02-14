@@ -4,15 +4,43 @@ export class Store {
     constructor() {
         this.items = [
             {
-                id: 'nuke',
-                name: 'Nuke',
-                description: 'A powerful explosive with larger blast radius',
+                id: 'heavy',
+                name: 'Heavy Shot',
+                description: 'Reliable standard ammo with larger blast.',
                 price: 50,
+                packSize: 5,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
-                    radius: 50,  // Regular explosion radius is 15
-                    damage: 150
+                    radius: 30,
+                    damage: 60
+                }
+            },
+            {
+                id: 'mega_nuke',
+                name: 'Mega Nuke',
+                description: 'The ultimate weapon. Destroys everything in a massive area.',
+                price: 500,
+                packSize: 1,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 150,
+                    damage: 200
+                }
+            },
+            {
+                id: 'cluster_bomb',
+                name: 'Cluster Bomb',
+                description: 'Splits at the apex into multiple sub-munitions.',
+                price: 150,
+                packSize: 3,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 20,
+                    damage: 30,
+                    special: 'cluster'
                 }
             },
             {
@@ -30,8 +58,8 @@ export class Store {
             {
                 id: 'shield',
                 name: 'Shield',
-                description: 'Protects your tank from one hit',
-                price: 30,
+                description: 'Protects your tank from one hit. Auto-active.',
+                price: 100,
                 category: 'defense',
                 effect: {
                     type: 'defense',
@@ -47,6 +75,85 @@ export class Store {
                 effect: {
                     type: 'healing',
                     amount: 50
+                }
+            },
+            {
+                id: 'dirtball',
+                name: 'Dirt Ball',
+                description: 'Creates terrain on impact. Can bury enemies.',
+                price: 35,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 30,
+                    damage: 10,
+                    special: 'add_terrain'
+                }
+            },
+            {
+                id: 'shovel',
+                name: 'Shovel',
+                description: 'Removes terrain in a cone. No damage to tanks.',
+                price: 20,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 40,
+                    damage: 0,
+                    special: 'remove_terrain_cone'
+                }
+            },
+            {
+                id: 'parachute',
+                name: 'Parachute',
+                description: 'Prevents fall damage. Auto-active.',
+                price: 50,
+                category: 'defense',
+                effect: {
+                    type: 'defense',
+                    special: 'parachute'
+                }
+            },
+            {
+                id: 'earthquake_s',
+                name: 'Earthquake (S)',
+                description: 'Small tremor. Freezes gravity, creates a few cracks.',
+                price: 40,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 40,
+                    damage: 5,
+                    special: 'earthquake',
+                    intensity: 3
+                }
+            },
+            {
+                id: 'earthquake_m',
+                name: 'Earthquake (M)',
+                description: 'Medium quake. Significant terrain damage.',
+                price: 70,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 100,
+                    damage: 20,
+                    special: 'earthquake',
+                    intensity: 8
+                }
+            },
+            {
+                id: 'earthquake_l',
+                name: 'Earthquake (L)',
+                description: 'MASSIVE earthquake. Shatters the landscape.',
+                price: 110,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 160,
+                    damage: 40,
+                    special: 'earthquake',
+                    intensity: 16
                 }
             }
         ];
@@ -223,10 +330,18 @@ export class Store {
     getWeaponIcon(id) {
         switch(id) {
             case 'default': return '💣';
-            case 'nuke': return '☢️';
+            case 'heavy': return '⚫';
+            case 'mega_nuke': return '☢️';
+            case 'cluster_bomb': return '🎆';
             case 'laser': return '⚡';
             case 'shield': return '🛡️';
             case 'health': return '❤️';
+            case 'dirtball': return '🟤';
+            case 'shovel': return '🥄';
+            case 'parachute': return '🪂';
+            case 'earthquake_s': return '📉';
+            case 'earthquake_m': return '📊';
+            case 'earthquake_l': return '🌋';
             default: return '❓';
         }
     }
@@ -372,6 +487,7 @@ export class Store {
         filteredItems.forEach(item => {
             const count = (this.currentTank.inventory || []).filter(i => i.id === item.id).length;
             const ownershipText = item.effect.type === 'healing' ? 'Instant Use' : `Owned: ${count}`;
+            const packText = item.packSize > 1 ? `<div style="color: #ff00ff; font-size: 10px; margin-bottom: 5px;">Pack of ${item.packSize}</div>` : '';
             
             const itemElement = document.createElement('div');
             itemElement.className = 'store-item';
@@ -380,6 +496,7 @@ export class Store {
                 <div style="font-size: 40px; margin-bottom: 10px;">${this.getWeaponIcon(item.id)}</div>
                 <h3>${item.name}</h3>
                 <p class="item-description">${item.description}</p>
+                ${packText}
                 <p class="item-price">${item.price} Coins</p>
                 <div style="margin-bottom: 10px; font-size: 12px; color: #00f7ff;">${ownershipText}</div>
                 <button class="buy-button ${this.currentTank.currency < item.price ? 'disabled' : ''}" 
@@ -413,17 +530,22 @@ export class Store {
                 this.currentTank.inventory = [];
             }
             
-            // Create a copy of the item for the inventory
-            const inventoryItem = JSON.parse(JSON.stringify(item));
-            this.currentTank.inventory.push(inventoryItem);
+            // Create copies of the item for the inventory based on pack size
+            const numToBuy = item.packSize || 1;
+            for (let k = 0; k < numToBuy; k++) {
+                const inventoryItem = JSON.parse(JSON.stringify(item));
+                this.currentTank.inventory.push(inventoryItem);
+            }
             
             // Special case for healing items - use immediately
             if (item.effect.type === 'healing') {
                 this.currentTank.health = Math.min(this.currentTank.maxHealth, this.currentTank.health + item.effect.amount);
-                // Remove from inventory
-                const index = this.currentTank.inventory.findIndex(i => i.id === itemId);
-                if (index !== -1) {
-                    this.currentTank.inventory.splice(index, 1);
+                // Remove from inventory (buyItem added them, but healing is instant)
+                for (let k = 0; k < numToBuy; k++) {
+                    const index = this.currentTank.inventory.findIndex(i => i.id === itemId);
+                    if (index !== -1) {
+                        this.currentTank.inventory.splice(index, 1);
+                    }
                 }
                 this.showMessage(`Healed +${item.effect.amount} HP!`);
             } else {

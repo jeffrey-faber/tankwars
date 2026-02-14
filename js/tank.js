@@ -53,13 +53,7 @@ function applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, 
             } else {
                 otherTank.health -= effectiveDamage;
                 if (otherTank.health <= 0) {
-                    otherTank.health = 0;
-                    otherTank.alive = false;
-                    if (tankIndex !== sourcePlayerId) {
-                        tanks[sourcePlayerId].score += 1;
-                        tanks[sourcePlayerId].kills += 1;
-                        tanks[sourcePlayerId].currency += 20;
-                    }
+                    otherTank.die(sourcePlayerId);
                 }
             }
         }
@@ -150,7 +144,9 @@ export class Tank {
                             triggerScreenShake(Math.min(20, damage / 2), 300);
                         }
                         
-                        if (this.health <= 0) this.alive = false;
+                        if (this.health <= 0) {
+                            this.die();
+                        }
                     }
                 }
             }
@@ -159,6 +155,91 @@ export class Tank {
         // Always reset spawn flag and update tracker on landing
         this.isInitialSpawn = false;
         this.lastSolidY = currentY;
+    }
+
+    die(killerId = -1) {
+        if (!this.alive) return;
+        this.alive = false;
+        this.health = 0;
+
+        // Update killer score/currency if applicable
+        if (killerId !== -1 && state.tanks[killerId] && state.tanks[killerId] !== this) {
+            state.tanks[killerId].score += 1;
+            state.tanks[killerId].kills += 1;
+            state.tanks[killerId].currency += 20;
+        }
+
+        // Trigger Death Explosion logic
+        this.triggerDeathExplosion();
+    }
+
+    triggerDeathExplosion() {
+        const centerX = this.x + this.width / 2;
+        const centerY = this.y - this.height / 2;
+        
+        // 1. Check for item-based override
+        const qualifyingItems = ['nuke', 'dirtball', 'earthquake_s', 'earthquake_m', 'earthquake_l'];
+        const availableChaoticItems = this.inventory.filter(item => qualifyingItems.includes(item.id));
+        
+        let triggeredItem = null;
+        
+        if (availableChaoticItems.length > 0 && Math.random() < (state.deathTriggerChance || 0)) {
+            // Pick a random qualifying item
+            const randomIndex = Math.floor(Math.random() * availableChaoticItems.length);
+            triggeredItem = availableChaoticItems[randomIndex];
+            
+            // Consume it
+            const invIndex = this.inventory.indexOf(triggeredItem);
+            this.inventory.splice(invIndex, 1);
+        }
+
+        // 2. Trigger appropriate effect
+        if (triggeredItem) {
+            console.log(`DEATH TRIGGER: ${this.name} used ${triggeredItem.id} on death!`);
+            
+            if (triggeredItem.id === 'dirtball') {
+                if (state.terrain.addTerrain) {
+                    state.terrain.addTerrain(centerX, centerY, 30);
+                }
+                if (state.ctx && state.canvas && draw) {
+                    createExplosion(centerX, centerY, 30, state.ctx, state.canvas, draw, '#3d2b1f');
+                }
+                applyExplosionDamage(centerX, centerY, state.tanks, 30, 10, -1);
+            } else if (triggeredItem.id.startsWith('earthquake')) {
+                if (state.terrain.createCracks) {
+                    state.terrain.freezeGravity = true;
+                    state.freezeTankGravity = true;
+                    
+                    const intensity = triggeredItem.effect.intensity || 8;
+                    const baseLength = 15 + (intensity * 4);
+                    
+                    for (let i = 0; i < intensity; i++) {
+                        state.terrain.createCracks(centerX, centerY, baseLength, (i / intensity) * Math.PI * 2);
+                    }
+                    
+                    setTimeout(() => { state.terrain.freezeGravity = false; }, 800);
+                    setTimeout(() => { state.freezeTankGravity = false; }, 2800);
+                }
+                if (state.ctx && state.canvas && draw) {
+                    createExplosion(centerX, centerY, triggeredItem.effect.radius || 100, state.ctx, state.canvas, draw, '#555555');
+                }
+                applyExplosionDamage(centerX, centerY, state.tanks, triggeredItem.effect.radius || 100, triggeredItem.effect.damage || 20, -1);
+            } else if (triggeredItem.id === 'nuke') {
+                if (state.ctx && state.canvas && draw) {
+                    createExplosion(centerX, centerY, 80, state.ctx, state.canvas, draw, 'red');
+                }
+                if (state.terrain.explode) {
+                    state.terrain.explode(centerX, centerY, 80);
+                }
+                applyExplosionDamage(centerX, centerY, state.tanks, 80, 150, -1);
+            }
+        } else {
+            // Default death explosion
+            if (state.ctx && state.canvas && draw) {
+                createExplosion(centerX, centerY, 30, state.ctx, state.canvas, draw, 'orange');
+            }
+            applyExplosionDamage(centerX, centerY, state.tanks, 30, 50, -1);
+        }
     }
 
     draw(ctx) {
@@ -176,8 +257,12 @@ export class Tank {
         
         if (this.selectedWeapon === 'default') {
             ctx.strokeStyle = 'black';
-        } else if (this.selectedWeapon === 'nuke') {
+        } else if (this.selectedWeapon === 'heavy') {
+            ctx.strokeStyle = '#444444'; // Dark grey
+        } else if (this.selectedWeapon === 'mega_nuke') {
             ctx.strokeStyle = 'red';
+        } else if (this.selectedWeapon === 'cluster_bomb') {
+            ctx.strokeStyle = '#ff00ff'; // Purple
         } else if (this.selectedWeapon === 'laser') {
             ctx.strokeStyle = '#00ff00';
         } else if (this.selectedWeapon === 'dirtball') {
@@ -235,19 +320,27 @@ export class Tank {
     fire() {
         if (state.projectile.flying) return;
         
-        let explosionRadius = 30;
-        let damage = 100;
+        let explosionRadius = 15; // Default reduced to 15
+        let damage = 50; // Default reduced to 50
         let projectileColor = 'black';
         let extraDistance = 0;
         
         let vx = this.power * Math.cos(this.angle) * 0.2;
         let vy = -this.power * Math.sin(this.angle) * 0.2;
         
-        if (this.selectedWeapon === 'nuke') {
-            explosionRadius = 80;
-            damage = 150;
+        if (this.selectedWeapon === 'heavy') {
+            explosionRadius = 30;
+            damage = 60;
+            projectileColor = '#444444';
+        } else if (this.selectedWeapon === 'mega_nuke') {
+            explosionRadius = 150;
+            damage = 200;
             projectileColor = 'red';
             extraDistance = 10;
+        } else if (this.selectedWeapon === 'cluster_bomb') {
+            explosionRadius = 20; // Radius of sub-munitions
+            damage = 30; // Damage of sub-munitions
+            projectileColor = '#ff00ff';
         } else if (this.selectedWeapon === 'laser') {
             vx *= 2;
             vy *= 2;
