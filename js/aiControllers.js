@@ -158,14 +158,44 @@ export class StandardAI extends AIController {
         }
 
         // Proactive Parachute
-        if (tank.currency >= 40 && tank.parachuteDurability === 0 && Math.random() < 0.1) {
+        if (tank.currency >= 50 && tank.parachuteDurability === 0 && Math.random() < 0.1) {
             store.buyItem('parachute');
+            return;
+        }
+
+        // Hard/Medium buying logic
+        if (this.difficulty === 'hard') {
+            if (tank.currency >= 110 && Math.random() < 0.3) {
+                store.buyItem('earthquake_l');
+                return;
+            }
+            if (tank.currency >= 50 && Math.random() < 0.5) {
+                store.buyItem('heavy');
+                return;
+            }
+        }
+        
+        if (this.difficulty === 'medium' && tank.currency >= 50 && Math.random() < 0.2) {
+            store.buyItem('heavy');
             return;
         }
 
         // Random otherwise
         const item = affordable[Math.floor(Math.random() * affordable.length)];
         store.buyItem(item.id);
+    }
+
+    chooseWeapon(tank, target, allTanks) {
+        // Hard bots use best available
+        if (this.difficulty === 'hard') {
+            if (tank.inventory.find(i => i.id === 'earthquake_l')) return 'earthquake_l';
+            if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
+        }
+        // Medium bots use heavy if available
+        if (this.difficulty === 'medium') {
+            if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
+        }
+        return 'default';
     }
 
     chooseTarget(tank, allTanks) {
@@ -202,7 +232,17 @@ export class StandardAI extends AIController {
 
 export class StupidAI extends AIController {
     shop(store, tank) {
-        // Stupid: Randomly buy things, even if not needed
+        // Stupid: Loves chaos (Cluster, Nuke)
+        if (tank.currency >= 150 && Math.random() < 0.5) {
+            store.buyItem('cluster_bomb');
+            return;
+        }
+        if (tank.currency >= 500 && Math.random() < 0.5) {
+            store.buyItem('mega_nuke');
+            return;
+        }
+
+        // Randomly buy things
         if (Math.random() < 0.5) {
             const affordable = store.items.filter(i => i.price <= tank.currency);
             if (affordable.length > 0) {
@@ -210,6 +250,15 @@ export class StupidAI extends AIController {
                 store.buyItem(item.id);
             }
         }
+    }
+
+    chooseWeapon(tank, target, allTanks) {
+        // Randomly pick a weapon from inventory
+        const weapons = tank.inventory.filter(i => i.effect.type === 'weapon');
+        if (weapons.length > 0 && Math.random() < 0.5) {
+            return weapons[Math.floor(Math.random() * weapons.length)].id;
+        }
+        return 'default';
     }
 
     calculateShot(tank, target, env) {
@@ -224,17 +273,24 @@ export class StupidAI extends AIController {
 
 export class LobberAI extends AIController {
     shop(store, tank) {
-        // Lobber loves Nukes and Dirt Balls
-        if (tank.currency >= 50) {
-            store.buyItem('nuke');
+        // Lobber loves Big Bombs
+        if (tank.currency >= 500) {
+            store.buyItem('mega_nuke');
+        } else if (tank.currency >= 150) {
+            store.buyItem('cluster_bomb');
+        } else if (tank.currency >= 50) {
+            store.buyItem('heavy');
         } else if (tank.currency >= 35) {
             store.buyItem('dirtball');
-        } else if (Math.random() < 0.3) {
-            const affordable = store.items.filter(i => i.price <= tank.currency);
-            if (affordable.length > 0) {
-                store.buyItem(affordable[0].id);
-            }
         }
+    }
+
+    chooseWeapon(tank, target, allTanks) {
+        if (tank.inventory.find(i => i.id === 'mega_nuke')) return 'mega_nuke';
+        if (tank.inventory.find(i => i.id === 'cluster_bomb')) return 'cluster_bomb';
+        if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
+        if (tank.inventory.find(i => i.id === 'dirtball')) return 'dirtball';
+        return 'default';
     }
 
     calculateShot(tank, target, env) {
@@ -263,9 +319,17 @@ export class SniperAI extends AIController {
         // Sniper loves Lasers and needs Shovel to clear paths
         if (tank.currency >= 40 && !tank.inventory.find(i => i.id === 'laser')) {
             store.buyItem('laser');
+        } else if (tank.currency >= 50 && !tank.inventory.find(i => i.id === 'heavy')) {
+            store.buyItem('heavy'); // Good for bunkers
         } else if (tank.currency >= 20 && !tank.inventory.find(i => i.id === 'shovel')) {
             store.buyItem('shovel');
         }
+    }
+
+    chooseWeapon(tank, target, allTanks) {
+        if (tank.inventory.find(i => i.id === 'laser')) return 'laser';
+        if (tank.inventory.find(i => i.id === 'heavy')) return 'heavy';
+        return 'default';
     }
 
     calculateShot(tank, target, env) {
