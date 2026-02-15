@@ -5,9 +5,12 @@ import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI } from './aiCont
 const ECONOMY_MULTIPLIER = 1;
 
 function checkTerrainAndBounds(x, y, terrain, canvas) {
-    if (x < 0 || x > canvas.width || y > canvas.height) return true;
-    if (terrain.checkCollision(x, y)) return true;
-    return false;
+    if (x < 0) return { hit: true, side: 'left' };
+    if (x > canvas.width) return { hit: true, side: 'right' };
+    if (y < 0) return { hit: true, side: 'top' };
+    if (y > canvas.height) return { hit: true, side: 'bottom' };
+    if (terrain.checkCollision(x, y)) return { hit: true, side: 'terrain' };
+    return { hit: false };
 }
 
 function checkDirectHit(x, y, tanks, sourceTank, excludeSourcePlayer = false) {
@@ -494,7 +497,24 @@ export class Tank {
                         hit = true;
                         proj.directHitTank = directHitTank;
                     } else {
-                        hit = checkTerrainAndBounds(proj.x, proj.y, state.terrain, state.canvas);
+                        const collision = checkTerrainAndBounds(proj.x, proj.y, state.terrain, state.canvas);
+                        if (collision.hit) {
+                            if (state.activeEdgeBehavior === 'reflect' && (collision.side === 'left' || collision.side === 'right' || collision.side === 'top')) {
+                                // Reflect logic
+                                if (collision.side === 'left') { proj.vx = Math.abs(proj.vx); proj.x = 0; }
+                                if (collision.side === 'right') { proj.vx = -Math.abs(proj.vx); proj.x = state.canvas.width; }
+                                if (collision.side === 'top') { proj.vy = Math.abs(proj.vy); proj.y = 0; }
+                                // No 'hit' for reflection, keep moving in the new direction
+                            } else if (state.activeEdgeBehavior === 'teleport' && (collision.side === 'left' || collision.side === 'right')) {
+                                // Teleport logic
+                                if (collision.side === 'left') proj.x = state.canvas.width;
+                                if (collision.side === 'right') proj.x = 0;
+                                // No 'hit' for teleport, keep moving from the new side
+                            } else {
+                                // Standard impact (bottom, terrain, or Impact behavior)
+                                hit = true;
+                            }
+                        }
                     }
                     
                     if (hit) break;
