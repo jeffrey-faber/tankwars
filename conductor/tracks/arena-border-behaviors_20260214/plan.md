@@ -8,10 +8,10 @@ This plan implements the "Edge Behavior" match setting, allowing projectiles to 
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Setup and State Management' (Protocol in workflow.md)
 
 ## Phase 2: Match Setup UI
-- [ ] Task: Add "Edge Behavior" select menu to `index.html` (Match Setup Overlay).
-- [ ] Task: Update `js/matchSetup.js` to capture the new setting and pass it to `initGameFromConfig`.
-- [ ] Task: Update `js/main.js` (`initGameFromConfig`) to store the chosen behavior in the global state.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Match Setup UI' (Protocol in workflow.md)
+- [x] Task: Add "Edge Behavior" select menu to `index.html` (Match Setup Overlay). c8d7bf3
+- [x] Task: Update `js/matchSetup.js` to capture the new setting and pass it to `initGameFromConfig`. 6644350
+- [x] Task: Update `js/main.js` (`initGameFromConfig`) to store the chosen behavior in the global state. 034bda3
+- [~] Task: Conductor - User Manual Verification 'Phase 2: Match Setup UI' (Protocol in workflow.md)
 
 ## Phase 3: Round Logic & HUD
 - [ ] Task: Update `resetRound` in `js/main.js` to handle "Random" selection at the start of each round.
