@@ -15,7 +15,7 @@ Focuses on the core logic to identify mobile devices and enforce the landscape r
 ## Phase 2: Mobile UI Overlays & Styling
 Creation of the on-screen controls following the neon aesthetic.
 
-- [ ] **Task: Scaffold Mobile HUD Structure**
+- [x] **Task: Scaffold Mobile HUD Structure** 5c7a034
     - [ ] Add HTML containers for mobile controls (sliders, action buttons, inventory bar) to `index.html`.
     - [ ] Style the containers in `css/style.css` with `display: none` by default.
     - [ ] Implement CSS media queries or class-based visibility (e.g., `.mobile-mode .mobile-ctrl`) to show them only when mobile mode is active.
