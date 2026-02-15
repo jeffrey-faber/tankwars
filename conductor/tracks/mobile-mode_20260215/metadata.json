@@ -1,0 +1,8 @@
+{
+  "track_id": "mobile-mode_20260215",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-15T17:23:00Z",
+  "updated_at": "2026-02-15T17:23:00Z",
+  "description": "Create a mobile mode with landscape-optimized on-screen controls and orientation locking."
+}
