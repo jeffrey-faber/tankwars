@@ -20,12 +20,56 @@ export function initMobileMode() {
     document.body.classList.add('mobile-mode');
 
     initMobileSliders();
+    initMobileButtons();
+
+    // Listen for game events
+    window.addEventListener('turnStarted', (e) => updateMobileHUD(e.detail.tank));
+    window.addEventListener('tankUpdated', (e) => updateMobileHUD(e.detail.tank));
+}
+
+/**
+ * Initializes mobile action buttons.
+ */
+export function initMobileButtons() {
+    const fireBtn = document.getElementById('mobileFireBtn');
+    if (fireBtn) {
+        fireBtn.onclick = () => {
+            vibrate(50);
+            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+        };
+    }
+
+    const shopBtn = document.getElementById('mobileShopBtn');
+    if (shopBtn) {
+        shopBtn.onclick = () => {
+            vibrate(20);
+            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+        };
+    }
+
+    const skipBtn = document.getElementById('mobileSkipBtn');
+    if (skipBtn) {
+        skipBtn.onclick = () => {
+            vibrate(20);
+            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Slash' }));
+        };
+    }
+}
+
+/**
+ * Trigger haptic feedback if supported.
+ */
+export function vibrate(pattern) {
+    if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+    }
 }
 
 /**
  * Toggles fullscreen mode and attempts to lock orientation to landscape.
  */
 export async function toggleFullScreen() {
+    vibrate(20);
     try {
         if (!document.fullscreenElement) {
             await document.documentElement.requestFullscreen();

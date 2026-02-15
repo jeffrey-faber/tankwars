@@ -409,13 +409,24 @@ export class Store {
     updateWeaponSelector(tank) {
         this.currentTank = tank; // Ensure we track current tank
         const selector = document.getElementById('weaponSelector');
-        if (!selector) return;
+        const mobileSelector = document.getElementById('mobileInventoryBar');
         
         // Update visibility logic based on new rules
         this.updateVisibility();
         
-        // If hidden by updateVisibility, stop
-        if (selector.style.display === 'none') return;
+        // Populate selectors
+        this.populateSelector(selector, tank);
+        this.populateSelector(mobileSelector, tank);
+    }
+
+    populateSelector(selector, tank) {
+        if (!selector) return;
+        
+        // If hidden by updateVisibility (and it's the main selector), stop
+        if (selector.id === 'weaponSelector' && selector.style.display === 'none') {
+             selector.innerHTML = '';
+             return;
+        }
         
         // Clear previous buttons
         selector.innerHTML = '';

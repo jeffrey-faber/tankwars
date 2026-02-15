@@ -76,6 +76,9 @@ export function startTurn(index) {
     if (state.store) {
         state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
     }
+
+    // Notify mobile manager or others that turn has started
+    window.dispatchEvent(new CustomEvent('turnStarted', { detail: { tank: state.tanks[state.currentPlayer] } }));
 }
 
 export function isSettling() {
@@ -237,11 +240,29 @@ export function draw() {
             }
         }
         
-        state.ctx.restore(); // Restore before HUD so HUD doesn't shake (optional choice, but standard)
+                state.ctx.restore(); // Restore before HUD so HUD doesn't shake (optional choice, but standard)
         
-        drawHUD(); // Draw HUD on top, static
+                    
         
-        // Render all active projectiles
+                drawHUD(); // Draw HUD on top, static
+        
+            
+        
+                // Notify listeners that tank state might have changed for HUD updates
+        
+                if (document.body.classList.contains('mobile-mode')) {
+        
+                    window.dispatchEvent(new CustomEvent('tankUpdated', { detail: { tank: tank } }));
+        
+                }
+        
+                    
+        
+                // Render all active projectiles
+        
+            
+        
+        
         state.projectiles.forEach(proj => {
             if (proj.x !== null && proj.y !== null) {
                 state.ctx.save();
