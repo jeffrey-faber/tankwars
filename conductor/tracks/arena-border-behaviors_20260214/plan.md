@@ -32,3 +32,6 @@ This plan implements the "Edge Behavior" match setting, allowing projectiles to 
 - [x] Task: Update AI simulation in `js/aiControllers.js` to be "Edge Aware" (so Mastermind can use bounces/wraps for shots). f846061
 - [x] Task: Final system-wide verification of all edge behaviors in various terrain types. 9248f14
 - [x] Task: Conductor - User Manual Verification 'Phase 5: AI & Final Polish' (Protocol in workflow.md) 9b95a73
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions a3d86a1
