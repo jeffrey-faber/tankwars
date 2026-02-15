@@ -22,8 +22,18 @@ export const state = {
     startingCash: 100,
     deathTriggerChance: 0.1, // Default 10%
     playerRosterConfig: [],
+    // Edge Behaviors
+    edgeBehavior: 'impact', // Default setting (from setup)
+    activeEdgeBehavior: 'impact', // Actual rule for current round
     // Visual Effects
     screenShake: { intensity: 0, startTime: 0, duration: 0 }
+};
+
+export const EDGE_BEHAVIORS = {
+    IMPACT: 'impact',
+    REFLECT: 'reflect',
+    TELEPORT: 'teleport',
+    RANDOM: 'random'
 };
 
 export function triggerScreenShake(intensity, duration) {

@@ -15,8 +15,24 @@ describe('Game State Machine', () => {
         expect(state.gameState).toBe('LOBBY_SHOPPING');
     });
 
-    it('should allow transitioning to PLAYING state', () => {
-        state.gameState = 'PLAYING';
-        expect(state.gameState).toBe('PLAYING');
+        it('should allow transitioning to PLAYING state', () => {
+
+            state.gameState = 'PLAYING';
+
+            expect(state.gameState).toBe('PLAYING');
+
+        });
+
+    
+
+        it('should have correct initial edge behavior state', () => {
+
+            expect(state.edgeBehavior).toBe('impact');
+
+            expect(state.activeEdgeBehavior).toBe('impact');
+
+        });
+
     });
-});
+
+    
