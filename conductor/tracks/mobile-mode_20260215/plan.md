@@ -23,7 +23,7 @@ Creation of the on-screen controls following the neon aesthetic.
     - [ ] Implement vertical slider UI for Angle and Power.
     - [ ] Add "+" and "-" fine-tuning buttons.
     - [ ] Apply neon glow effects and styles consistent with `product-guidelines.md`.
-- [ ] **Task: Create Mobile Action Buttons & Inventory Bar**
+- [x] **Task: Create Mobile Action Buttons & Inventory Bar** ffe14e4
     - [ ] Implement large touch-friendly buttons for Fire, Shop, and Skip.
     - [ ] Create the bottom inventory selection bar.
 - [ ] **Task: Conductor - User Manual Verification 'Mobile UI Overlays & Styling' (Protocol in workflow.md)**
