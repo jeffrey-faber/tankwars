@@ -16,7 +16,8 @@ describe('Match Setup Integration', () => {
             'winCondition': { value: 'score' },
             'startingCash': { value: '100' },
             'windIntensity': { value: 'normal' },
-            'mapStyle': { value: 'random' }
+            'mapStyle': { value: 'random' },
+            'edgeBehavior': { value: 'impact' }
         };
 
         global.document = {
