@@ -13,10 +13,10 @@ This plan implements the "Edge Behavior" match setting, allowing projectiles to 
 - [x] Task: Update `js/main.js` (`initGameFromConfig`) to store the chosen behavior in the global state. 034bda3
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Match Setup UI' (Protocol in workflow.md)
 
-## Phase 3: Round Logic & HUD
+## Phase 3: Round Logic & HUD [checkpoint: d3abd21]
 - [x] Task: Update `resetRound` in `js/main.js` to handle "Random" selection at the start of each round. e93a4d6
 - [x] Task: Update `drawHUD` in `js/gameContext.js` to display the active Edge Rule. ba09268
-- [~] Task: Conductor - User Manual Verification 'Phase 3: Round Logic & HUD' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Round Logic & HUD' (Protocol in workflow.md)
 
 ## Phase 4: Physics Engine Implementation
 - [ ] Task: Implement TDD for **Reflect** logic:
