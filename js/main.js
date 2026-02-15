@@ -118,6 +118,11 @@ function initGameFromConfig(config) {
     state.startingCash = config.startingCash;
     state.deathTriggerChance = config.deathTriggerChance !== undefined ? config.deathTriggerChance : 0.1;
     state.edgeBehavior = config.edgeBehavior || 'impact';
+    if (state.edgeBehavior === 'random') {
+        state.activeEdgeBehavior = selectRandomEdgeBehavior();
+    } else {
+        state.activeEdgeBehavior = state.edgeBehavior;
+    }
     state.playerRosterConfig = config.players;
     state.currentGameIndex = 0;
     state.numPlayers = config.players.length;
