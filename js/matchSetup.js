@@ -117,6 +117,7 @@ export class MatchSetup {
             deathTriggerChance: parseInt(this.deathTriggerSlider.value) / 100,
             windIntensity: document.getElementById('windIntensity').value,
             mapStyle: document.getElementById('mapStyle').value,
+            edgeBehavior: document.getElementById('edgeBehavior').value,
             turnTimer: {
                 enabled: this.timerToggle.checked,
                 seconds: parseInt(this.timerSeconds.value)
