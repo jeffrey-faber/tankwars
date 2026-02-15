@@ -6,7 +6,7 @@ Focuses on the core logic to identify mobile devices and enforce the landscape r
 - [x] **Task: Implement Mobile Detection Utility** f866f47
     - [ ] Write tests in `js/utils.test.js` for a `isTouchDevice()` utility.
     - [ ] Implement `isTouchDevice()` in `js/utils.js` using `matchMedia("(pointer: coarse)")`.
-- [ ] **Task: Create Orientation & Fullscreen Manager**
+- [x] **Task: Create Orientation & Fullscreen Manager** c0c5f62
     - [ ] Create `js/mobileManager.js` to handle Screen Orientation API and Fullscreen API.
     - [ ] Implement logic to request landscape lock when entering fullscreen.
     - [ ] Add a "Full Screen" toggle button to the main UI that only appears on touch devices.
