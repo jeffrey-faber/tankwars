@@ -1,4 +1,4 @@
-import { getUrlParams, getRandomTankPositions, createExplosion } from './utils.js';
+import { getUrlParams, getRandomTankPositions, createExplosion, selectRandomEdgeBehavior } from './utils.js';
 import { Tank } from './tank.js';
 import { Terrain } from './terrain.js';
 import { BitmaskTerrain } from './BitmaskTerrain.js';
@@ -233,6 +233,13 @@ function resetRound() {
     state.needsRedraw = true;
     state.currentPlayer = 0;
     state.wind = (Math.random() * 2 - 1) / 10;
+
+    // Selection of active edge behavior for this round
+    if (state.edgeBehavior === 'random') {
+        state.activeEdgeBehavior = selectRandomEdgeBehavior();
+    } else {
+        state.activeEdgeBehavior = state.edgeBehavior;
+    }
 
     const newOldTerrain = new Terrain(state.canvas.width, state.canvas.height);
     state.terrain.bakeHeightmap(newOldTerrain.points);
