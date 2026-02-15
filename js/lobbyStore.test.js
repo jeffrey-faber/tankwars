@@ -25,10 +25,10 @@ describe('Store Purchase Logic', () => {
         expect(tank.currency).toBe(500);
     });
 
-    it('should NOT increment inventory for healing items (used immediately)', () => {
+    it('should increment inventory for healing items (now held in inventory)', () => {
         store.buyItem('health');
-        expect(tank.inventory.length).toBe(0);
-        expect(tank.health).toBe(100);
+        expect(tank.inventory.length).toBe(1);
+        expect(tank.inventory[0].id).toBe('health');
         expect(tank.currency).toBe(975);
     });
 

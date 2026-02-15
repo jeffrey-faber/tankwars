@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     background-color: black;
     color: white;
@@ -116,28 +120,52 @@ input[type="submit"] {
     background-color: #222;
     border: 4px solid white;
     padding: 40px;
-    width: 90%;
+    width: 95%;
     max-width: 1000px;
     margin: 20px 0;
     box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
 }
 
+@media (max-width: 600px) {
+    .setup-container {
+        padding: 20px;
+    }
+    .roster-section, .settings-section {
+        min-width: 100%;
+    }
+}
+
+
 .setup-sections {
     display: flex;
+    flex-wrap: wrap;
     gap: 40px;
     margin: 30px 0;
     text-align: left;
+    justify-content: center;
 }
 
 .roster-section {
     flex: 1.2;
+    min-width: 350px;
     border-right: 2px solid #444;
     padding-right: 40px;
 }
 
 .settings-section {
     flex: 1;
+    min-width: 350px;
 }
+
+@media (max-width: 800px) {
+    .roster-section {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 2px solid #444;
+        padding-bottom: 40px;
+    }
+}
+
 
 .setup-container h1 {
     font-size: 32px;
@@ -160,6 +188,7 @@ input[type="submit"] {
 
 .player-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     background: #333;
@@ -170,12 +199,14 @@ input[type="submit"] {
 
 .player-row input[type="text"] {
     flex: 1;
+    min-width: 120px;
     font-size: 12px;
     padding: 8px;
-    width: auto;
 }
 
 .player-row select {
+    flex: 1.5;
+    min-width: 200px;
     background: #444;
     color: white;
     border: none;
@@ -183,6 +214,7 @@ input[type="submit"] {
     font-size: 10px;
     padding: 8px;
 }
+
 
 .remove-player-btn {
     background: #ff0000;
@@ -205,7 +237,13 @@ input[type="submit"] {
     color: #aaa;
 }
 
-.setting-group select, .setting-group input[type="number"] {
+.setting-group > select, 
+.setting-group > input {
+    width: 100%;
+}
+
+.setting-group select, 
+.setting-group input[type="number"] {
     background: #333;
     color: white;
     border: 1px solid #555;
@@ -213,6 +251,11 @@ input[type="submit"] {
     font-family: 'Press Start 2P', cursive;
     font-size: 12px;
 }
+
+.toggle-group input[type="number"] {
+    width: 80px;
+}
+
 
 .toggle-group {
     display: flex;
@@ -253,20 +296,33 @@ input[type="submit"] {
     opacity: 0.5;
 }
 
+.setup-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
 .setup-btn {
     background: #444;
     color: white;
     border: 2px solid white;
     padding: 15px;
-    width: 100%;
     cursor: pointer;
     font-family: 'Press Start 2P', cursive;
     font-size: 12px;
     transition: all 0.2s;
+    min-width: 300px;
 }
 
 .setup-btn:hover {
     background: #555;
+}
+
+.reset-btn {
+    background-color: #555 !important;
+    padding: 20px 30px !important;
+    font-size: 14px !important;
 }
 
 .start-btn {
@@ -279,6 +335,7 @@ input[type="submit"] {
     cursor: pointer;
     box-shadow: 0 0 20px #ff00ff;
     transition: transform 0.2s;
+    min-width: 300px;
 }
 
 .start-btn:hover {

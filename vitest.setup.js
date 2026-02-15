@@ -144,14 +144,23 @@ global.window = {
     ...global.window,
     location: {
         search: '',
+        reload: vi.fn(),
     },
+    localStorage: {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+    },
+    confirm: vi.fn(() => true),
     addEventListener: global.document.addEventListener,
     dispatchEvent: global.document.dispatchEvent,
     requestAnimationFrame: vi.fn(),
     cancelAnimationFrame: vi.fn(),
 };
 
+global.localStorage = global.window.localStorage;
+global.confirm = global.window.confirm;
 global.requestAnimationFrame = global.window.requestAnimationFrame;
-global.cancelAnimationFrame = global.window.cancelAnimationFrame;
 
 

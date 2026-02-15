@@ -21,7 +21,7 @@ export function getRandomTankPositions(numPlayers, terrain) {
         const pointIndex = Math.floor(Math.random() * (points.length - 2)) + 1;
         const newPosition = {
             x: points[pointIndex].x,
-            y: points[pointIndex].y
+            y: points[pointIndex].y - 100 // Start 100px higher in the air
         };
         let isValid = true;
         for (let pos of positions) {
@@ -45,30 +45,44 @@ export function getRandomColor() {
     return color;
 }
 
-// Create an explosion effect (requires a draw callback to re-render the game)
-export function createExplosion(x, y, radius, ctx, canvas, drawCallback, color = 'orange') {
-    const drawExplosion = (currentRadius) => {
-        ctx.beginPath();
-        ctx.arc(x, y, currentRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
-    };
-
-    let currentRadius = 0;
-    const animateExplosion = () => {
-        if (currentRadius < radius) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawCallback(); // re-render the game state
-            drawExplosion(currentRadius);
-            currentRadius += 2;
-            requestAnimationFrame(animateExplosion);
-        }
-    };
-    animateExplosion();
+// Create an explosion effect
+export function createExplosion(x, y, radius, ctx, canvas, drawCallback, color = 'orange', duration = 500) {
+    if (state.activeExplosions) {
+        state.activeExplosions.push({
+            x, y, radius, color,
+            startTime: performance.now(),
+            duration: duration
+        });
+    }
 }
 
 // Select a random edge behavior from the core options (Impact, Reflect, Teleport)
 export function selectRandomEdgeBehavior() {
     const options = ['impact', 'reflect', 'teleport'];
     return options[Math.floor(Math.random() * options.length)];
+}
+
+/**
+ * Calculates a new wind value based on the specified intensity.
+ * @param {string} intensity - 'none', 'low', 'normal', 'high', or 'random'
+ * @returns {number} The calculated wind value.
+ */
+export function calculateWind(intensity) {
+    let actualIntensity = intensity;
+    if (intensity === 'random') {
+        const options = ['none', 'low', 'normal', 'high'];
+        actualIntensity = options[Math.floor(Math.random() * options.length)];
+    }
+
+    switch (actualIntensity) {
+        case 'none':
+            return 0;
+        case 'low':
+            return (Math.random() * 2 - 1) * 0.005;
+        case 'high':
+            return (Math.random() * 2 - 1) * 0.04;
+        case 'normal':
+        default:
+            return (Math.random() * 2 - 1) * 0.015;
+    }
 }

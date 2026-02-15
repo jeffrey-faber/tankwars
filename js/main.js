@@ -1,4 +1,4 @@
-import { getUrlParams, getRandomTankPositions, createExplosion, selectRandomEdgeBehavior } from './utils.js';
+import { getUrlParams, getRandomTankPositions, createExplosion, selectRandomEdgeBehavior, calculateWind } from './utils.js';
 import { Tank } from './tank.js';
 import { Terrain } from './terrain.js';
 import { BitmaskTerrain } from './BitmaskTerrain.js';
@@ -7,7 +7,7 @@ import { LobbyManager } from './lobbyManager.js';
 import { ScoreManager } from './scoreManager.js';
 import { MatchSetup } from './matchSetup.js';
 import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
-import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSettling } from './gameContext.js';
+import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSettling, startTurn } from './gameContext.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
@@ -19,9 +19,9 @@ const matchSetupOverlay = document.getElementById('matchSetupOverlay');
 const gameCanvas = document.getElementById('gameCanvas');
 
 let matchSetup = null;
+let lastFrameTime = performance.now();
 
 // Initialize game state from context
-state.wind = (Math.random() * 2 - 1) / 10;
 window.state = state; // Debugging
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -106,7 +106,7 @@ function finalizeTurnOrder() {
     state.tanks.sort((a, b) => a.x - b.x);
     
     // 2. Choose a random starting player in that sorted array
-    state.currentPlayer = Math.floor(Math.random() * state.tanks.length);
+    startTurn(Math.floor(Math.random() * state.tanks.length));
     
     console.log(`Turn Order Finalized: Starting with ${state.tanks[state.currentPlayer].name}`);
 }
@@ -118,6 +118,10 @@ function initGameFromConfig(config) {
     state.startingCash = config.startingCash;
     state.deathTriggerChance = config.deathTriggerChance !== undefined ? config.deathTriggerChance : 0.1;
     state.edgeBehavior = config.edgeBehavior || 'impact';
+    state.windIntensity = config.windIntensity || 'normal';
+    state.wind = calculateWind(state.windIntensity);
+    state.mapStyle = urlParams.map || config.mapStyle || 'random';
+    state.turnTimer = config.turnTimer || { enabled: false, seconds: 30 };
     if (state.edgeBehavior === 'random') {
         state.activeEdgeBehavior = selectRandomEdgeBehavior();
     } else {
@@ -134,7 +138,7 @@ function initGameFromConfig(config) {
     canvas.height = canvasHeight;
 
     // Initialize Terrain
-    const oldTerrain = new Terrain(canvasWidth, canvasHeight);
+    const oldTerrain = new Terrain(canvasWidth, canvasHeight, state.mapStyle);
     state.terrain = new BitmaskTerrain(canvasWidth, canvasHeight);
     state.terrain.bakeHeightmap(oldTerrain.points);
 
@@ -147,7 +151,7 @@ function initGameFromConfig(config) {
         let type = p.type;
         
         if (type === 'bot-random') {
-            const types = ['bot-easy', 'bot-medium', 'bot-hard', 'bot-stupid', 'bot-lobber', 'bot-sniper', 'bot-mastermind'];
+            const types = ['bot-easy', 'bot-medium', 'bot-hard', 'bot-stupid', 'bot-lobber', 'bot-sniper', 'bot-mastermind', 'bot-nemesis'];
             type = types[Math.floor(Math.random() * types.length)];
         }
 
@@ -183,6 +187,13 @@ function initGameFromConfig(config) {
     // Initialize Managers
     state.store = new Store();
     state.store.init(state.tanks);
+    
+    // AI Initial Shopping Phase (MUST BE AFTER STORE INIT)
+    state.tanks.forEach(tank => {
+        if (tank.isAI) {
+            state.store.aiPurchase(tank);
+        }
+    });
     
     window.lobbyManager = new LobbyManager(state.tanks);
 
@@ -235,9 +246,10 @@ function resetRound() {
     state.gameState = 'LOBBY';
     state.isGameOver = false;
     state.projectiles = []; // Clear all projectiles
+    state.projectileLoopActive = false;
     state.needsRedraw = true;
-    state.currentPlayer = 0;
-    state.wind = (Math.random() * 2 - 1) / 10;
+    startTurn(0);
+    state.wind = calculateWind(state.windIntensity || 'normal');
 
     // Selection of active edge behavior for this round
     if (state.edgeBehavior === 'random') {
@@ -246,13 +258,15 @@ function resetRound() {
         state.activeEdgeBehavior = state.edgeBehavior;
     }
 
-    const newOldTerrain = new Terrain(state.canvas.width, state.canvas.height);
+    const newOldTerrain = new Terrain(state.canvas.width, state.canvas.height, state.mapStyle);
     state.terrain.bakeHeightmap(newOldTerrain.points);
 
     const newTankPositions = getRandomTankPositions(state.numPlayers, newOldTerrain);
     state.tanks.forEach((tank, i) => {
         tank.x = newTankPositions[i].x;
         tank.y = newTankPositions[i].y;
+        tank.lastSolidY = tank.y; // Update tracking for fall damage
+        tank.isInitialSpawn = true; // Prevent damage on first landing
         tank.angle = Math.PI / 4;
         tank.power = 50;
         tank.alive = true;
@@ -287,8 +301,22 @@ function gameLoop() {
         return;
     }
 
+    const now = performance.now();
+    const dt = (now - lastFrameTime) / 1000;
+    lastFrameTime = now;
+
     const aliveTanks = state.tanks.filter(tank => tank.alive);
     
+    // Turn Timer Logic
+    if (state.gameState === 'PLAYING' && !state.isGameOver && state.turnTimer?.enabled && state.projectiles.length === 0 && !isSettling()) {
+        state.remainingTurnTime -= dt;
+        if (state.remainingTurnTime <= 0) {
+            state.remainingTurnTime = 0;
+            console.log("Turn time expired!");
+            startTurn(getNextAliveTankIndex(state.currentPlayer));
+        }
+    }
+
     // Victory/Settlement Logic
     if (aliveTanks.length <= 1 && !state.isGameOver && state.gameState === 'PLAYING') {
         // Only trigger victory overlay when all projectiles and falling dirt have settled
@@ -314,10 +342,24 @@ function gameLoop() {
         }
     }
 
-    if (!state.tanks[state.currentPlayer]?.alive && state.gameState === 'PLAYING') {
-        state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
-        if (state.store) {
-            state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
+    if (!state.tanks[state.currentPlayer]?.alive && state.gameState === 'PLAYING' && state.projectiles.length === 0 && !isSettling()) {
+        startTurn(getNextAliveTankIndex(state.currentPlayer));
+    }
+
+    if (state.projectiles.length > 0) {
+        // Projectiles should be managed by the Tank that fired them, 
+        // but if that tank died mid-rattle, they might hang.
+        // Kick a loop owner if projectiles exist but no loop is running.
+        if (!state.projectileLoopActive) {
+            const owner = state.projectiles[0]?.sourceTank;
+            if (owner && typeof owner.startProjectileLoop === 'function') {
+                owner.startProjectileLoop(false);
+            }
+        }
+        if (state.projectiles.length > 50) {
+            console.warn("DEBUG: Projectile overload detected! Clearing...");
+            state.projectiles = [];
+            state.projectileLoopActive = false;
         }
     }
 
@@ -335,12 +377,16 @@ function gameLoop() {
         }
         
         if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && !isSettling() && state.tanks[state.currentPlayer].alive) {
-            let targetTank;
-            do {
-                targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
-            } while (targetTank === state.tanks[state.currentPlayer] || !targetTank.alive);
-            
-            state.tanks[state.currentPlayer].aiFire();
+            // Add a small safety delay before AI actually starts its "thinking" phase
+            // This ensures all state changes from previous turns (like death) have fully propagated.
+            if (!state.aiTurnTimeout) {
+                state.aiTurnTimeout = setTimeout(() => {
+                    if (state.tanks[state.currentPlayer]?.isAI && !isSettling() && state.tanks[state.currentPlayer].alive) {
+                        state.tanks[state.currentPlayer].aiFire();
+                    }
+                    state.aiTurnTimeout = null;
+                }, 500);
+            }
         }
     }
     requestAnimationFrame(gameLoop);
@@ -358,17 +404,15 @@ document.addEventListener('keydown', (event) => {
 
     let tank = state.tanks[state.currentPlayer];
     if (!tank?.alive) {
-        state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
+        startTurn(getNextAliveTankIndex(state.currentPlayer));
         return;
     }
 
     if (event.key === '/') {
         state.projectiles = [];
+        state.projectileLoopActive = false;
         state.needsRedraw = true;
-        state.currentPlayer = getNextAliveTankIndex(state.currentPlayer);
-        if (state.store) {
-            state.store.updateWeaponSelector(state.tanks[state.currentPlayer]);
-        }
+        startTurn(getNextAliveTankIndex(state.currentPlayer));
     }
 
     if (!tank.isAI && state.store && !state.store.isOpen && state.gameState === 'PLAYING') {

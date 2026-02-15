@@ -22,3 +22,10 @@ export function loadMatchSettings() {
         return null;
     }
 }
+
+/**
+ * Clears the match settings from localStorage.
+ */
+export function clearMatchSettings() {
+    localStorage.removeItem(STORAGE_KEY);
+}

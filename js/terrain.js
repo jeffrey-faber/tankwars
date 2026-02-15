@@ -1,15 +1,27 @@
 export class Terrain {
     constructor(width, height, mapProps = null) {
-        if (!mapProps) mapProps = this.pickRandomMap();
-        console.log(mapProps);
         this.width = width;
         this.height = height;
+        if (typeof mapProps === 'string') {
+            mapProps = this.pickMapByStyle(mapProps);
+        }
+        if (!mapProps) mapProps = this.pickRandomMap();
+        console.log('Generating terrain with:', mapProps);
         this.points = [];
         const detail = mapProps.detail || mapProps.smoothness || 10;
         let previousY = Math.floor(Math.random() * mapProps.variance + mapProps.baseHeight);
 
         for (let i = 0; i <= this.width; i += detail) {
             let y = Math.floor(Math.random() * mapProps.variance + mapProps.baseHeight);
+            
+            // Special logic for valley: make it deeper in the middle
+            if (mapProps.desc === 'valley') {
+                const center = this.width / 2;
+                const distFromCenter = Math.abs(i - center);
+                const depth = (1 - (distFromCenter / center)) * 200;
+                y += depth;
+            }
+
             y = (previousY + y) / 2; // Smooth interpolation between previous and current value.
             this.points.push({ x: i, y });
             previousY = y;
@@ -23,11 +35,20 @@ export class Terrain {
         { variance: 500, smoothness: 20, baseHeight: 20, desc: 'High', detail: 5 },
         { variance: 200, smoothness: 40, baseHeight: 20, desc: 'High Flat', detail: 10 },
         { variance: 200, smoothness: 40, baseHeight: 380, desc: 'Low Flat', detail: 10 },
+        { variance: 150, smoothness: 80, baseHeight: 300, desc: 'hills', detail: 15 },
+        { variance: 300, smoothness: 20, baseHeight: 100, desc: 'rugged', detail: 5 },
+        { variance: 200, smoothness: 100, baseHeight: 200, desc: 'valley', detail: 20 },
     ];
 
     pickRandomMap() {
         const randomIndex = Math.floor(Math.random() * this.premadeMaps.length);
         return this.premadeMaps[randomIndex];
+    }
+
+    pickMapByStyle(style) {
+        if (style === 'random') return this.pickRandomMap();
+        if (style === 'bedrock') return { variance: 0, smoothness: 100, baseHeight: this.height - 1, desc: 'bedrock', detail: 20 };
+        return this.premadeMaps.find(m => m.desc === style) || this.pickRandomMap();
     }
 
     getHeightAt(x) {

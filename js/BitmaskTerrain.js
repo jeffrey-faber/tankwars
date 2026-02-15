@@ -20,15 +20,22 @@ export class BitmaskTerrain {
     }
 
     isSolid(x, y) {
-        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+        if (x < 0 || x >= this.width) {
+            return false;
+        }
+        // Bedrock layer: The bottom row is always solid
+        if (y >= this.height - 1) {
+            return true;
+        }
+        if (y < 0) {
             return false;
         }
         return this.data[y * this.width + x] === 1;
     }
 
     setSolid(x, y, solid) {
-        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-            return;
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height - 1) {
+            return; // Cannot modify bedrock or out of bounds
         }
         const idx = y * this.width + x;
         const current = this.data[idx];
@@ -37,7 +44,7 @@ export class BitmaskTerrain {
         if (current !== newValue) {
             this.data[idx] = newValue;
             
-            // Update visual pixel immediately
+            // Update visual pixel in ImageData buffer
             const pIdx = idx * 4;
             if (solid) {
                 this.pixels[pIdx] = 57;     // R
@@ -55,6 +62,16 @@ export class BitmaskTerrain {
         this.data.fill(0);
         this.pixels.fill(0);
 
+        // Pre-fill bedrock visually
+        for (let x = 0; x < this.width; x++) {
+            const idx = (this.height - 1) * this.width + x;
+            const pIdx = idx * 4;
+            this.pixels[pIdx] = 30;     // Darker bedrock
+            this.pixels[pIdx + 1] = 30; 
+            this.pixels[pIdx + 2] = 30;  
+            this.pixels[pIdx + 3] = 255; 
+        }
+
         for (let i = 1; i < points.length; i++) {
             const p1 = points[i - 1];
             const p2 = points[i];
@@ -69,9 +86,9 @@ export class BitmaskTerrain {
                 const t = (x - p1.x) / (p2.x - p1.x);
                 const groundY = Math.floor(p1.y + t * (p2.y - p1.y));
                 
-                // Fill from groundY to the bottom of the canvas
-                for (let y = groundY; y < this.height; y++) {
-                    if (y >= 0 && y < this.height) {
+                // Fill from groundY to the bedrock
+                for (let y = groundY; y < this.height - 1; y++) {
+                    if (y >= 0) {
                         this.setSolid(x, y, true);
                     }
                 }
@@ -93,7 +110,7 @@ export class BitmaskTerrain {
         // A pixel is stable if there is solid terrain all the way to the bottom
         // (Simplified for performance: just check 5 pixels down or bedrock)
         for (let i = 1; i <= 5; i++) {
-            if (y + i >= this.height) return true; // Bedrock
+            if (y + i >= this.height - 1) return true; // Bedrock
             if (!this.isSolid(x, y + i)) return false; // Gap below
         }
         return true; // Likely part of a stable stack
@@ -104,23 +121,16 @@ export class BitmaskTerrain {
         const xMin = Math.max(0, Math.floor(centerX - radius));
         const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
         const yMin = Math.max(0, Math.floor(centerY - radius));
-        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+        const yMax = Math.min(this.height - 2, Math.floor(centerY + radius)); // Respect bedrock
 
-        let changed = false;
         for (let y = yMin; y <= yMax; y++) {
             for (let x = xMin; x <= xMax; x++) {
                 const dx = x - centerX;
                 const dy = y - centerY;
                 if (dx * dx + dy * dy <= r2) {
-                    if (this.isSolid(x, y)) {
-                        this.setSolid(x, y, false);
-                        changed = true;
-                    }
+                    this.setSolid(x, y, false);
                 }
             }
-        }
-        if (changed) {
-            this.ctx.putImageData(this.imageData, 0, 0);
         }
     }
 
@@ -129,23 +139,16 @@ export class BitmaskTerrain {
         const xMin = Math.max(0, Math.floor(centerX - radius));
         const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
         const yMin = Math.max(0, Math.floor(centerY - radius));
-        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+        const yMax = Math.min(this.height - 2, Math.floor(centerY + radius)); // Respect bedrock
 
-        let changed = false;
         for (let y = yMin; y <= yMax; y++) {
             for (let x = xMin; x <= xMax; x++) {
                 const dx = x - centerX;
                 const dy = y - centerY;
                 if (dx * dx + dy * dy <= r2) {
-                    if (!this.isSolid(x, y)) {
-                        this.setSolid(x, y, true);
-                        changed = true;
-                    }
+                    this.setSolid(x, y, true);
                 }
             }
-        }
-        if (changed) {
-            this.ctx.putImageData(this.imageData, 0, 0);
         }
     }
 
@@ -154,9 +157,8 @@ export class BitmaskTerrain {
         const xMin = Math.max(0, Math.floor(centerX - radius));
         const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
         const yMin = Math.max(0, Math.floor(centerY - radius));
-        const yMax = Math.min(this.height - 1, Math.floor(centerY + radius));
+        const yMax = Math.min(this.height - 2, Math.floor(centerY + radius)); // Respect bedrock
 
-        let changed = false;
         const halfSpread = spread / 2;
 
         for (let y = yMin; y <= yMax; y++) {
@@ -174,16 +176,10 @@ export class BitmaskTerrain {
                     if (diff > Math.PI) diff = Math.PI * 2 - diff;
 
                     if (diff <= halfSpread) {
-                        if (this.isSolid(x, y)) {
-                            this.setSolid(x, y, false);
-                            changed = true;
-                        }
+                        this.setSolid(x, y, false);
                     }
                 }
             }
-        }
-        if (changed) {
-            this.ctx.putImageData(this.imageData, 0, 0);
         }
     }
 
@@ -191,7 +187,7 @@ export class BitmaskTerrain {
         this.ctx.putImageData(this.imageData, 0, 0);
     }
 
-    createCracks(startX, startY, length, angle, depth = 0) {
+    createCracks(startX, startY, length, angle, depth = 0, solid = false) {
         // Increase max depth for more complex patterns
         if (depth > 8 || length < 3) return;
         
@@ -209,8 +205,9 @@ export class BitmaskTerrain {
             // Draw a small cross/block for thickness
             for (let tx = -thickness; tx <= thickness; tx++) {
                 for (let ty = -thickness; ty <= thickness; ty++) {
-                    if (this.isSolid(px + tx, py + ty)) {
-                        this.setSolid(px + tx, py + ty, false);
+                    // Respect bedrock
+                    if (py + ty < this.height - 1) {
+                        this.setSolid(px + tx, py + ty, solid);
                     }
                 }
             }
@@ -221,7 +218,7 @@ export class BitmaskTerrain {
         for (let b = 0; b < branches; b++) {
             const nextAngle = angle + (Math.random() * 1.2 - 0.6); // Wider spread
             const nextLength = length * (0.7 + Math.random() * 0.3);
-            this.createCracks(endX, endY, nextLength, nextAngle, depth + 1);
+            this.createCracks(endX, endY, nextLength, nextAngle, depth + 1, solid);
         }
     }
 

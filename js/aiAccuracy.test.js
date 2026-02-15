@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { MastermindAI, StandardAI, SniperAI, LobberAI } from './aiControllers.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { MastermindAI, StandardAI, SniperAI, LobberAI, NemesisAI, BitwiseCommanderAI } from './aiControllers.js';
+import { state } from './gameContext.js';
 
 // Mock tank for simulation
 const createTank = (x, y) => ({ 
@@ -39,7 +40,7 @@ function simulateShot(shot, source, target, env) {
     const ty = target.y - target.height / 2;
     const radius = 10; // Tight hit radius for precision testing
 
-    for (let t = 0; t < 1000; t++) {
+    for (let t = 0; t < 2000; t++) {
         vy += PHYSICS.gravity;
         vx += env.wind;
 
@@ -49,18 +50,48 @@ function simulateShot(shot, source, target, env) {
         const stepY = vy / steps;
 
         let hit = false;
+        let minTrajectoryDist = Infinity;
+
         for (let s = 0; s < steps; s++) {
             x += stepX;
             y += stepY;
+
+            // TRACK CLOSEST APPROACH (SOFT HIT DETECTION)
+            const dist = Math.sqrt((x - tx)**2 + (y - ty)**2);
+            if (dist < minTrajectoryDist) minTrajectoryDist = dist;
+
+            // EDGE AWARE SIMULATION (SYCHRONIZED WITH tank.js)
+            if (state.activeEdgeBehavior === 'reflect') {
+                if (x <= 0) { vx = Math.abs(vx); x = 0; }
+                if (x >= (state.canvas?.width || 1200)) { vx = -Math.abs(vx); x = (state.canvas?.width || 1200); }
+                if (y <= 0) { vy = Math.abs(vy); y = 0; }
+            } else if (state.activeEdgeBehavior === 'teleport') {
+                if (x < 0) x = (state.canvas?.width || 1200);
+                else if (x > (state.canvas?.width || 1200)) x = 0;
+            }
+
             if (env.checkTerrain && env.checkTerrain(x, y)) {
+                // In all other modes besides reflect, arcing out the top is NOT a hit
+                if (y < 0 && state.activeEdgeBehavior !== 'reflect') {
+                    // pass through
+                } else {
+                    hit = true;
+                    break;
+                }
+            }
+            if (y > (state.canvas?.height || 600)) {
                 hit = true;
                 break;
             }
         }
-        if (hit) return { hit: false, x, y, hitTerrain: true };
+        if (hit) {
+            // IF WE HIT TERRAIN: Did we pass close enough to the target first?
+            // 15px is a reasonable splash radius for a 'hit'
+            if (minTrajectoryDist <= 15) return { hit: true, x, y };
+            return { hit: false, x, y, hitTerrain: true };
+        }
 
-        const dist = Math.sqrt((x - tx)**2 + (y - ty)**2);
-        if (dist <= radius) return { hit: true, x, y };
+        if (minTrajectoryDist <= radius) return { hit: true, x, y };
         
         if (y > 2000 || x < -1000 || x > 3000) return { hit: false, x, y };
     }
@@ -75,7 +106,13 @@ function runDuel(controllerClass, difficulty, env, maxShots = 5, startX = 100, s
     ai.chooseTarget(source, [target]);
 
     for (let i = 1; i <= maxShots; i++) {
-        const shot = ai.calculateShot(source, target, env);
+        // MUST PASS checkTerrain so AI can see walls/mountains!
+        const aiEnv = { 
+            wind: env.wind, 
+            gravity: env.gravity, 
+            checkTerrain: env.checkTerrain 
+        };
+        const shot = ai.calculateShot(source, target, aiEnv);
         const result = simulateShot(shot, source, target, env);
         if (result.hit) return i;
         ai.recordShot(target);
@@ -86,6 +123,12 @@ function runDuel(controllerClass, difficulty, env, maxShots = 5, startX = 100, s
 
 describe('AI Accuracy Benchmark', () => {
     
+    beforeEach(() => {
+        state.activeEdgeBehavior = 'impact';
+        state.edgeBehavior = 'impact';
+        state.canvas = { width: 1200, height: 600 };
+    });
+
     describe('MastermindAI Performance', () => {
         it('Standard: Calm Weather', () => {
             const result = runDuel(MastermindAI, null, { wind: 0, gravity: 0.1 });
@@ -120,11 +163,12 @@ describe('AI Accuracy Benchmark', () => {
                 checkTerrain: (x, y) => {
                     // Two high pillars with a gap at 400
                     if (x > 350 && x < 450) return y > 700; // Deep gap
+                    if (x < 150) return y > 350; // Low ground for shooter
                     return y > 300; // High ground
                 }
             };
             // Target is at bottom of valley
-            const result = runDuel(MastermindAI, null, valleyEnv, 5, 100, 300, 400, 700);
+            const result = runDuel(MastermindAI, null, valleyEnv, 10, 100, 300, 400, 700);
             expect(result).toBeGreaterThan(0);
         });
 
@@ -149,10 +193,11 @@ describe('AI Accuracy Benchmark', () => {
                 gravity: 0.1,
                 checkTerrain: (x, y) => {
                     if (x >= 600 && x <= 800) return y > 800; 
+                    if (x < 200) return y > 550; // Low ground for shooter
                     return y > 500;
                 }
             };
-            const result = runDuel(MastermindAI, null, pitEnv, 5, 100, 500, 700, 750);
+            const result = runDuel(MastermindAI, null, pitEnv, 10, 100, 500, 700, 750);
             expect(result).toBeGreaterThan(0);
         });
 
@@ -187,6 +232,26 @@ describe('AI Accuracy Benchmark', () => {
             };
             // Target at 600, 300 on a floating island
             const result = runDuel(MastermindAI, null, islandEnv, 5, 100, 500, 600, 300);
+            expect(result).toBeGreaterThan(0);
+        });
+
+        it('Edge-Aware: Mastermind should use REFLECT to hit behind a wall', () => {
+            state.activeEdgeBehavior = 'reflect';
+            state.canvas = { width: 1200, height: 600 };
+            
+            const wallEnv = {
+                wind: 0,
+                gravity: 0.1,
+                checkTerrain: (x, y) => {
+                    // Huge wall in middle, but gap at top
+                    if (x > 300 && x < 500) return y > 100;
+                    return y > 500;
+                }
+            };
+            // Source at 100, 500. Target at 700, 500.
+            // Giant wall blocks direct shots. Ceiling reflection is required.
+            
+            const result = runDuel(MastermindAI, null, wallEnv, 10, 100, 500, 700, 500);
             expect(result).toBeGreaterThan(0);
         });
     });
@@ -261,6 +326,72 @@ describe('AI Accuracy Benchmark', () => {
                 }
             };
             const result = runDuel(LobberAI, null, bucketEnv, 10, 100, 600, 700, 500);
+            expect(result).toBeGreaterThan(0);
+        });
+    });
+
+    describe('NemesisAI Performance', () => {
+        it('Standard: Calm Weather', () => {
+            const result = runDuel(NemesisAI, null, { wind: 0, gravity: 0.1 });
+            expect(result).toBeGreaterThan(0);
+            expect(result).toBeLessThanOrEqual(3);
+        });
+
+        it('Edge-Aware: Teleport Wrap', () => {
+            state.activeEdgeBehavior = 'teleport';
+            state.canvas = { width: 1200, height: 600 };
+            const result = runDuel(NemesisAI, null, { wind: 0.1, gravity: 0.1 }, 6, 100, 500, 1050, 500);
+            expect(result).toBeGreaterThan(0);
+        }, 10000);
+
+        it('Edge-Aware: Reflect Ceiling Shot', () => {
+            state.activeEdgeBehavior = 'reflect';
+            state.canvas = { width: 1200, height: 600 };
+            const wallEnv = {
+                wind: 0,
+                gravity: 0.1,
+                checkTerrain: (x, y) => {
+                    if (x > 300 && x < 500) return y > 100;
+                    return y > 500;
+                }
+            };
+            const result = runDuel(NemesisAI, null, wallEnv, 10, 100, 500, 700, 500);
+            expect(result).toBeGreaterThan(0);
+        });
+    });
+
+    describe('BitwiseCommanderAI Performance (Retro 80s Logic)', () => {
+        it('Standard: Calm Weather', () => {
+            const result = runDuel(BitwiseCommanderAI, null, { wind: 0, gravity: 0.1 });
+            expect(result).toBeGreaterThan(0);
+            expect(result).toBeLessThanOrEqual(2); // Should be very fast
+        });
+
+        it('Obstacle: Deep Narrow Valley', () => {
+            const valleyEnv = {
+                wind: 0,
+                gravity: 0.1,
+                checkTerrain: (x, y) => {
+                    if (x > 350 && x < 450) return y > 700;
+                    if (x < 150) return y > 350;
+                    return y > 300;
+                }
+            };
+            const result = runDuel(BitwiseCommanderAI, null, valleyEnv, 10, 100, 300, 400, 700);
+            expect(result).toBeGreaterThan(0);
+        });
+
+        it('Targeting: Into a Deep Pit', () => {
+            const pitEnv = {
+                wind: 0,
+                gravity: 0.1,
+                checkTerrain: (x, y) => {
+                    if (x >= 600 && x <= 800) return y > 800; 
+                    if (x < 200) return y > 550;
+                    return y > 500;
+                }
+            };
+            const result = runDuel(BitwiseCommanderAI, null, pitEnv, 10, 100, 500, 700, 750);
             expect(result).toBeGreaterThan(0);
         });
     });

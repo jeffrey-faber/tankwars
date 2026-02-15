@@ -6,14 +6,14 @@ export class Store {
             {
                 id: 'heavy',
                 name: 'Heavy Shot',
-                description: 'Reliable standard ammo with larger blast.',
+                description: 'Powerful standard ammo. High direct-hit damage.',
                 price: 50,
                 packSize: 5,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
                     radius: 30,
-                    damage: 60
+                    damage: 75
                 }
             },
             {
@@ -72,13 +72,14 @@ export class Store {
             {
                 id: 'laser',
                 name: 'Laser',
-                description: 'High-velocity projectile, less affected by wind',
+                description: 'Utility beam. Carves thin tunnels, low direct-hit damage, penetration scales with power.',
                 price: 40,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
-                    speedMultiplier: 2.0,
-                    damage: 80
+                    radius: 4,
+                    damage: 35,
+                    special: 'beam'
                 }
             },
             {
@@ -95,8 +96,9 @@ export class Store {
             {
                 id: 'health',
                 name: 'Health Pack',
-                description: 'Heals 50 health points',
+                description: 'Heals 50 HP. Consumes your turn.',
                 price: 25,
+                packSize: 1,
                 category: 'utility',
                 effect: {
                     type: 'healing',
@@ -104,15 +106,52 @@ export class Store {
                 }
             },
             {
+                id: 'teleport',
+                name: 'Teleport',
+                description: 'Move to a random location. Grants fall immunity until you land.',
+                price: 100,
+                packSize: 1,
+                category: 'utility',
+                effect: {
+                    type: 'teleport'
+                }
+            },
+            {
                 id: 'dirtball',
                 name: 'Dirt Ball',
-                description: 'Creates terrain on impact. Can bury enemies.',
+                description: 'Creates terrain on impact. No damage.',
                 price: 35,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
                     radius: 30,
-                    damage: 10,
+                    damage: 0,
+                    special: 'add_terrain'
+                }
+            },
+            {
+                id: 'mound',
+                name: 'Mound',
+                description: 'Creates a medium amount of terrain. No damage.',
+                price: 75,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 60,
+                    damage: 0,
+                    special: 'add_terrain'
+                }
+            },
+            {
+                id: 'mountain',
+                name: 'Mountain',
+                description: 'Creates a massive amount of terrain. No damage.',
+                price: 150,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 120,
+                    damage: 0,
                     special: 'add_terrain'
                 }
             },
@@ -216,22 +255,14 @@ export class Store {
         const startButton = document.createElement('button');
         startButton.id = 'startMatchButton';
         startButton.textContent = 'START MATCH';
-        startButton.style.position = 'absolute';
-        startButton.style.top = '50%';
-        startButton.style.left = '50%';
-        startButton.style.transform = 'translate(-50%, -50%)';
-        startButton.style.backgroundColor = '#ff00ff';
-        startButton.style.color = 'white';
-        startButton.style.border = 'none';
-        startButton.style.padding = '20px 40px';
-        startButton.style.cursor = 'pointer';
-        startButton.style.fontFamily = "'Press Start 2P', cursive";
-        startButton.style.fontSize = '20px';
-        startButton.style.zIndex = '150'; // Higher than overlays
-        startButton.style.boxShadow = '0 0 20px #ff00ff';
+        startButton.className = 'start-btn';
+        startButton.style.marginTop = '20px';
         startButton.style.display = 'none'; // Hidden by default
         
-        document.body.appendChild(startButton);
+        const lobbyOverlay = document.getElementById('lobbyOverlay');
+        if (lobbyOverlay) {
+            lobbyOverlay.appendChild(startButton);
+        }
         
         startButton.addEventListener('click', () => {
             state.gameState = 'PLAYING';
@@ -259,11 +290,8 @@ export class Store {
             if (storeButton) storeButton.style.display = 'none';
             if (startMatchButton) startMatchButton.style.display = 'none';
             if (weaponSelector) {
-                // Only show if we have items or if we explicitly want to see default
-                // User said "When there are no items, I see a small blue selector box and nothing inside"
-                // So if inventory is empty, hide it.
-                const hasItems = this.currentTank && this.currentTank.inventory && this.currentTank.inventory.length > 0;
-                weaponSelector.style.display = hasItems ? 'flex' : 'none';
+                // Always show if we are in PLAYING state
+                weaponSelector.style.display = 'flex';
             }
         }
     }
@@ -366,6 +394,9 @@ export class Store {
             case 'shield': return '🛡️';
             case 'health': return '❤️';
             case 'dirtball': return '🟤';
+            case 'mound': return '🤎';
+            case 'mountain': return '⛰️';
+            case 'teleport': return '🌀';
             case 'shovel': return '🥄';
             case 'parachute': return '🪂';
             case 'earthquake_s': return '📉';
@@ -393,10 +424,20 @@ export class Store {
         const createIcon = (id, name, count, isSelected, key, description) => {
             const icon = document.createElement('div');
             icon.className = `weapon-icon ${isSelected ? 'selected' : ''} ${tank.isAI ? 'is-ai' : ''}`;
+            
+            let countText = count > 0 ? count : '';
+            if (id === 'shield') {
+                const percent = Math.ceil((tank.shieldDurability / tank.maxHealth) * 100);
+                countText = `${percent}%`;
+            } else if (id === 'parachute') {
+                const percent = Math.ceil((tank.parachuteDurability / tank.maxHealth) * 100);
+                countText = `${percent}%`;
+            }
+
             icon.innerHTML = `
                 <span class="weapon-key">${key}</span>
                 ${this.getWeaponIcon(id)}
-                ${count > 0 ? `<span class="weapon-count">${count}</span>` : ''}
+                ${countText ? `<span class="weapon-count">${countText}</span>` : ''}
                 <div class="weapon-tooltip">
                     <span class="weapon-tooltip-title">${name}</span>
                     ${description}
@@ -522,11 +563,11 @@ export class Store {
             let isMaxed = false;
 
             if (item.id === 'shield') {
-                const maxShield = this.currentTank.maxHealth * 2;
+                const maxShield = this.currentTank.maxHealth;
                 ownershipText = `Durability: ${Math.ceil(this.currentTank.shieldDurability)}/${maxShield}`;
                 if (this.currentTank.shieldDurability >= maxShield) isMaxed = true;
             } else if (item.id === 'parachute') {
-                const maxPara = this.currentTank.maxHealth * 2;
+                const maxPara = this.currentTank.maxHealth;
                 ownershipText = `Durability: ${Math.ceil(this.currentTank.parachuteDurability)}/${maxPara}`;
                 if (this.currentTank.parachuteDurability >= maxPara) isMaxed = true;
             }
@@ -570,11 +611,11 @@ export class Store {
         if (!item) return;
 
         // Check if maxed
-        if (itemId === 'shield' && this.currentTank.shieldDurability >= this.currentTank.maxHealth * 2) {
+        if (itemId === 'shield' && this.currentTank.shieldDurability >= this.currentTank.maxHealth) {
             this.showMessage("Shield already at max!");
             return;
         }
-        if (itemId === 'parachute' && this.currentTank.parachuteDurability >= this.currentTank.maxHealth * 2) {
+        if (itemId === 'parachute' && this.currentTank.parachuteDurability >= this.currentTank.maxHealth) {
             this.showMessage("Parachute already at max!");
             return;
         }
@@ -594,10 +635,10 @@ export class Store {
                 }
 
                 if (itemId === 'shield') {
-                    this.currentTank.shieldDurability = this.currentTank.maxHealth * 2;
+                    this.currentTank.shieldDurability = this.currentTank.maxHealth;
                     this.showMessage("Shield Active!");
                 } else {
-                    this.currentTank.parachuteDurability = this.currentTank.maxHealth * 2;
+                    this.currentTank.parachuteDurability = this.currentTank.maxHealth;
                     this.showMessage("Parachute Ready!");
                 }
             } else {
@@ -613,20 +654,7 @@ export class Store {
                     this.currentTank.inventory.push(inventoryItem);
                 }
                 
-                // Special case for healing items - use immediately
-                if (item.effect.type === 'healing') {
-                    this.currentTank.health = Math.min(this.currentTank.maxHealth, this.currentTank.health + item.effect.amount);
-                    // Remove from inventory
-                    for (let k = 0; k < numToBuy; k++) {
-                        const index = this.currentTank.inventory.findIndex(i => i.id === itemId);
-                        if (index !== -1) {
-                            this.currentTank.inventory.splice(index, 1);
-                        }
-                    }
-                    this.showMessage(`Healed +${item.effect.amount} HP!`);
-                } else {
-                    this.showMessage(`You bought ${item.name}!`);
-                }
+                this.showMessage(`You bought ${item.name}!`);
             }
             
             // Update the store UI
@@ -659,43 +687,20 @@ export class Store {
         }, 2000);
     }
     
-        // AI will randomly buy items they can afford
-    
-        aiPurchase(aiTank) {
-    
-            if (!aiTank.isAI || !aiTank.alive) return;
-    
-            
-    
-            // AI has a chance to buy an item if they have enough currency
-    
-            const affordableItems = this.items.filter(item => aiTank.currency >= item.price);
-    
-            
-    
-            if (affordableItems.length > 0 && Math.random() < 0.3) { // 30% chance to buy an item
-    
-                const randomItem = affordableItems[Math.floor(Math.random() * affordableItems.length)];
-    
-                
-    
-                // Set as current tank temporarily to use buyItem logic
-    
-                const prevTank = this.currentTank;
-    
-                this.currentTank = aiTank;
-    
-                this.buyItem(randomItem.id);
-    
-                this.currentTank = prevTank;
-    
-                
-    
-                console.log(`AI ${aiTank.name} bought ${randomItem.name}`);
-    
-            }
-    
-        }
+    // AI will shop using its specific controller logic
+    aiPurchase(aiTank) {
+        if (!aiTank.isAI || !aiTank.alive || !aiTank.aiController) return;
+        
+        // Set as current tank temporarily so buyItem logic works
+        const prevTank = this.currentTank;
+        this.currentTank = aiTank;
+        
+        // AI shops using its specific personality
+        aiTank.aiController.shop(this, aiTank, state.tanks);
+        
+        this.currentTank = prevTank;
+        console.log(`AI \${aiTank.name} finished shopping.`);
+    }
     
     }
     

@@ -47,7 +47,7 @@ export class ScoreManager {
                             ${player.name}
                         </div>
                     </td>
-                    <td>${player.score}</td>
+                    <td>${Math.round(player.score)}</td>
                     <td>${player.wins}</td>
                     <td>${player.kills}</td>
                     <td>${player.currency}</td>

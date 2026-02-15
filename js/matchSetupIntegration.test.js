@@ -8,6 +8,7 @@ describe('Match Setup Integration', () => {
         mockElements = {
             'playerList': { innerHTML: '', appendChild: vi.fn() },
             'addPlayerButton': { addEventListener: vi.fn() },
+            'resetSettingsButton': { addEventListener: vi.fn() },
             'timerToggle': { addEventListener: vi.fn(), checked: false },
             'timerSeconds': { value: '30', disabled: false },
             'deathTriggerChance': { value: '15', addEventListener: vi.fn() },

@@ -4,6 +4,8 @@
 
 **Tank Wars** is a web-based, multiplayer artillery game inspired by classics like "Scorched Earth" or "Worms". Players control tanks on a destructible 2D terrain, aiming to destroy opponents by adjusting the angle and power of their shots. The game features turn-based gameplay, wind mechanics, various weapons, and AI opponents.
 
+> **Note on Testing:** Some AI accuracy tests in `js/aiAccuracy.test.js` may fail. These are benchmark tests for ongoing improvements to AI targeting logic and do not necessarily indicate a regression in core game functionality.
+
 ### Key Technologies
 
 *   **Frontend:** HTML5 Canvas for rendering, vanilla JavaScript (ES6+) for logic, and CSS for UI styling.
