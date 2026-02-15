@@ -109,6 +109,46 @@
     <button id="startShoppingButton" class="hidden">Enter Store</button>
 </div>
 
+<!-- Mobile Controls -->
+<div id="mobileControls" class="mobile-only">
+    <div class="mobile-left-controls">
+        <div class="mobile-slider-group" id="angleSliderGroup">
+            <label>ANGLE</label>
+            <div class="slider-container">
+                <button class="fine-tune-btn" id="anglePlus">+</button>
+                <div class="slider-track vertical">
+                    <div id="angleHandle" class="slider-handle"></div>
+                </div>
+                <button class="fine-tune-btn" id="angleMinus">-</button>
+            </div>
+            <span id="angleValueDisplay">45°</span>
+        </div>
+        <div class="mobile-slider-group" id="powerSliderGroup">
+            <label>POWER</label>
+            <div class="slider-container">
+                <button class="fine-tune-btn" id="powerPlus">+</button>
+                <div class="slider-track vertical">
+                    <div id="powerHandle" class="slider-handle"></div>
+                </div>
+                <button class="fine-tune-btn" id="powerMinus">-</button>
+            </div>
+            <span id="powerValueDisplay">50</span>
+        </div>
+    </div>
+
+    <div class="mobile-right-controls">
+        <button id="mobileFireBtn" class="mobile-action-btn fire">FIRE</button>
+        <div class="mobile-secondary-actions">
+            <button id="mobileShopBtn" class="mobile-action-btn secondary">SHOP</button>
+            <button id="mobileSkipBtn" class="mobile-action-btn secondary">SKIP</button>
+        </div>
+    </div>
+
+    <div id="mobileInventoryBar" class="mobile-inventory">
+        <!-- Will be populated dynamically like the desktop weapon selector -->
+    </div>
+</div>
+
 
 <!-- Load game as a module -->
 <script type="module" src="js/main.js"></script>
