@@ -86,3 +86,11 @@ export function calculateWind(intensity) {
             return (Math.random() * 2 - 1) * 0.015;
     }
 }
+
+/**
+ * Checks if the current device is a touch-enabled device.
+ * @returns {boolean} True if the device supports touch.
+ */
+export function isTouchDevice() {
+    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+}
