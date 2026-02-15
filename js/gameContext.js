@@ -95,6 +95,9 @@ export function drawHUD() {
         weaponText += ` (${count})`;
     }
     state.ctx.fillText(weaponText, 10, 160);
+
+    state.ctx.fillStyle = 'blue';
+    state.ctx.fillText('Edge Rule: ' + state.activeEdgeBehavior.toUpperCase(), 10, 180);
 }
 
 export function draw() {
