@@ -57,4 +57,22 @@ describe('mobileManager', () => {
             expect(document.exitFullscreen).toHaveBeenCalled();
         });
     });
+
+    describe('updateMobileHUD', () => {
+        it('should update angle and power displays', () => {
+            document.body.innerHTML = `
+                <div id="angleValueDisplay"></div>
+                <div id="powerValueDisplay"></div>
+                <div id="angleHandle"></div>
+                <div id="powerHandle"></div>
+                <div class="slider-track vertical" style="height: 100px;"></div>
+            `;
+            const tank = { angle: 30, power: 80 };
+            import('./mobileManager.js').then(m => {
+                m.updateMobileHUD(tank);
+                expect(document.getElementById('angleValueDisplay').innerText).toBe('30°');
+                expect(document.getElementById('powerValueDisplay').innerText).toBe('80');
+            });
+        });
+    });
 });
