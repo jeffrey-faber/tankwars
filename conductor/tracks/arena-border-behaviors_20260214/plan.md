@@ -28,7 +28,7 @@ This plan implements the "Edge Behavior" match setting, allowing projectiles to 
 - [x] Task: Refine **Impact** (Standard) logic to ensure it respects the new toggle system. eb2f78f
 - [x] Task: Conductor - User Manual Verification 'Phase 4: Physics Engine Implementation' (Protocol in workflow.md)
 
-## Phase 5: AI & Final Polish
+## Phase 5: AI & Final Polish [checkpoint: 9b95a73]
 - [x] Task: Update AI simulation in `js/aiControllers.js` to be "Edge Aware" (so Mastermind can use bounces/wraps for shots). f846061
 - [x] Task: Final system-wide verification of all edge behaviors in various terrain types. 9248f14
-- [ ] Task: Conductor - User Manual Verification 'Phase 5: AI & Final Polish' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 5: AI & Final Polish' (Protocol in workflow.md) 9b95a73
