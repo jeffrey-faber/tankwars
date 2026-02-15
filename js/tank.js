@@ -510,8 +510,11 @@ export class Tank {
                                 if (collision.side === 'left') proj.x = state.canvas.width;
                                 if (collision.side === 'right') proj.x = 0;
                                 // No 'hit' for teleport, keep moving from the new side
+                            } else if (collision.side === 'top') {
+                                // In all other modes, arcing out the top is NOT a hit
+                                // Just let it keep moving until it comes back or hits a side
                             } else {
-                                // Standard impact (bottom, terrain, or Impact behavior)
+                                // Standard impact (bottom, terrain, or side-hit in Impact behavior)
                                 hit = true;
                             }
                         }
@@ -546,8 +549,13 @@ export class Tank {
 
                 if (hit) {
                     // Impact logic
+                    // Only trigger explosion if hitting something inside or on the boundaries of the arena
                     if (proj.y >= 0 && proj.y <= (state.canvas?.height || 400)) {
                         this.handleProjectileImpact(proj);
+                    } else if (proj.y < 0 && state.activeEdgeBehavior === 'impact') {
+                        // In impact mode, projectiles that go off the top might be deleted or handled specifically.
+                        // Currently, the spec says they can arc out the top.
+                        // So we ONLY set hit=true if they hit SIDES or BOTTOM.
                     }
                     toRemove.push(index);
                 }
