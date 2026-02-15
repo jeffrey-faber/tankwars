@@ -2,10 +2,10 @@
 
 This plan implements the "Edge Behavior" match setting, allowing projectiles to reflect, teleport, or impact based on the active round rule.
 
-## Phase 1: Setup and State Management
+## Phase 1: Setup and State Management [checkpoint: c70c78d]
 - [x] Task: Update `gameContext.js` state to include `edgeBehavior` and `edgeBehaviors` (constants). 76d187b
 - [x] Task: Implement `selectRandomEdgeBehavior()` helper in `js/utils.js`. d1486b6
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Setup and State Management' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Setup and State Management' (Protocol in workflow.md)
 
 ## Phase 2: Match Setup UI
 - [ ] Task: Add "Edge Behavior" select menu to `index.html` (Match Setup Overlay).
