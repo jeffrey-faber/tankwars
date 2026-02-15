@@ -18,17 +18,17 @@ This plan implements the "Edge Behavior" match setting, allowing projectiles to 
 - [x] Task: Update `drawHUD` in `js/gameContext.js` to display the active Edge Rule. ba09268
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Round Logic & HUD' (Protocol in workflow.md)
 
-## Phase 4: Physics Engine Implementation
+## Phase 4: Physics Engine Implementation [checkpoint: bb22514]
 - [x] Task: Implement TDD for **Reflect** logic:
     - [x] Write tests for side-wall and top-wall reflection in a new `js/edgePhysics.test.js`.
-    - [x] Update `Projectile.update` (or equivalent loop in `js/tank.js`) to handle reflections. 034bda3
+    - [x] Update `Projectile.update` (or equivalent loop in `js/tank.js`) to handle reflections. eb2f78f
 - [x] Task: Implement TDD for **Teleport** logic:
     - [x] Write tests for wrap-around behavior in `js/edgePhysics.test.js`.
-    - [x] Update projectile logic to handle X-coordinate teleportation. 034bda3
-- [x] Task: Refine **Impact** (Standard) logic to ensure it respects the new toggle system. 034bda3
-- [~] Task: Conductor - User Manual Verification 'Phase 4: Physics Engine Implementation' (Protocol in workflow.md)
+    - [x] Update projectile logic to handle X-coordinate teleportation. 806c53d
+- [x] Task: Refine **Impact** (Standard) logic to ensure it respects the new toggle system. eb2f78f
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Physics Engine Implementation' (Protocol in workflow.md)
 
 ## Phase 5: AI & Final Polish
-- [ ] Task: Update AI simulation in `js/aiControllers.js` to be "Edge Aware" (so Mastermind can use bounces/wraps for shots).
+- [x] Task: Update AI simulation in `js/aiControllers.js` to be "Edge Aware" (so Mastermind can use bounces/wraps for shots). f846061
 - [ ] Task: Final system-wide verification of all edge behaviors in various terrain types.
 - [ ] Task: Conductor - User Manual Verification 'Phase 5: AI & Final Polish' (Protocol in workflow.md)
