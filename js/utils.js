@@ -46,11 +46,11 @@ export function getRandomColor() {
 }
 
 // Create an explosion effect (requires a draw callback to re-render the game)
-export function createExplosion(x, y, radius, ctx, canvas, drawCallback) {
+export function createExplosion(x, y, radius, ctx, canvas, drawCallback, color = 'orange') {
     const drawExplosion = (currentRadius) => {
         ctx.beginPath();
         ctx.arc(x, y, currentRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = 'orange';
+        ctx.fillStyle = color;
         ctx.fill();
     };
 
@@ -65,4 +65,10 @@ export function createExplosion(x, y, radius, ctx, canvas, drawCallback) {
         }
     };
     animateExplosion();
+}
+
+// Select a random edge behavior from the core options (Impact, Reflect, Teleport)
+export function selectRandomEdgeBehavior() {
+    const options = ['impact', 'reflect', 'teleport'];
+    return options[Math.floor(Math.random() * options.length)];
 }
