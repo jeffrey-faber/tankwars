@@ -3,7 +3,7 @@
 ## Phase 1: Environment Detection & Orientation Management
 Focuses on the core logic to identify mobile devices and enforce the landscape requirement.
 
-- [ ] **Task: Implement Mobile Detection Utility**
+- [x] **Task: Implement Mobile Detection Utility** f866f47
     - [ ] Write tests in `js/utils.test.js` for a `isTouchDevice()` utility.
     - [ ] Implement `isTouchDevice()` in `js/utils.js` using `matchMedia("(pointer: coarse)")`.
 - [ ] **Task: Create Orientation & Fullscreen Manager**
