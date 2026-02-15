@@ -14,7 +14,7 @@ export function detectClumping(target, allTanks) {
 }
 
 // Helper to simulate shots and find the best parameters within constraints
-function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, preference = 'any', weaponRadius = 15, initialAngleStep = Math.PI / 60, initialPowerStep = 1) {
+function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, preference = 'any', weaponRadius = 15, initialAngleStep = Math.PI / 30, initialPowerStep = 5) {
     const g = env.gravity;
     const physicsScale = 0.2; 
     const barrelLength = 30;
@@ -28,14 +28,20 @@ function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powe
     let bestCriteria = (preference === 'steepest' ? -Infinity : Infinity);
 
     const checkBetter = (error, angle, peakY, power) => {
-        // PRIORITY 1: Accuracy (Always prefer hits that are closer to the target center)
-        // If the new error is significantly better (e.g., 5px closer), take it immediately.
-        if (error < minError - 5) return true;
+        const hitThreshold = 20;
 
-        // PRIORITY 2: Character Preference (Only if accuracy is already 'good enough' or similar)
+        // PRIORITY 1: Absolute Accuracy (If we haven't found a 'hit' yet, take the closest shot)
+        if (error < hitThreshold && minError > hitThreshold) return true; // Found first 'hit'
+        
+        if (error > hitThreshold && minError > hitThreshold) {
+            // Both are misses: strictly take the one that is closer
+            return error < minError;
+        }
+
+        // PRIORITY 2: Character Preference / Efficiency (Only apply if both are within hit threshold OR very similar)
         if (Math.abs(error - minError) <= 5) {
             if (preference === 'flattest') {
-                // If it's a sniper shot, favor lower power first (less overshoot risk) then height
+                // If similar accuracy, prefer lower power (safer) then peak height
                 if (power < bestPower - 10) return true;
                 return peakY > bestCriteria; 
             }
@@ -63,11 +69,11 @@ function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powe
         }
     }
 
-    // Phase 2: Refined Search
+    // Phase 2: Refined Search (Intensive search around the best coarse result)
     if (bestAngle !== null) {
         const refineAngleRange = initialAngleStep;
         const refinePowerRange = initialPowerStep;
-        const refineSteps = 10; 
+        const refineSteps = 20; // High precision for final result
 
         for (let power = Math.max(powerMin, bestPower - refinePowerRange); power <= Math.min(powerMax, bestPower + refinePowerRange); power += refinePowerRange / refineSteps) {
             for (let angle = Math.max(angleMin, bestAngle - refineAngleRange); angle <= Math.min(angleMax, bestAngle + refineAngleRange); angle += refineAngleRange / refineSteps) {
@@ -106,7 +112,7 @@ function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsSca
     let vx = power * Math.cos(angle) * physicsScale;
     let vy = -power * Math.sin(angle) * physicsScale;
     
-    const dxInitial = tx - (tank.x + tank.width / 2);
+    let minDistance = Infinity;
     let peakY = y;
 
     for(let t = 0; t < 1000; t++) {
@@ -123,18 +129,21 @@ function simulateSingleTrajectory(tank, target, env, angle, power, g, physicsSca
         for (let s = 0; s < steps; s++) {
             x += stepX;
             y += stepY;
+            
+            // Track closest approach to target center
+            const dist = Math.sqrt((x - tx)**2 + (y - ty)**2);
+            if (dist < minDistance) minDistance = dist;
+
             if (env.checkTerrain && env.checkTerrain(x, y)) {
-                return { hitX: false }; 
+                // If we hit terrain, we can't get any closer
+                return { hitX: true, error: minDistance, peakY };
             }
         }
 
-        const crossedX = (dxInitial > 0 && x >= tx) || (dxInitial < 0 && x <= tx);
-        if (crossedX) {
-            return { hitX: true, error: Math.abs(y - ty), peakY };
-        }
-        if (y > 2000) break; 
+        // Off-screen checks
+        if (y > 2000 || x < -500 || x > 2500) break; 
     }
-    return { hitX: false };
+    return { hitX: true, error: minDistance, peakY };
 }
 
 export class AIController {
@@ -375,7 +384,13 @@ export class LobberAI extends AIController {
             maxA = 120 * Math.PI / 180;
         }
         // Lobber locked to high angles and prefers STEEPEST
-        const result = findBestShot(tank, target, env, minA, maxA, 20, 100, 'steepest', weaponRadius);
+        let result = findBestShot(tank, target, env, minA, maxA, 20, 100, 'steepest', weaponRadius);
+        
+        // If steepest is blocked, try flattest (still within lob range)
+        if (result.angle === null) {
+            result = findBestShot(tank, target, env, minA, maxA, 20, 100, 'flattest', weaponRadius);
+        }
+
         const history = this.getShotHistory(target);
         const learningFactor = Math.max(0.1, 1.0 - (history * 0.2));
         const noise = (Math.random() * 2 - 1) * 2 * learningFactor;
@@ -587,9 +602,15 @@ export class MastermindAI extends AIController {
         
         let best = directResult;
         
-        // If direct is blocked or risky, prefer the lob
-        if (directResult.angle === null || (lobResult.angle !== null && lobResult.error < directResult.error)) {
+        // If direct is blocked, prefer the lob
+        if (directResult.angle === null) {
             best = lobResult;
+        } else if (lobResult.angle !== null) {
+            // Both found hits: only take the lob if it's significantly better (>10px)
+            // Lobs are harder to hit with noise/wind, so direct is safer.
+            if (lobResult.error < directResult.error - 10) {
+                best = lobResult;
+            }
         }
 
         let angle = best.angle || Math.PI/4;
@@ -624,7 +645,7 @@ export class MastermindAI extends AIController {
 
         // 3. Recursive Safety Check: Nudge angle until shot is clear
         let safetyIterations = 0;
-        while (this.detectSelfHarm(tank, env, angle, idealPower) && safetyIterations < 5) {
+        while (this.detectSelfHarm(tank, env, angle, idealPower, weaponRadius) && safetyIterations < 5) {
             angle += (Math.PI / 36) * (Math.cos(angle) > 0 ? 1 : -1); // 5 degree nudge
             safetyIterations++;
         }
@@ -633,23 +654,38 @@ export class MastermindAI extends AIController {
         return { angle, power: idealPower };
     }
 
-    detectSelfHarm(tank, env, angle, power) {
+    detectSelfHarm(tank, env, angle, power, weaponRadius = 15) {
         const g = env.gravity;
         const physicsScale = 0.2;
         const barrelLength = 30;
+        
         let x = tank.x + tank.width / 2 + barrelLength * Math.cos(angle);
         let y = tank.y - tank.height - barrelLength * Math.sin(angle);
+
+        // SYNC WITH GAME PHYSICS: Apply safe starting distance "teleport"
+        const safeStartingDistance = weaponRadius + 20;
+        const tankCenterX = tank.x + tank.width/2;
+        const tankCenterY = tank.y - tank.height/2;
+        const distanceFromTankCenterToProjectile = Math.sqrt(
+            (x - tankCenterX)**2 + (y - tankCenterY)**2
+        );
+        
+        if (distanceFromTankCenterToProjectile < safeStartingDistance) {
+            const safetyFactor = safeStartingDistance / distanceFromTankCenterToProjectile;
+            x = tankCenterX + (x - tankCenterX) * safetyFactor;
+            y = tankCenterY + (y - tankCenterY) * safetyFactor;
+        }
+
         let vx = power * Math.cos(angle) * physicsScale;
         let vy = -power * Math.sin(angle) * physicsScale;
 
-        // Check first 30 frames (approx 500ms in game time, but we care about immediate)
+        // Check first 30 frames
         for(let t = 0; t < 30; t++) {
             vy += g;
             vx += env.wind;
             x += vx;
             y += vy;
             if (env.checkTerrain && env.checkTerrain(x, y)) {
-                // If it hits within a small radius of the tank, it's likely self-harm
                 const distFromTank = Math.sqrt((x - (tank.x+tank.width/2))**2 + (y - (tank.y-tank.height/2))**2);
                 if (distFromTank < 60) return true; 
             }

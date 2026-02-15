@@ -100,6 +100,17 @@ function enterLobby() {
     startNextStoreTurn();
 }
 
+function finalizeTurnOrder() {
+    // 1. Sort tanks based on horizontal position (X)
+    // This creates a spatial 'round robin'
+    state.tanks.sort((a, b) => a.x - b.x);
+    
+    // 2. Choose a random starting player in that sorted array
+    state.currentPlayer = Math.floor(Math.random() * state.tanks.length);
+    
+    console.log(`Turn Order Finalized: Starting with ${state.tanks[state.currentPlayer].name}`);
+}
+
 function initGameFromConfig(config) {
     // Apply config to state
     state.totalGames = config.totalGames;
@@ -160,6 +171,8 @@ function initGameFromConfig(config) {
         tank.currency = state.startingCash;
         state.tanks.push(tank);
     });
+
+    finalizeTurnOrder();
 
     // Initialize Managers
     state.store = new Store();
@@ -239,6 +252,8 @@ function resetRound() {
             state.store.aiPurchase(tank);
         }
     });
+
+    finalizeTurnOrder();
     
     setTimeout(() => {
         console.log("ResetRound: Applying initial gravity");
@@ -306,7 +321,7 @@ function gameLoop() {
             });
         }
         
-        if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && state.projectiles.length === 0 && state.tanks[state.currentPlayer].alive) {
+        if (state.gameState === 'PLAYING' && state.tanks[state.currentPlayer]?.isAI && !isSettling() && state.tanks[state.currentPlayer].alive) {
             let targetTank;
             do {
                 targetTank = state.tanks[Math.floor(Math.random() * state.tanks.length)];
