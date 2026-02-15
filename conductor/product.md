@@ -12,12 +12,14 @@ Tank Wars is a modern tribute to the classic artillery genre, capturing the stra
 
 ## Key Value Propositions
 - **Physics Mastery:** A high skill ceiling driven by complex projectile trajectories and dynamic wind conditions.
+- **Boundary Tactics:** Strategic use of arena borders, featuring reflection and teleportation behaviors that redefine trick-shot potential.
 - **Destructive Dynamics:** High-stakes gameplay where the environment is as much a threat as the enemy.
 - **Economic Strategy:** A persistent economy and pre-match shop system that rewards tactical spending across multiple battles.
 
 ## Core Features
-- **High-Precision Tactical AI:** Advanced AI personalities (Mr. Stupid, Lobber, Sniper, Mastermind) with synchronized ballistic modeling, specialized trajectory preferences (flattest vs steepest), Expected Value (EV) decision engines, and adaptive power management.
+- **High-Precision Tactical AI:** Advanced AI personalities (Mr. Stupid, Lobber, Sniper, Mastermind) with synchronized ballistic modeling, edge-aware trajectory planning (Reflect/Teleport), specialized trajectory preferences (flattest vs steepest), Expected Value (EV) decision engines, and adaptive power management.
 - **High-Octane Tactical Arsenal:** A robust multi-tiered weapon system (Standard, Heavy, Blockbuster, Titan Shell, Mega Nuke) with pack-based economy, Cluster Bombs with sub-munitions, and "auto-active" defensive utilities.
+- **Arena Border Behaviors:** Configurable match rules (Impact, Reflect, Teleport, Random) that dictate projectile interaction with screen boundaries, adding a deep tactical layer to every round.
 - **Dynamic Combat Economy:** A rewarding progression system that awards currency for damage dealt and multi-kill chain reactions, featuring a central economy multiplier for balance tuning.
 - **Last Stand Dynamics:** Strategic risk where dying tanks always explode, with a configurable chance to trigger powerful chaotic items from their inventory.
 - **Physical Consequences:** A dynamic gravity and fall damage system that rewards tactical positioning and terrain destruction.
