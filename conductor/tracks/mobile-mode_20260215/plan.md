@@ -19,7 +19,7 @@ Creation of the on-screen controls following the neon aesthetic.
     - [ ] Add HTML containers for mobile controls (sliders, action buttons, inventory bar) to `index.html`.
     - [ ] Style the containers in `css/style.css` with `display: none` by default.
     - [ ] Implement CSS media queries or class-based visibility (e.g., `.mobile-mode .mobile-ctrl`) to show them only when mobile mode is active.
-- [ ] **Task: Create Neon Slider Components**
+- [x] **Task: Create Neon Slider Components** a3a0de5
     - [ ] Implement vertical slider UI for Angle and Power.
     - [ ] Add "+" and "-" fine-tuning buttons.
     - [ ] Apply neon glow effects and styles consistent with `product-guidelines.md`.
