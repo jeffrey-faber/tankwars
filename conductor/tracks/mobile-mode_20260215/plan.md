@@ -26,7 +26,7 @@ Creation of the on-screen controls following the neon aesthetic.
 - [x] **Task: Create Mobile Action Buttons & Inventory Bar** ffe14e4
     - [ ] Implement large touch-friendly buttons for Fire, Shop, and Skip.
     - [ ] Create the bottom inventory selection bar.
-- [ ] **Task: Conductor - User Manual Verification 'Mobile UI Overlays & Styling' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Mobile UI Overlays & Styling' (Protocol in workflow.md)** ffe14e4/d04380e
 
 ## Phase 3: Touch Interaction Logic & Game Integration
 Connecting the UI components to the game's state and handling touch inputs.
