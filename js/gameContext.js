@@ -109,7 +109,8 @@ export function drawHUD() {
     state.ctx.font = '16px Arial';
     state.ctx.fillStyle = 'black';
     state.ctx.fillText(tank.name, 10, 20);
-    state.ctx.fillText('Angle: ' + (tank.angle * (180 / Math.PI)).toFixed(1) + '°', 10, 40);
+    const angleText = (tank.angle * (180 / Math.PI)).toFixed(1) + '°';
+    state.ctx.fillText('Angle: ' + angleText, 10, 40);
     state.ctx.fillText('Power: ' + tank.power.toFixed(1), 10, 60);
     state.ctx.fillText('Wind: ' + (state.wind * 100).toFixed(1), 10, 80);
     

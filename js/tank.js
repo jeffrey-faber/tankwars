@@ -241,7 +241,7 @@ export class Tank {
         if (Math.random() >= (state.deathTriggerChance || 0.1)) {
             // Default small explosion
             if (state.ctx && state.canvas && draw) {
-                createExplosion(centerX, centerY, 30, state.ctx, state.canvas, draw, 'orange');
+                createExplosion(centerX, centerY, 30, 'orange');
             }
             applyExplosionDamage(centerX, centerY, state.tanks, 30, 50, myIndex);
             return;
@@ -265,7 +265,7 @@ export class Tank {
             
             if (triggeredItem.id === 'dirtball') {
                 if (state.terrain.addTerrain) state.terrain.addTerrain(centerX, centerY, 30);
-                if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, 30, state.ctx, state.canvas, draw, '#3d2b1f');
+                if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, 30, '#3d2b1f');
                 applyExplosionDamage(centerX, centerY, state.tanks, 30, 10, myIndex);
             } else if (triggeredItem.id.startsWith('earthquake')) {
                 // Apply tag damage so kills credit to us
@@ -281,11 +281,11 @@ export class Tank {
                     setTimeout(() => { state.terrain.freezeGravity = false; }, 800);
                     setTimeout(() => { state.freezeTankGravity = false; }, 2800);
                 }
-                if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, triggeredItem.effect.radius || 100, state.ctx, state.canvas, draw, '#555555');
+                if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, triggeredItem.effect.radius || 100, '#555555');
             } else if (triggeredItem.id.includes('nuke')) {
                 const radius = triggeredItem.id === 'mega_nuke' ? 250 : 80;
                 const damage = triggeredItem.id === 'mega_nuke' ? 250 : 150;
-                if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, radius, state.ctx, state.canvas, draw, 'red');
+                if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, radius, 'red');
                 if (state.terrain.explode) state.terrain.explode(centerX, centerY, radius);
                 applyExplosionDamage(centerX, centerY, state.tanks, radius, damage, myIndex);
             }
@@ -295,7 +295,7 @@ export class Tank {
             state.freezeTankGravity = true;
             
             // Pop effect
-            if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, 40, state.ctx, state.canvas, draw, '#3d2b1f');
+            if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, 40, '#3d2b1f');
 
             // REVERSE EARTHQUAKE: Erupt upward
             const intensity = 6; // Reduced from 12
@@ -314,7 +314,7 @@ export class Tank {
         } else {
             console.log(`DEBUG: Triggering Fireworks for ${this.name}. Count: 12`);
             // Pop effect
-            if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, 40, state.ctx, state.canvas, draw, 'white');
+            if (state.ctx && state.canvas && draw) createExplosion(centerX, centerY, 40, 'white');
 
             for (let i = 0; i < 12; i++) {
                 const angle = (Math.PI * 0.45) + Math.random() * (Math.PI * 0.1); 
@@ -477,7 +477,7 @@ export class Tank {
             const target = checkDirectHit(x, y, state.tanks, this, true);
             if (target) {
                 target.health -= directHitDamage;
-                createExplosion(x, y, 7, state.ctx, state.canvas, draw, '#5dffb3');
+                createExplosion(x, y, 7, '#5dffb3');
                 if (target.health <= 0) target.die(state.tanks.indexOf(this));
                 directHitTank = target;
                 endX = x;
@@ -563,7 +563,7 @@ export class Tank {
             
             if (state.ctx && state.canvas && draw) {
                 // Flash effect at origin
-                createExplosion(this.x, this.y, 40, state.ctx, state.canvas, draw, '#00f7ff');
+                createExplosion(this.x, this.y, 40, '#00f7ff');
             }
 
             // Consume and reset
@@ -584,7 +584,7 @@ export class Tank {
                 
                 if (state.ctx && state.canvas && draw) {
                     // Green flash effect
-                    createExplosion(this.x + this.width/2, this.y - this.height/2, 40, state.ctx, state.canvas, draw, '#00ff00');
+                    createExplosion(this.x + this.width/2, this.y - this.height/2, 40, '#00ff00');
                 }
 
                 // Consume and reset
@@ -878,7 +878,7 @@ export class Tank {
 
         if (state.ctx && state.canvas && draw && !proj.noVisual) {
             const color = special === 'add_terrain' ? '#3d2b1f' : (special === 'remove_terrain_cone' ? '#aaaaaa' : null);
-            createExplosion(x, y, explosionRadius, state.ctx, state.canvas, draw, color);
+            createExplosion(x, y, explosionRadius, color);
         }
 
         applyExplosionDamage(x, y, state.tanks, explosionRadius, damage, sourcePlayerId, directHitTank);

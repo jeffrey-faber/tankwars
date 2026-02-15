@@ -351,9 +351,9 @@ function gameLoop() {
         // but if that tank died mid-rattle, they might hang.
         // Kick a loop owner if projectiles exist but no loop is running.
         if (!state.projectileLoopActive) {
-            const owner = state.projectiles[0]?.sourceTank;
-            if (owner && typeof owner.startProjectileLoop === 'function') {
-                owner.startProjectileLoop(false);
+            const loopOwner = state.projectiles.find(p => p.sourceTank?.startProjectileLoop);
+            if (loopOwner) {
+                loopOwner.sourceTank.startProjectileLoop(false);
             }
         }
         if (state.projectiles.length > 50) {

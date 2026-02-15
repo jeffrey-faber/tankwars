@@ -46,7 +46,7 @@ export function getRandomColor() {
 }
 
 // Create an explosion effect
-export function createExplosion(x, y, radius, ctx, canvas, drawCallback, color = 'orange', duration = 500) {
+export function createExplosion(x, y, radius, color = 'orange', duration = 500) {
     if (state.activeExplosions) {
         state.activeExplosions.push({
             x, y, radius, color,

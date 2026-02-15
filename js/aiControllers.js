@@ -1,3 +1,5 @@
+import { state } from './gameContext.js';
+
 export function detectClumping(target, allTanks) {
     const radius = 100;
     const tx = target.x + target.width / 2;
@@ -12,8 +14,6 @@ export function detectClumping(target, allTanks) {
 
     return enemiesNearTarget.length >= 2;
 }
-
-import { state } from './gameContext.js';
 
 const AI_SOLVER_GUARDS = Object.freeze({
     MAX_SOLVER_TIME_MS: 26,
