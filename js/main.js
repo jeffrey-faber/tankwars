@@ -8,6 +8,7 @@ import { ScoreManager } from './scoreManager.js';
 import { MatchSetup } from './matchSetup.js';
 import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
 import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSettling, startTurn } from './gameContext.js';
+import { initMobileMode } from './mobileManager.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
@@ -27,6 +28,8 @@ window.state = state; // Debugging
 document.addEventListener('DOMContentLoaded', () => {
     state.canvas = document.getElementById('gameCanvas');
     state.ctx = state.canvas.getContext('2d');
+
+    initMobileMode();
 
     matchSetup = new MatchSetup();
 

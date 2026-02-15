@@ -608,3 +608,28 @@ input[type="submit"] {
     height: 4px;
     background-color: red;
 }
+
+/* Mobile Styles */
+.mobile-fs-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #00f7ff;
+    color: black;
+    border: none;
+    padding: 15px 25px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 0 15px #00f7ff;
+    z-index: 1000;
+    transition: transform 0.2s;
+}
+
+.mobile-fs-btn:active {
+    transform: scale(0.95);
+}
+
+body:not(.mobile-mode) .mobile-fs-btn {
+    display: none !important;
+}

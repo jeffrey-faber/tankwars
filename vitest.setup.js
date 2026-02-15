@@ -7,7 +7,7 @@ class MockElement {
         this.tagName = tag.toUpperCase();
         this.id = '';
         this.className = '';
-        this.innerHTML = '';
+        this._innerHTML = '';
         this.style = {};
         this.children = [];
         this.listeners = new Map();
@@ -22,6 +22,17 @@ class MockElement {
             }),
             contains: vi.fn((cls) => this.className.includes(cls)),
         };
+    }
+
+    get innerHTML() {
+        return this._innerHTML;
+    }
+
+    set innerHTML(val) {
+        this._innerHTML = val;
+        if (val === '') {
+            this.children = [];
+        }
     }
 
     appendChild(child) {
@@ -104,6 +115,8 @@ global.document = {
         return el;
     }),
     body: new MockElement('body'),
+    documentElement: new MockElement('html'),
+    head: new MockElement('head'),
     getElementById: vi.fn((id) => {
         if (id === 'storeButton') return global.document.body.children.find(c => c.id === 'storeButton') || null;
         if (id === 'gameCanvas') return new MockCanvas();
