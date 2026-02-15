@@ -59,12 +59,12 @@ describe('Weapon Rebalance and Store Updates', () => {
         expect(state.projectiles[0].damage).toBe(60);
     });
 
-    it('should have mega_nuke with radius 150 and damage 200', () => {
-        tank.inventory.push({ id: 'mega_nuke', effect: { type: 'weapon', radius: 150, damage: 200 } });
+    it('should have mega_nuke with radius 250 and damage 250', () => {
+        tank.inventory.push({ id: 'mega_nuke', effect: { type: 'weapon', radius: 250, damage: 250 } });
         tank.selectedWeapon = 'mega_nuke';
         tank.fire();
-        expect(state.projectiles[0].explosionRadius).toBe(150);
-        expect(state.projectiles[0].damage).toBe(200);
+        expect(state.projectiles[0].explosionRadius).toBe(250);
+        expect(state.projectiles[0].damage).toBe(250);
     });
 
     it('should buy heavy weapon in pack of 5', () => {

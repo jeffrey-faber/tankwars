@@ -39,7 +39,11 @@ describe('Tank', () => {
     it('should fall if terrain below is empty', () => {
         // Terrain is empty by default
         tank.y = 100;
-        tank.applyGravity(terrain);
+        
+        // Simulate multiple frames until it reaches bottom
+        for(let i = 0; i < 200; i++) {
+            tank.applyGravity(terrain);
+        }
         
         // Should fall to bottom (minus height)
         expect(tank.y).toBe(600 - tank.height - 5);
@@ -48,11 +52,17 @@ describe('Tank', () => {
     it('should stop falling when hitting terrain', () => {
         // Create ground at y=200
         for (let x = 0; x < 800; x++) {
-            terrain.setSolid(x, 200, true);
+            // Need 6 layers for "stable ground" logic (checks 5 down)
+            for (let dy = 0; dy <= 5; dy++) {
+                terrain.setSolid(x, 200 + dy, true);
+            }
         }
         
         tank.y = 100;
-        tank.applyGravity(terrain);
+        // Simulate multiple frames
+        for(let i = 0; i < 100; i++) {
+            tank.applyGravity(terrain);
+        }
         
         // Should land on 200
         expect(tank.y).toBe(200);

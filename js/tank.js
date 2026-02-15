@@ -2,6 +2,8 @@ import { getRandomColor, createExplosion } from './utils.js';
 import { state, getNextAliveTankIndex, draw, triggerScreenShake } from './gameContext.js';
 import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI } from './aiControllers.js';
 
+const ECONOMY_MULTIPLIER = 1;
+
 function checkTerrainAndBounds(x, y, terrain, canvas) {
     if (x < 0 || x > canvas.width || y > canvas.height) return true;
     if (terrain.checkCollision(x, y)) return true;
@@ -50,14 +52,22 @@ function applyExplosionDamage(x, y, tanks, radius, damage, sourcePlayerId = -1, 
                 effectiveDamage -= absorbed;
                 
                 // Partial score for damaging shield
-                if (tankIndex !== sourcePlayerId && absorbed > 0) {
+                if (tankIndex !== sourcePlayerId && absorbed > 0 && sourcePlayerId !== -1) {
                     state.tanks[sourcePlayerId].score += 0.2;
-                    state.tanks[sourcePlayerId].currency += 2;
+                    state.tanks[sourcePlayerId].currency += Math.floor(5 * ECONOMY_MULTIPLIER);
                 }
             }
 
             if (effectiveDamage > 0) {
-                otherTank.health -= effectiveDamage;
+                const actualDamage = Math.min(otherTank.health, effectiveDamage);
+                otherTank.health -= actualDamage;
+                
+                // Reward for damage to others
+                if (tankIndex !== sourcePlayerId && actualDamage > 0 && sourcePlayerId !== -1) {
+                    const reward = Math.floor(actualDamage * 0.2 * ECONOMY_MULTIPLIER); // 1 coin per 5 damage
+                    state.tanks[sourcePlayerId].currency += reward;
+                }
+
                 if (otherTank.health <= 0) {
                     otherTank.die(sourcePlayerId);
                 }
@@ -169,17 +179,24 @@ export class Tank {
         this.health = 0;
 
         // Update killer score/currency if applicable
-        if (killerId !== -1 && state.tanks[killerId] && state.tanks[killerId] !== this) {
-            state.tanks[killerId].score += 1;
-            state.tanks[killerId].kills += 1;
-            state.tanks[killerId].currency += 20;
+        if (killerId !== -1 && state.tanks[killerId]) {
+            const killer = state.tanks[killerId];
+            if (killer === this) {
+                // Self kill: -1 penalty to kills, no score/currency change
+                this.kills -= 1;
+            } else {
+                // Killed by another: Award score, kill, and currency to the killer
+                killer.score += 1;
+                killer.kills += 1;
+                killer.currency += Math.floor(50 * ECONOMY_MULTIPLIER);
+            }
         }
 
         // Trigger Death Explosion logic
-        this.triggerDeathExplosion();
+        this.triggerDeathExplosion(killerId);
     }
 
-    triggerDeathExplosion() {
+    triggerDeathExplosion(killerId = -1) {
         const centerX = this.x + this.width / 2;
         const centerY = this.y - this.height / 2;
         
@@ -210,7 +227,7 @@ export class Tank {
                 if (state.ctx && state.canvas && draw) {
                     createExplosion(centerX, centerY, 30, state.ctx, state.canvas, draw, '#3d2b1f');
                 }
-                applyExplosionDamage(centerX, centerY, state.tanks, 30, 10, -1);
+                applyExplosionDamage(centerX, centerY, state.tanks, 30, 10, killerId);
             } else if (triggeredItem.id.startsWith('earthquake')) {
                 if (state.terrain.createCracks) {
                     state.terrain.freezeGravity = true;
@@ -231,7 +248,7 @@ export class Tank {
                 if (state.ctx && state.canvas && draw) {
                     createExplosion(centerX, centerY, triggeredItem.effect.radius || 100, state.ctx, state.canvas, draw, '#555555');
                 }
-                applyExplosionDamage(centerX, centerY, state.tanks, triggeredItem.effect.radius || 100, triggeredItem.effect.damage || 20, -1);
+                applyExplosionDamage(centerX, centerY, state.tanks, triggeredItem.effect.radius || 100, triggeredItem.effect.damage || 20, killerId);
             } else if (triggeredItem.id === 'nuke') {
                 if (state.ctx && state.canvas && draw) {
                     createExplosion(centerX, centerY, 80, state.ctx, state.canvas, draw, 'red');
@@ -239,14 +256,14 @@ export class Tank {
                 if (state.terrain.explode) {
                     state.terrain.explode(centerX, centerY, 80);
                 }
-                applyExplosionDamage(centerX, centerY, state.tanks, 80, 150, -1);
+                applyExplosionDamage(centerX, centerY, state.tanks, 80, 150, killerId);
             }
         } else {
             // Default death explosion
             if (state.ctx && state.canvas && draw) {
                 createExplosion(centerX, centerY, 30, state.ctx, state.canvas, draw, 'orange');
             }
-            applyExplosionDamage(centerX, centerY, state.tanks, 30, 50, -1);
+            applyExplosionDamage(centerX, centerY, state.tanks, 30, 50, killerId);
         }
     }
 
@@ -267,6 +284,10 @@ export class Tank {
             ctx.strokeStyle = 'black';
         } else if (this.selectedWeapon === 'heavy') {
             ctx.strokeStyle = '#444444'; // Dark grey
+        } else if (this.selectedWeapon === 'blockbuster') {
+            ctx.strokeStyle = '#ff8800'; // Orange
+        } else if (this.selectedWeapon === 'titan_shell') {
+            ctx.strokeStyle = '#880000'; // Dark red
         } else if (this.selectedWeapon === 'mega_nuke') {
             ctx.strokeStyle = 'red';
         } else if (this.selectedWeapon === 'cluster_bomb') {
@@ -349,9 +370,17 @@ export class Tank {
             explosionRadius = 30;
             damage = 60;
             projectileColor = '#444444';
+        } else if (this.selectedWeapon === 'blockbuster') {
+            explosionRadius = 60;
+            damage = 100;
+            projectileColor = '#ff8800';
+        } else if (this.selectedWeapon === 'titan_shell') {
+            explosionRadius = 120;
+            damage = 150;
+            projectileColor = '#880000';
         } else if (this.selectedWeapon === 'mega_nuke') {
-            explosionRadius = 150;
-            damage = 200;
+            explosionRadius = 250;
+            damage = 250;
             projectileColor = 'red';
             extraDistance = 10;
         } else if (this.selectedWeapon === 'cluster_bomb') {

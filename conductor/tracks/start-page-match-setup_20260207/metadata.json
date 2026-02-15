@@ -1,8 +1,0 @@
-{
-  "track_id": "start-page-match-setup_20260207",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-02-07T10:00:00Z",
-  "updated_at": "2026-02-07T10:00:00Z",
-  "description": "Revamp the start page with a dynamic player roster (human/bot choice) and multi-game Match settings (starting cash, win conditions, etc.)."
-}

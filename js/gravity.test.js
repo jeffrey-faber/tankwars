@@ -28,7 +28,10 @@ describe('Gravity Integration', () => {
         terrain.bakeHeightmap(points);
         
         // Tank at y=0. Ground at 300.
-        tank.applyGravity(terrain);
+        // Simulate frames
+        for(let i = 0; i < 150; i++) {
+            tank.applyGravity(terrain);
+        }
         
         // Tank should be at 300
         expect(tank.y).toBe(300);

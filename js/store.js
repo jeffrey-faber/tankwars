@@ -17,6 +17,32 @@ export class Store {
                 }
             },
             {
+                id: 'blockbuster',
+                name: 'Blockbuster',
+                description: 'A serious explosive for taking out bunkers.',
+                price: 150,
+                packSize: 3,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 60,
+                    damage: 100
+                }
+            },
+            {
+                id: 'titan_shell',
+                name: 'Titan Shell',
+                description: 'Massive impact. High damage, large area.',
+                price: 300,
+                packSize: 1,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 120,
+                    damage: 150
+                }
+            },
+            {
                 id: 'mega_nuke',
                 name: 'Mega Nuke',
                 description: 'The ultimate weapon. Destroys everything in a massive area.',
@@ -25,8 +51,8 @@ export class Store {
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
-                    radius: 150,
-                    damage: 200
+                    radius: 250,
+                    damage: 250
                 }
             },
             {
@@ -118,7 +144,8 @@ export class Store {
                 id: 'earthquake_s',
                 name: 'Earthquake (S)',
                 description: 'Small tremor. Freezes gravity, creates a few cracks.',
-                price: 40,
+                price: 60,
+                packSize: 3,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
@@ -132,21 +159,21 @@ export class Store {
                 id: 'earthquake_m',
                 name: 'Earthquake (M)',
                 description: 'Medium quake. Significant terrain damage.',
-                price: 70,
+                price: 120,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
-                    radius: 100,
+                    radius: 80,
                     damage: 20,
                     special: 'earthquake',
-                    intensity: 8
+                    intensity: 6
                 }
             },
             {
                 id: 'earthquake_l',
-                name: 'Earthquake (L)',
+                name: 'The World Shatterer',
                 description: 'MASSIVE earthquake. Shatters the landscape.',
-                price: 110,
+                price: 350,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',
@@ -331,6 +358,8 @@ export class Store {
         switch(id) {
             case 'default': return '💣';
             case 'heavy': return '⚫';
+            case 'blockbuster': return '🧨';
+            case 'titan_shell': return '🌑';
             case 'mega_nuke': return '☢️';
             case 'cluster_bomb': return '🎆';
             case 'laser': return '⚡';
