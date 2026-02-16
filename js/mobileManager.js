@@ -12,7 +12,7 @@ export function initMobileMode() {
     fsButton.id = 'fullScreenButton';
     fsButton.innerText = 'FULL SCREEN';
     fsButton.className = 'mobile-fs-btn';
-    fsButton.onclick = toggleFullScreen;
+    fsButton.onpointerdown = toggleFullScreen;
 
     document.body.appendChild(fsButton);
     
@@ -56,9 +56,16 @@ export function setMobileControlsVisibility(visible) {
 export function initMobileButtons() {
     const fireBtn = document.getElementById('mobileFireBtn');
     if (fireBtn) {
-        fireBtn.onclick = () => {
+        fireBtn.onpointerdown = (e) => {
+            e.preventDefault();
             vibrate(50);
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space' }));
+            // Dispatch to document since main.js listens there
+            document.dispatchEvent(new KeyboardEvent('keydown', { 
+                key: ' ', 
+                code: 'Space',
+                bubbles: true,
+                cancelable: true
+            }));
         };
     }
 }
