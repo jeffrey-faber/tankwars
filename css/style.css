@@ -681,6 +681,12 @@ body.mobile-mode .mobile-only:not(.hidden) {
     align-items: center;
     height: 100%;
     width: 40px; /* Slimmer */
+    opacity: 0.5; /* Transparent */
+    transition: opacity 0.2s;
+}
+
+.mobile-slider-group:active, .mobile-slider-group:hover {
+    opacity: 0.9;
 }
 
 .mobile-slider-group label {
@@ -700,7 +706,7 @@ body.mobile-mode .mobile-only:not(.hidden) {
 .slider-track.vertical {
     width: 8px; /* Slimmer track */
     flex: 1;
-    background: #222;
+    background: rgba(34, 34, 34, 0.5); /* Transparent */
     border: 1px solid #444;
     border-radius: 4px;
     position: relative;
@@ -714,19 +720,19 @@ body.mobile-mode .mobile-only:not(.hidden) {
     transform: translateX(-50%);
     width: 28px; /* Smaller handle */
     height: 28px;
-    background: #00f7ff;
-    border: 2px solid white;
+    background: rgba(0, 247, 255, 0.6); /* Transparent */
+    border: 2px solid rgba(255, 255, 255, 0.8);
     border-radius: 50%;
-    box-shadow: 0 0 10px #00f7ff;
+    box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
     cursor: pointer;
 }
 
 .fine-tune-btn {
     width: 34px; /* Smaller */
     height: 34px;
-    background: #333;
+    background: rgba(51, 51, 51, 0.4); /* Transparent */
     border: 1px solid #555;
-    color: white;
+    color: rgba(255, 255, 255, 0.7);
     font-family: 'Press Start 2P', cursive;
     font-size: 14px; /* Smaller */
     display: flex;
@@ -737,7 +743,7 @@ body.mobile-mode .mobile-only:not(.hidden) {
 }
 
 .fine-tune-btn:active {
-    background: #444;
+    background: rgba(68, 68, 68, 0.8);
     transform: scale(0.9);
 }
 
@@ -762,19 +768,24 @@ body.mobile-mode .mobile-only:not(.hidden) {
     border: none;
     cursor: pointer;
     box-shadow: 0 0 15px currentColor;
-    transition: transform 0.1s;
+    transition: transform 0.1s, opacity 0.2s;
+    opacity: 0.5; /* Transparent */
+}
+
+.mobile-action-btn:active {
+    opacity: 1.0;
+    transform: scale(0.9);
 }
 
 .mobile-action-btn.fire {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: #ff0000;
-    color: #ff0000; /* Used for shadow */
-    border: 5px solid white;
+    background: rgba(255, 0, 0, 0.4); /* Transparent red */
+    color: rgba(255, 255, 255, 0.8);
+    border: 5px solid rgba(255, 255, 255, 0.5);
     font-size: 20px;
-    color: white;
-    box-shadow: 0 0 25px #ff0000;
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.3);
 }
 
 .mobile-action-btn.secondary {
@@ -805,10 +816,15 @@ body.mobile-mode .mobile-only:not(.hidden) {
     pointer-events: auto;
     display: flex;
     gap: 10px;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.3); /* Mostly transparent */
     padding: 5px 15px;
     border-radius: 15px;
-    border: 1px solid #444;
+    border: 1px solid rgba(68, 68, 68, 0.5);
+    opacity: 0.6;
+}
+
+.mobile-inventory:hover, .mobile-inventory:active {
+    opacity: 1.0;
 }
 
 /* Reuse desktop icon styles but maybe tweak for mobile */
