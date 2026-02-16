@@ -154,7 +154,6 @@ global.document = {
 };
 
 global.window = {
-    ...global.window,
     location: {
         search: '',
         reload: vi.fn(),
@@ -172,7 +171,8 @@ global.window = {
     cancelAnimationFrame: vi.fn(),
     navigator: {
         vibrate: vi.fn(),
-    }
+    },
+    document: global.document
 };
 
 global.localStorage = global.window.localStorage;

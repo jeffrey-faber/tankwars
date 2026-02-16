@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "canvas": "^3.2.1",
     "jsdom": "^27.4.0",
     "vitest": "^4.0.18"

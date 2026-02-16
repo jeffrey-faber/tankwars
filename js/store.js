@@ -281,18 +281,27 @@ export class Store {
         const storeButton = document.getElementById('storeButton');
         const startMatchButton = document.getElementById('startMatchButton');
         const weaponSelector = document.getElementById('weaponSelector');
+        const mobileInventory = document.getElementById('mobileInventoryBar');
         
+        const isMobile = document.body.classList.contains('mobile-mode');
+
         if (state.gameState === 'LOBBY') {
             // Hide lobby buttons if store is open to prevent overlap
             if (storeButton) storeButton.style.display = this.isOpen ? 'none' : 'block';
             // Only show startMatchButton via main.js logic when lobby is done
             if (weaponSelector) weaponSelector.style.display = 'none';
+            if (mobileInventory) mobileInventory.style.display = 'none';
         } else {
             if (storeButton) storeButton.style.display = 'none';
             if (startMatchButton) startMatchButton.style.display = 'none';
-            if (weaponSelector) {
-                // Always show if we are in PLAYING state
-                weaponSelector.style.display = 'flex';
+            
+            if (isMobile) {
+                if (weaponSelector) weaponSelector.style.display = 'none';
+                // Mobile inventory visibility is also tied to #mobileControls visibility
+                if (mobileInventory) mobileInventory.style.display = 'flex';
+            } else {
+                if (weaponSelector) weaponSelector.style.display = 'flex';
+                if (mobileInventory) mobileInventory.style.display = 'none';
             }
         }
     }
@@ -423,8 +432,8 @@ export class Store {
     populateSelector(selector, tank) {
         if (!selector) return;
         
-        // If hidden by updateVisibility (and it's the main selector), stop
-        if (selector.id === 'weaponSelector' && selector.style.display === 'none') {
+        // If hidden by updateVisibility, clear and stop
+        if (selector.style.display === 'none') {
              selector.innerHTML = '';
              return;
         }

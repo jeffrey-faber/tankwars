@@ -8,7 +8,7 @@ import { ScoreManager } from './scoreManager.js';
 import { MatchSetup } from './matchSetup.js';
 import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
 import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSettling, startTurn } from './gameContext.js';
-import { initMobileMode } from './mobileManager.js';
+import { initMobileMode, setMobileControlsVisibility } from './mobileManager.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
