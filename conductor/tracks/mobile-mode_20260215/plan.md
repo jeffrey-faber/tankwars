@@ -31,7 +31,7 @@ Creation of the on-screen controls following the neon aesthetic.
 ## Phase 3: Touch Interaction Logic & Game Integration
 Connecting the UI components to the game's state and handling touch inputs.
 
-- [ ] **Task: Implement Slider & Drag Logic**
+- [x] **Task: Implement Slider & Drag Logic** 6398867
     - [ ] Write tests for updating tank power/angle via new mobile inputs.
     - [ ] Hook up sliders and fine-tuning buttons to update the current tank's `power` and `angle`.
     - [ ] Implement relative vertical dragging logic for side-screen areas.
