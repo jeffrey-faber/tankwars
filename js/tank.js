@@ -999,7 +999,7 @@ export class Tank {
 
         const defaultAngle = (targetTank.x >= this.x) ? (Math.PI / 4) : (3 * Math.PI / 4);
         const safeAngle = Number.isFinite(shot?.angle) ? shot.angle : defaultAngle;
-        const safePower = Number.isFinite(shot?.power) ? Math.max(10, Math.min(100, shot.power)) : 65;
+        const safePower = Number.isFinite(shot?.power) ? Math.max(10, Math.min(120, shot.power)) : 65;
         
         this.angle = safeAngle;
         this.power = safePower;

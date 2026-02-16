@@ -24,7 +24,7 @@ const AI_SOLVER_GUARDS = Object.freeze({
 });
 
 // Helper to simulate shots and find the best parameters within constraints
-function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 100, preference = 'any', weaponRadius = 15, initialAngleStep = Math.PI / 20, initialPowerStep = 10, refinedSteps = 10, exhaustive = false) {
+function findBestShot(tank, target, env, angleMin, angleMax, powerMin = 10, powerMax = 120, preference = 'any', weaponRadius = 15, initialAngleStep = Math.PI / 20, initialPowerStep = 10, refinedSteps = 10, exhaustive = false) {
     const g = env.gravity;
     const physicsScale = 0.2; 
     const barrelLength = 30;
@@ -271,11 +271,11 @@ export class AIController {
         }
 
         const rawRequiredPower = (terrainCost + 3) / 1.9;
-        const canHit = distance <= maxDist && rawRequiredPower <= 100;
-        const power = Math.max(10, Math.min(100, Math.max(30, rawRequiredPower + 8) + powerBias));
+        const canHit = distance <= maxDist && rawRequiredPower <= 120;
+        const power = Math.max(10, Math.min(120, Math.max(30, rawRequiredPower + 8) + powerBias));
         const error = canHit
             ? Math.min(35, terrainCost * 0.35)
-            : (130 + Math.max(0, rawRequiredPower - 100) * 2 + Math.max(0, distance - maxDist) * 0.2);
+            : (130 + Math.max(0, rawRequiredPower - 120) * 2 + Math.max(0, distance - maxDist) * 0.2);
 
         return {
             angle: aimedAngle,
