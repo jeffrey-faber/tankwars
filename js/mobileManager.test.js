@@ -74,7 +74,7 @@ describe('mobileManager', () => {
             createEl('angleHandle');
             createEl('powerHandle');
             
-            const tank = { angle: 30, power: 80 };
+            const tank = { angle: 30 * (Math.PI / 180), power: 80 };
             const m = await import('./mobileManager.js');
             m.updateMobileHUD(tank);
             

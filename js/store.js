@@ -273,6 +273,7 @@ export class Store {
             if (state.tanks && state.tanks[state.currentPlayer]) {
                 this.updateWeaponSelector(state.tanks[state.currentPlayer]);
             }
+            window.dispatchEvent(new CustomEvent('gameStarted'));
         });
     }
 

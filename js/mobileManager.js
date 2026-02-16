@@ -23,8 +23,31 @@ export function initMobileMode() {
     initMobileButtons();
 
     // Listen for game events
-    window.addEventListener('turnStarted', (e) => updateMobileHUD(e.detail.tank));
-    window.addEventListener('tankUpdated', (e) => updateMobileHUD(e.detail.tank));
+    window.addEventListener('turnStarted', (e) => {
+        updateMobileHUD(e.detail.tank);
+        setMobileControlsVisibility(true);
+    });
+
+    window.addEventListener('gameStarted', () => {
+        setMobileControlsVisibility(true);
+    });
+
+    // Hide initially
+    setMobileControlsVisibility(false);
+}
+
+/**
+ * Shows or hides the mobile control overlays.
+ */
+export function setMobileControlsVisibility(visible) {
+    const controls = document.getElementById('mobileControls');
+    if (controls) {
+        if (visible && state.gameState === 'PLAYING') {
+            controls.classList.remove('hidden');
+        } else {
+            controls.classList.add('hidden');
+        }
+    }
 }
 
 /**
@@ -36,22 +59,6 @@ export function initMobileButtons() {
         fireBtn.onclick = () => {
             vibrate(50);
             window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space' }));
-        };
-    }
-
-    const shopBtn = document.getElementById('mobileShopBtn');
-    if (shopBtn) {
-        shopBtn.onclick = () => {
-            vibrate(20);
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', code: 'KeyS' }));
-        };
-    }
-
-    const skipBtn = document.getElementById('mobileSkipBtn');
-    if (skipBtn) {
-        skipBtn.onclick = () => {
-            vibrate(20);
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', code: 'Slash' }));
         };
     }
 }
@@ -100,12 +107,14 @@ export function updateMobileHUD(tank) {
     const angleHandle = document.getElementById('angleHandle');
     const powerHandle = document.getElementById('powerHandle');
 
-    if (angleDisplay) angleDisplay.innerText = `${Math.round(tank.angle)}°`;
+    // Angle is in Radians in-game, but we show Degrees 0-180
+    const degrees = Math.round(tank.angle * (180 / Math.PI));
+    if (angleDisplay) angleDisplay.innerText = `${degrees}°`;
     if (powerDisplay) powerDisplay.innerText = `${Math.round(tank.power)}`;
 
     // Update slider handles (Angle 0-180, Power 0-120)
     if (angleHandle) {
-        const anglePercent = (tank.angle / 180) * 100;
+        const anglePercent = (degrees / 180) * 100;
         angleHandle.style.bottom = `${anglePercent}%`;
     }
     if (powerHandle) {
@@ -125,7 +134,14 @@ export function initMobileSliders() {
             const tank = state.tanks[state.currentPlayer];
             if (!tank || tank.isAI) return;
             
-            tank[property] = Math.max(min, Math.min(max, tank[property] + delta));
+            if (property === 'angle') {
+                const currentDeg = tank.angle * (180 / Math.PI);
+                const nextDeg = Math.max(min, Math.min(max, currentDeg + delta));
+                tank.angle = nextDeg * (Math.PI / 180);
+            } else {
+                tank[property] = Math.max(min, Math.min(max, tank[property] + delta));
+            }
+            
             updateMobileHUD(tank);
             pulseDisplay(displayId);
         };
@@ -163,7 +179,8 @@ function setupRelativeDrag(elementId, property, sensitivity, max) {
         startY = touch.clientY;
         const tank = state.tanks[state.currentPlayer];
         if (tank && !tank.isAI) {
-            startValue = tank[property];
+            // Get current value in degrees if angle
+            startValue = property === 'angle' ? tank.angle * (180 / Math.PI) : tank[property];
             isDragging = true;
         }
     };
@@ -177,8 +194,12 @@ function setupRelativeDrag(elementId, property, sensitivity, max) {
         const tank = state.tanks[state.currentPlayer];
         
         if (tank && !tank.isAI) {
-            const newValue = startValue + (deltaY * sensitivity);
-            tank[property] = Math.max(0, Math.min(max, newValue));
+            const newValue = Math.max(0, Math.min(max, startValue + (deltaY * sensitivity)));
+            if (property === 'angle') {
+                tank.angle = newValue * (Math.PI / 180);
+            } else {
+                tank[property] = newValue;
+            }
             updateMobileHUD(tank);
         }
     };
@@ -207,35 +228,27 @@ function setupSliderDrag(groupId, property, min, max, displayId) {
         // Prevent scrolling while interacting with slider
         if (e.cancelable) e.preventDefault();
         
-        const touch = e.touches[0];
+        const touch = e.touches[0] || e; // Fallback for click event simulation
         const rect = track.getBoundingClientRect();
         
-        // Pass rect geometry directly
         const value = calculateSliderValue(touch.clientY, rect, min, max);
 
         const tank = state.tanks[state.currentPlayer];
         if (tank && !tank.isAI) {
-            tank[property] = value;
+            if (property === 'angle') {
+                tank.angle = value * (Math.PI / 180);
+            } else {
+                tank[property] = value;
+            }
             updateMobileHUD(tank);
             pulseDisplay(displayId);
-            vibrate(5); // Light vibration on drag
+            if (e.touches) vibrate(5); 
         }
     };
 
     track.addEventListener('touchstart', handleTouch, { passive: false });
     track.addEventListener('touchmove', handleTouch, { passive: false });
-    // Click handling for non-drag interactions (tapping on track)
-    track.addEventListener('click', (e) => {
-        const rect = track.getBoundingClientRect();
-        const value = calculateSliderValue(e.clientY, rect, min, max);
-        const tank = state.tanks[state.currentPlayer];
-        if (tank && !tank.isAI) {
-            tank[property] = value;
-            updateMobileHUD(tank);
-            pulseDisplay(displayId);
-            vibrate(10);
-        }
-    });
+    track.addEventListener('click', handleTouch);
 }
 
 /**
