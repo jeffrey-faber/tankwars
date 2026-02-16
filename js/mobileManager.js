@@ -35,7 +35,7 @@ export function initMobileButtons() {
     if (fireBtn) {
         fireBtn.onclick = () => {
             vibrate(50);
-            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space' }));
         };
     }
 
@@ -43,7 +43,7 @@ export function initMobileButtons() {
     if (shopBtn) {
         shopBtn.onclick = () => {
             vibrate(20);
-            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', code: 'KeyS' }));
         };
     }
 
@@ -51,7 +51,7 @@ export function initMobileButtons() {
     if (skipBtn) {
         skipBtn.onclick = () => {
             vibrate(20);
-            window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Slash' }));
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', code: 'Slash' }));
         };
     }
 }
