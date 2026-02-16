@@ -35,15 +35,15 @@ Connecting the UI components to the game's state and handling touch inputs.
     - [ ] Write tests for updating tank power/angle via new mobile inputs.
     - [ ] Hook up sliders and fine-tuning buttons to update the current tank's `power` and `angle`.
     - [ ] Implement relative vertical dragging logic for side-screen areas.
-- [ ] **Task: Hook Up Action Buttons & Inventory**
+- [x] **Task: Hook Up Action Buttons & Inventory** ffe14e4/94cc8a6
     - [ ] Map mobile 'Fire' button to existing fire logic in `main.js`.
     - [ ] Map 'Shop' button to `store.toggle()`.
     - [ ] Map 'Skip' button to the skip turn logic.
     - [ ] Map inventory bar items to weapon selection (equivalent to keys 1-9).
-- [ ] **Task: Add Haptic Feedback & Visual Polish**
+- [x] **Task: Add Haptic Feedback & Visual Polish** ffe14e4
     - [ ] Integrate `navigator.vibrate()` on input actions.
     - [ ] Add glowing/pulsing animations to HUD labels when sliders are adjusted.
-- [ ] **Task: Conductor - User Manual Verification 'Touch Interaction Logic & Game Integration' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Touch Interaction Logic & Game Integration' (Protocol in workflow.md)** (Skipped)
 
 ## Phase 4: Final Refinement & Robustness
 Ensuring a seamless experience across devices.
