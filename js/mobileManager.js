@@ -135,6 +135,123 @@ export function initMobileSliders() {
     setupFineTune('angleMinus', 'angle', -1, 0, 180, 'angleValueDisplay');
     setupFineTune('powerPlus', 'power', 1, 0, 120, 'powerValueDisplay');
     setupFineTune('powerMinus', 'power', -1, 0, 120, 'powerValueDisplay');
+
+    setupSliderDrag('angleSliderGroup', 'angle', 0, 180, 'angleValueDisplay');
+    setupSliderDrag('powerSliderGroup', 'power', 0, 120, 'powerValueDisplay');
+
+    // Enable relative dragging on the groups themselves (outside the track)
+    setupRelativeDrag('angleSliderGroup', 'angle', 0.2, 180);
+    setupRelativeDrag('powerSliderGroup', 'power', 0.2, 120);
+}
+
+/**
+ * Attaches relative drag listeners to an element.
+ */
+function setupRelativeDrag(elementId, property, sensitivity, max) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    let startY = 0;
+    let startValue = 0;
+    let isDragging = false;
+
+    const handleStart = (e) => {
+        // Ignore if touching slider track or buttons
+        if (e.target.closest('.slider-track') || e.target.closest('button')) return;
+        
+        const touch = e.touches[0];
+        startY = touch.clientY;
+        const tank = state.tanks[state.currentPlayer];
+        if (tank && !tank.isAI) {
+            startValue = tank[property];
+            isDragging = true;
+        }
+    };
+
+    const handleMove = (e) => {
+        if (!isDragging) return;
+        if (e.cancelable) e.preventDefault(); // Prevent scroll
+        
+        const touch = e.touches[0];
+        const deltaY = startY - touch.clientY; // Drag up = positive
+        const tank = state.tanks[state.currentPlayer];
+        
+        if (tank && !tank.isAI) {
+            const newValue = startValue + (deltaY * sensitivity);
+            tank[property] = Math.max(0, Math.min(max, newValue));
+            updateMobileHUD(tank);
+        }
+    };
+
+    const handleEnd = () => {
+        isDragging = false;
+    };
+
+    el.addEventListener('touchstart', handleStart, { passive: false });
+    el.addEventListener('touchmove', handleMove, { passive: false });
+    el.addEventListener('touchend', handleEnd);
+    el.addEventListener('touchcancel', handleEnd);
+}
+
+/**
+ * Attaches touch listeners for dragging on a slider.
+ */
+function setupSliderDrag(groupId, property, min, max, displayId) {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+
+    const track = group.querySelector('.slider-track');
+    if (!track) return;
+
+    const handleTouch = (e) => {
+        // Prevent scrolling while interacting with slider
+        if (e.cancelable) e.preventDefault();
+        
+        const touch = e.touches[0];
+        const rect = track.getBoundingClientRect();
+        
+        // Pass rect geometry directly
+        const value = calculateSliderValue(touch.clientY, rect, min, max);
+
+        const tank = state.tanks[state.currentPlayer];
+        if (tank && !tank.isAI) {
+            tank[property] = value;
+            updateMobileHUD(tank);
+            pulseDisplay(displayId);
+            vibrate(5); // Light vibration on drag
+        }
+    };
+
+    track.addEventListener('touchstart', handleTouch, { passive: false });
+    track.addEventListener('touchmove', handleTouch, { passive: false });
+    // Click handling for non-drag interactions (tapping on track)
+    track.addEventListener('click', (e) => {
+        const rect = track.getBoundingClientRect();
+        const value = calculateSliderValue(e.clientY, rect, min, max);
+        const tank = state.tanks[state.currentPlayer];
+        if (tank && !tank.isAI) {
+            tank[property] = value;
+            updateMobileHUD(tank);
+            pulseDisplay(displayId);
+            vibrate(10);
+        }
+    });
+}
+
+/**
+ * Calculates value based on vertical position within a rect (bottom is 0%, top is 100%).
+ * @param {number} clientY - The Y coordinate of the input event.
+ * @param {Object} rect - BoundingClientRect-like object with top, bottom, height.
+ * @param {number} min - Minimum value.
+ * @param {number} max - Maximum value.
+ * @returns {number} The calculated value.
+ */
+export function calculateSliderValue(clientY, rect, min, max) {
+    // 0% at bottom, 100% at top
+    // Position relative to bottom: (rect.bottom - clientY)
+    const relativeY = rect.bottom - clientY;
+    const percent = Math.max(0, Math.min(1, relativeY / rect.height));
+    return min + (percent * (max - min));
 }
 
 function pulseDisplay(id) {

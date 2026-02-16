@@ -170,10 +170,14 @@ global.window = {
     dispatchEvent: global.document.dispatchEvent,
     requestAnimationFrame: vi.fn(),
     cancelAnimationFrame: vi.fn(),
+    navigator: {
+        vibrate: vi.fn(),
+    }
 };
 
 global.localStorage = global.window.localStorage;
 global.confirm = global.window.confirm;
 global.requestAnimationFrame = global.window.requestAnimationFrame;
+global.navigator = global.window.navigator;
 
 
