@@ -377,6 +377,12 @@ export class Tank {
             ctx.strokeStyle = '#aaaaaa';
         } else if (this.selectedWeapon.startsWith('earthquake')) {
             ctx.strokeStyle = '#555555';
+        } else if (this.selectedWeapon === 'blackhole_s') {
+            ctx.strokeStyle = '#222222';
+        } else if (this.selectedWeapon === 'blackhole_m') {
+            ctx.strokeStyle = '#440044';
+        } else if (this.selectedWeapon === 'blackhole_l') {
+            ctx.strokeStyle = '#aa00ff';
         } else {
             ctx.strokeStyle = 'black';
         }
@@ -656,6 +662,12 @@ export class Tank {
             damage = weaponItem?.effect?.damage || 20;
             projectileColor = '#555555';
             special = 'earthquake';
+        } else if (this.selectedWeapon.startsWith('blackhole')) {
+            const weaponItem = this.inventory.find(i => i.id === this.selectedWeapon);
+            explosionRadius = weaponItem?.effect?.radius || 100;
+            damage = 0;
+            projectileColor = '#000000';
+            special = 'black_hole';
         }
 
         // Sudden Death: Nuke Growth
@@ -807,6 +819,11 @@ export class Tank {
                     return;
                 }
 
+                // Apex trigger for Event Horizon (Large Black Hole)
+                if (proj.type === 'blackhole_l' && proj.vy > 0) {
+                    hit = true;
+                }
+
                 const totalElapsedTime = Date.now() - (proj.turnStartTime || Date.now());
                 if (totalElapsedTime >= maxTurnTime) hit = true;
 
@@ -847,6 +864,11 @@ export class Tank {
 
         if (this.isAI && this.aiController && this.currentTarget && !proj.isSubMunition) {
             this.aiController.onShotResult(this.currentTarget, x, y);
+        }
+
+        if (special === 'black_hole') {
+            this.handleBlackHoleImpact(proj);
+            return;
         }
 
         if (special === 'add_terrain') {
@@ -891,6 +913,71 @@ export class Tank {
         }
 
         applyExplosionDamage(x, y, state.tanks, explosionRadius, damage, sourcePlayerId, directHitTank);
+    }
+
+    handleBlackHoleImpact(proj) {
+        const { x, y, type, explosionRadius } = proj;
+        const weaponItem = this.inventory.find(i => i.id === type) || { effect: { pullStrength: 10, size: 'small' } };
+        const pullStrength = weaponItem.effect.pullStrength || 10;
+        const size = weaponItem.effect.size || 'small';
+
+        console.log(`BLACK HOLE ACTIVATED! Type: ${type}, Pos: ${Math.round(x)},${Math.round(y)}`);
+
+        // 1. Pull Tanks
+        state.tanks.forEach(tank => {
+            if (!tank.alive) return;
+            const dx = x - (tank.x + tank.width / 2);
+            const dy = y - (tank.y - tank.height / 2);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < explosionRadius) {
+                const force = (1 - dist / explosionRadius) * pullStrength;
+                const angle = Math.atan2(dy, dx);
+                
+                // Displace tank
+                tank.x += Math.cos(angle) * force * 5;
+                tank.y += Math.sin(angle) * force * 5;
+                
+                // Add velocity for "throw" effect
+                tank.vy = Math.sin(angle) * force;
+                tank.lastSolidY = tank.y; // Ensure fall damage calculation starts from pull height
+            }
+        });
+
+        // 2. Terrain Manipulation
+        if (size === 'medium' || size === 'large') {
+            // Remove dirt at center
+            if (state.terrain.explode) {
+                state.terrain.explode(x, y, explosionRadius * 0.4);
+            }
+
+            // Throw small amount of dirt everywhere (Simulated by adding tiny dirtballs)
+            if (state.terrain.addTerrain) {
+                const dirtCount = size === 'large' ? 12 : 6;
+                for (let i = 0; i < dirtCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * explosionRadius;
+                    const dx = Math.cos(angle) * dist;
+                    const dy = Math.sin(angle) * dist;
+                    state.terrain.addTerrain(x + dx, y + dy, 5 + Math.random() * 5);
+                }
+            }
+        }
+
+        // 3. Visuals
+        if (state.ctx && state.canvas && draw) {
+            const color = size === 'large' ? 'purple' : (size === 'medium' ? '#333' : '#000');
+            createExplosion(x, y, explosionRadius, color);
+            // Flash effect
+            state.activeExplosions.push({
+                x, y, radius: explosionRadius * 0.2, color: 'white',
+                startTime: performance.now(), duration: 200
+            });
+        }
+
+        if (state.terrain?.updateCanvas) {
+            state.terrain.updateCanvas();
+        }
     }
     
     useItem(itemId) {

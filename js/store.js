@@ -221,6 +221,52 @@ export class Store {
                     special: 'earthquake',
                     intensity: 16
                 }
+            },
+            {
+                id: 'blackhole_s',
+                name: 'Mini Singularity',
+                description: 'Small gravitational pull. Hits on impact. Good for pulling tanks off ledges.',
+                price: 45,
+                packSize: 3,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 60,
+                    damage: 0,
+                    special: 'black_hole',
+                    pullStrength: 8,
+                    size: 'small'
+                }
+            },
+            {
+                id: 'blackhole_m',
+                name: 'Black Hole',
+                description: 'Medium gravitational pull. Removes dirt and pulls entrenched tanks.',
+                price: 120,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 120,
+                    damage: 0,
+                    special: 'black_hole',
+                    pullStrength: 15,
+                    size: 'medium'
+                }
+            },
+            {
+                id: 'blackhole_l',
+                name: 'Event Horizon',
+                description: 'Massive gravitational pull. Triggers at the peak of flight. Devastating terrain displacement.',
+                price: 300,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 250,
+                    damage: 0,
+                    special: 'black_hole',
+                    pullStrength: 25,
+                    size: 'large'
+                }
             }
         ];
         
@@ -412,6 +458,9 @@ export class Store {
             case 'earthquake_s': return '📉';
             case 'earthquake_m': return '📊';
             case 'earthquake_l': return '🌋';
+            case 'blackhole_s': return '🕳️';
+            case 'blackhole_m': return '🌀';
+            case 'blackhole_l': return '🌌';
             default: return '❓';
         }
     }
