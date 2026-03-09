@@ -83,6 +83,19 @@ export class Store {
                 }
             },
             {
+                id: 'laser_heavy',
+                name: 'Heavy Laser',
+                description: 'High-power plasma beam. Wider tunnel, much higher damage and penetration.',
+                price: 150,
+                category: 'utility',
+                effect: {
+                    type: 'weapon',
+                    radius: 12,
+                    damage: 100,
+                    special: 'beam'
+                }
+            },
+            {
                 id: 'shield',
                 name: 'Shield',
                 description: 'Protects your tank from one hit. Auto-active.',
@@ -448,6 +461,7 @@ export class Store {
             case 'mega_nuke': return '☢️';
             case 'cluster_bomb': return '🎆';
             case 'laser': return '⚡';
+            case 'laser_heavy': return '🩸';
             case 'shield': return '🛡️';
             case 'health': return '❤️';
             case 'dirtball': return '🟤';

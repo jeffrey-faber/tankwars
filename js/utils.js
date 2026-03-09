@@ -1,3 +1,5 @@
+import { state } from './gameContext.js';
+
 // Parse URL parameters
 export function getUrlParams() {
     const queryString = window.location.search.slice(1);

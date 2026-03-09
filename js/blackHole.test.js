@@ -8,6 +8,7 @@ describe('Black Hole Weapon Logic', () => {
 
     beforeEach(() => {
         state.tanks = [];
+        state.canvas = { width: 1200, height: 600 };
         state.terrain = {
             explode: vi.fn(),
             addTerrain: vi.fn(),
@@ -95,5 +96,32 @@ describe('Black Hole Weapon Logic', () => {
 
         expect(state.terrain.explode).toHaveBeenCalled();
         expect(state.terrain.addTerrain).toHaveBeenCalled();
+    });
+
+    it('should fire standard laser and remove terrain circle', () => {
+        state.terrain.removeCircle = vi.fn();
+        state.terrain.checkCollision = vi.fn().mockReturnValue(true);
+        tank.inventory.push({ id: 'laser', effect: { radius: 4, damage: 35 } });
+        tank.selectedWeapon = 'laser';
+        tank.angle = 0; // Fire right
+        tank.power = 50;
+        
+        tank.fireLaser('laser');
+        
+        expect(state.terrain.removeCircle).toHaveBeenCalled();
+    });
+
+    it('should fire heavy laser with increased radius', () => {
+        state.terrain.removeCircle = vi.fn();
+        state.terrain.checkCollision = vi.fn().mockReturnValue(true);
+        tank.inventory.push({ id: 'laser_heavy', effect: { radius: 12, damage: 100 } });
+        tank.selectedWeapon = 'laser_heavy';
+        tank.angle = 0; 
+        tank.power = 50;
+        
+        tank.fireLaser('laser_heavy');
+        
+        // Verify it uses the radius from the weapon profile
+        expect(state.terrain.removeCircle).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 12);
     });
 });

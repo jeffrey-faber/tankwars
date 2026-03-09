@@ -370,6 +370,8 @@ export class Tank {
             ctx.strokeStyle = '#ff00ff'; // Purple
         } else if (this.selectedWeapon === 'laser') {
             ctx.strokeStyle = '#00ff00';
+        } else if (this.selectedWeapon === 'laser_heavy') {
+            ctx.strokeStyle = '#ff0000';
         } else if (this.selectedWeapon === 'teleport') {
             ctx.strokeStyle = '#00f7ff';
         } else if (this.selectedWeapon === 'dirtball') {
@@ -437,14 +439,19 @@ export class Tank {
         }
     }
 
-    fireLaser() {
-        const weaponItem = this.inventory.find(i => i.id === 'laser');
-        const beamWidth = Math.max(2, Math.min(8, weaponItem?.effect?.radius || 4));
+    fireLaser(laserId = 'laser') {
+        const weaponItem = this.inventory.find(i => i.id === laserId);
+        const beamWidth = Math.max(2, Math.min(20, weaponItem?.effect?.radius || 4));
         const baseDamage = weaponItem?.effect?.damage || 35;
-        // Utility weapon: low damage, but power slightly boosts direct-hit output.
-        const directHitDamage = Math.max(12, Math.min(42, Math.round(baseDamage * (0.55 + (this.power / 150)))));
+        
+        // Heavy laser logic: higher damage and penetration scaling
+        const isHeavy = laserId === 'laser_heavy';
+        
+        // Direct-hit output scaling with power
+        const directHitDamage = Math.max(baseDamage * 0.5, Math.min(baseDamage * 2, Math.round(baseDamage * (0.55 + (this.power / 150)))));
+        
         // Power governs how much solid terrain the beam can tunnel through.
-        let penetrationBudget = Math.max(6, Math.min(220, Math.round(this.power * 1.9)));
+        let penetrationBudget = Math.max(6, Math.min(1000, Math.round(this.power * (isHeavy ? 5.0 : 1.9))));
 
         const barrelLength = 35;
         const step = 2;
@@ -486,7 +493,7 @@ export class Tank {
             const target = checkDirectHit(x, y, state.tanks, this, true);
             if (target) {
                 target.health -= directHitDamage;
-                createExplosion(x, y, 7, '#5dffb3');
+                createExplosion(x, y, isHeavy ? 15 : 7, isHeavy ? '#ff0000' : '#5dffb3');
                 if (target.health <= 0) target.die(state.tanks.indexOf(this));
                 directHitTank = target;
                 endX = x;
@@ -502,7 +509,7 @@ export class Tank {
             state.terrain.updateCanvas();
         }
 
-        const beamDurationMs = 180;
+        const beamDurationMs = isHeavy ? 350 : 180;
         if (!Array.isArray(state.laserBeams)) {
             state.laserBeams = [];
         }
@@ -512,12 +519,12 @@ export class Tank {
             x2: endX,
             y2: endY,
             width: beamWidth,
-            color: directHitTank ? '#8dffd1' : '#48fcb0',
+            color: isHeavy ? (directHitTank ? '#ffaaaa' : '#ff4444') : (directHitTank ? '#8dffd1' : '#48fcb0'),
             expiresAt: performance.now() + beamDurationMs,
             duration: beamDurationMs
         });
 
-        triggerScreenShake(6, beamDurationMs);
+        triggerScreenShake(isHeavy ? 12 : 6, beamDurationMs);
         state.freezeTankGravity = true;
         if (state.terrain) state.terrain.freezeGravity = true;
         if (state.ctx && state.canvas && state.terrain?.draw) {
@@ -535,7 +542,7 @@ export class Tank {
                 state.freezeTankGravity = false;
                 if (state.terrain) state.terrain.freezeGravity = false;
 
-                const index = this.inventory.findIndex(item => item.id === 'laser');
+                const index = this.inventory.findIndex(item => item.id === laserId);
                 if (index !== -1) this.inventory.splice(index, 1);
                 this.selectedWeapon = 'default';
             }
@@ -546,8 +553,8 @@ export class Tank {
         // Prevent firing if any projectiles are still active (standard turn-based rule)
         if (state.projectiles.length > 0) return;
 
-        if (this.selectedWeapon === 'laser') {
-            this.fireLaser();
+        if (this.selectedWeapon === 'laser' || this.selectedWeapon === 'laser_heavy') {
+            this.fireLaser(this.selectedWeapon);
             return;
         }
 
