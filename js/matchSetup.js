@@ -128,6 +128,7 @@ export class MatchSetup {
                 <option value="bot-mastermind" ${player.type === 'bot-mastermind' ? 'selected' : ''}>Bot (Mastermind)</option>
                 <option value="bot-nemesis" ${player.type === 'bot-nemesis' ? 'selected' : ''}>Bot (Nemesis)</option>
                 <option value="bot-ghost" ${player.type === 'bot-ghost' ? 'selected' : ''}>Bot (The Ghost)</option>
+                <option value="bot-singularity" ${player.type === 'bot-singularity' ? 'selected' : ''}>Bot (Singularity - UNFAIR)</option>
                 <option value="bot-random" ${player.type === 'bot-random' ? 'selected' : ''}>Bot (Random)</option>
             </select>
             <button class="remove-player-btn">×</button>

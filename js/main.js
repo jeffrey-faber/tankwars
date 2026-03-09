@@ -154,7 +154,7 @@ function initGameFromConfig(config) {
         let type = p.type;
         
         if (type === 'bot-random') {
-            const types = ['bot-easy', 'bot-medium', 'bot-hard', 'bot-stupid', 'bot-lobber', 'bot-sniper', 'bot-mastermind', 'bot-nemesis'];
+            const types = ['bot-easy', 'bot-medium', 'bot-hard', 'bot-stupid', 'bot-lobber', 'bot-sniper', 'bot-mastermind', 'bot-nemesis', 'bot-ghost', 'bot-commander', 'bot-singularity'];
             type = types[Math.floor(Math.random() * types.length)];
         }
 

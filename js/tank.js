@@ -1,6 +1,6 @@
 import { getRandomColor, createExplosion } from './utils.js';
 import { state, getNextAliveTankIndex, draw, triggerScreenShake, startTurn } from './gameContext.js';
-import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI, NemesisAI, BitwiseCommanderAI, GhostAI } from './aiControllers.js';
+import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI, NemesisAI, BitwiseCommanderAI, GhostAI, SingularityAI } from './aiControllers.js';
 
 const ECONOMY_MULTIPLIER = 1;
 
@@ -140,6 +140,8 @@ export class Tank {
             this.aiController = new MastermindAI();
         } else if (this.personality === 'ghost') {
             this.aiController = new GhostAI();
+        } else if (this.personality === 'singularity') {
+            this.aiController = new SingularityAI();
         } else {
             // Standard AI based on aiLevel if no personality
             const diff = this.aiLevel <= 3 ? 'easy' : this.aiLevel <= 6 ? 'medium' : 'hard';
@@ -1032,6 +1034,6 @@ export class Tank {
             } finally {
                 state.aiReadyToFire = true;
             }
-        }, 1000);
+        }, 2000);
     }
 }

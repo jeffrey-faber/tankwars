@@ -2122,18 +2122,23 @@ export class GhostAI extends AIController {
     onShotResult(target, impactX, impactY) {
         // Track proximity to self for tactical decisions (shovel logic)
         const myTank = state.tanks.find(t => t.aiController === this);
-        if (myTank) {
-            const dx = impactX - (myTank.x + myTank.width / 2);
-            const dy = impactY - (myTank.y - myTank.height / 2);
-            this.lastImpactToSelf = Math.sqrt(dx*dx + dy*dy);
-        }
+        if (!myTank) return;
 
+        const myTankX = myTank.x + myTank.width / 2;
         const tx = target.x + target.width / 2;
         const ty = target.y - target.height / 2;
+        const side = tx > myTankX ? 1 : -1;
         
+        // 0.8 Damping per turn (learning cycle)
+        this.sharedOffset.x *= 0.8;
+        this.sharedOffset.y *= 0.8;
+
         // GLOBAL LEARNING: Apply error correction (ActualTarget - Impact) to shared knowledge
-        const errorX = tx - impactX;
+        // We store x offset relative to the direction of fire (directional offset)
+        const rawErrorX = tx - impactX;
+        const errorX = rawErrorX * side;
         const errorY = ty - impactY;
+        
         const canvasWidth = state.canvas?.width || 1200;
         const sideHit = impactX <= 2 || impactX >= (canvasWidth - 2);
         const edgeMode = state.activeEdgeBehavior || 'impact';
@@ -2168,12 +2173,16 @@ export class GhostAI extends AIController {
         this.sharedOffset.x = Math.max(-1200, Math.min(1200, this.sharedOffset.x));
         this.sharedOffset.y = Math.max(-600, Math.min(600, this.sharedOffset.y));
 
-        console.log(`Ghost knowledge update. Shared Offset:`, this.sharedOffset);
+        console.log(`Ghost knowledge update. Directional Offset:`, this.sharedOffset);
     }
 
     calculateShot(tank, target, env) {
-        // 1. Create the "Ghost Target" (Aim Point = Actual Target + Shared Knowledge)
-        const aimX = (target.x + target.width / 2) + this.sharedOffset.x;
+        const targetX = target.x + target.width / 2;
+        const tankX = tank.x + tank.width / 2;
+        const side = targetX > tankX ? 1 : -1;
+
+        // 1. Create the "Ghost Target" (Aim Point = Actual Target + Directional Shared Knowledge)
+        const aimX = targetX + (this.sharedOffset.x * side);
         const aimY = (target.y - target.height / 2) + this.sharedOffset.y;
 
         const ghostProxy = { 
@@ -2203,7 +2212,6 @@ export class GhostAI extends AIController {
         // Restrict power to 60 or less on the very first shot of the match (no knowledge yet)
         const isMatchStart = this.sharedOffset.x === 0 && this.sharedOffset.y === 0;
         const targetName = target?.name || 'unknown';
-        const targetX = target.x + target.width / 2;
         const originX = tank.x + tank.width / 2;
         const dx = Math.abs(targetX - originX);
         const gravity = Math.max(0.05, env?.gravity ?? state.gravity ?? 0.1);
@@ -2231,5 +2239,138 @@ export class GhostAI extends AIController {
             angle: planned.angle,
             power: power
         };
+    }
+}
+
+export class SingularityAI extends AIController {
+    constructor() {
+        super();
+    }
+
+    calculateShot(tank, target, env) {
+        const tx = target.x + target.width / 2;
+        const ty = target.y - target.height / 2;
+        const sx = tank.x + tank.width / 2;
+        const sy = tank.y - tank.height;
+
+        const arcs = this.getSearchArcs(sx, tx, ty, sy);
+        let best = { angle: Math.PI / 4, power: 60, error: Infinity };
+
+        for (const angle of arcs) {
+            // STEP 1: Dense scan to find the best power region
+            let localBestP = 10;
+            let localMinErr = Infinity;
+            
+            for (let p = 10; p <= 160; p += 2) {
+                const res = this.trace(sx, sy, angle, p, env, tx, ty);
+                if (res.error < localMinErr) {
+                    localMinErr = res.error;
+                    localBestP = p;
+                }
+                if (res.error < best.error) {
+                    best = { angle, power: p, error: res.error };
+                }
+            }
+
+            // STEP 2: Fine-tune using bisection in the localized region
+            let low = Math.max(10, localBestP - 2);
+            let high = Math.min(160, localBestP + 2);
+            
+            for (let i = 0; i < 20; i++) {
+                const mid = (low + high) / 2;
+                const result = this.trace(sx, sy, angle, mid, env, tx, ty);
+
+                if (result.error < best.error) {
+                    best = { angle, power: mid, error: result.error };
+                }
+
+                // Check direction: if impact is closer to sx than tx, we are "short"
+                const impactDx = result.finalX - sx;
+                const targetDx = tx - sx;
+                
+                // If moving right (targetDx > 0), then impactDx < targetDx means short.
+                // If moving left (targetDx < 0), then impactDx > targetDx means short (e.g., -500 > -700).
+                const isShort = Math.abs(impactDx) < Math.abs(targetDx);
+                
+                if (isShort) low = mid;
+                else high = mid;
+
+                if (result.error < 0.05) break;
+            }
+        }
+        return { angle: best.angle, power: best.power };
+    }
+
+    getSearchArcs(sx, tx, ty, sy) {
+        const isRight = tx > sx;
+        const base = [15, 30, 45, 60, 75, 82]; 
+        // Targeted additions for pits and ceiling bounces
+        if (ty > sy + 50) base.push(-30, -15, -5, 5); 
+        if (state.activeEdgeBehavior === 'reflect') {
+            base.push(65, 70, 80, 85, 87, 89); 
+        }
+        return base.map(a => (isRight ? a : 180 - a) * (Math.PI / 180));
+    }
+
+    trace(sx, sy, angle, power, env, tx, ty) {
+        const PHYSICS = { gravity: 0.1, scale: 0.2 };
+        const barrelLength = 30;
+        const weaponRadius = 15;
+        
+        let x = sx + barrelLength * Math.cos(angle);
+        let y = sy - barrelLength * Math.sin(angle);
+        
+        // SYNC: Matches simulateShot's safe starting distance "teleport"
+        const safeDist = weaponRadius + 20;
+        const dxStart = x - sx;
+        const dyStart = y - (sy + 5); 
+        const dStart = Math.sqrt(dxStart*dxStart + dyStart*dyStart);
+        if (dStart > 0 && dStart < safeDist) {
+            const k = safeDist / dStart;
+            x = sx + dxStart * k;
+            y = (sy + 5) + dyStart * k;
+        }
+
+        let vx = power * Math.cos(angle) * PHYSICS.scale;
+        let vy = -power * Math.sin(angle) * PHYSICS.scale;
+        
+        let minErr = Infinity;
+        let bestX = x;
+        const floorY = state.canvas?.height || 600;
+
+        for (let t = 0; t < 2000; t++) {
+            vy += PHYSICS.gravity;
+            vx += env.wind;
+
+            const speed = Math.sqrt(vx*vx + vy*vy);
+            const steps = Math.max(1, Math.ceil(speed / 2));
+            const stepX = vx / steps;
+            const stepY = vy / steps;
+
+            for (let s = 0; s < steps; s++) {
+                x += stepX;
+                y += stepY;
+
+                if (state.activeEdgeBehavior === 'reflect') {
+                    if (x <= 0) { vx = Math.abs(vx); x = 0; }
+                    if (x >= (state.canvas?.width || 1200)) { vx = -Math.abs(vx); x = (state.canvas?.width || 1200); }
+                    if (y <= 0) { vy = Math.abs(vy); y = 0; }
+                } else if (state.activeEdgeBehavior === 'teleport') {
+                    if (x < 0) x = (state.canvas?.width || 1200);
+                    else if (x > (state.canvas?.width || 1200)) x = 0;
+                }
+
+                const dist = Math.sqrt((x - tx)**2 + (y - ty)**2);
+                if (dist < minErr) {
+                    minErr = dist;
+                    bestX = x;
+                }
+
+                if (env.checkTerrain && env.checkTerrain(x, y)) return { error: minErr, finalX: x };
+                if (y > floorY) return { error: minErr, finalX: x };
+            }
+            if (y > 2000 || x < -1000 || x > 3000) break;
+        }
+        return { error: minErr, finalX: x };
     }
 }

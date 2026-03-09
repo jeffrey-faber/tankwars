@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MastermindAI, StandardAI, SniperAI, LobberAI, NemesisAI, BitwiseCommanderAI } from './aiControllers.js';
+import { MastermindAI, StandardAI, SniperAI, LobberAI, NemesisAI, BitwiseCommanderAI, SingularityAI } from './aiControllers.js';
 import { state } from './gameContext.js';
 
 // Mock tank for simulation
@@ -126,7 +126,7 @@ describe('AI Accuracy Benchmark', () => {
     beforeEach(() => {
         state.activeEdgeBehavior = 'impact';
         state.edgeBehavior = 'impact';
-        state.canvas = { width: 1200, height: 600 };
+        state.canvas = { width: 1200, height: 1000 };
     });
 
     describe('MastermindAI Performance', () => {
@@ -356,6 +356,50 @@ describe('AI Accuracy Benchmark', () => {
                 }
             };
             const result = runDuel(NemesisAI, null, wallEnv, 10, 100, 500, 700, 500);
+            expect(result).toBeGreaterThan(0);
+        });
+    });
+
+    describe('SingularityAI Performance (UNFAIR)', () => {
+        it('Standard: Calm Weather', () => {
+            const result = runDuel(SingularityAI, null, { wind: 0, gravity: 0.1 });
+            expect(result).toBe(1); // Should hit on the very first shot
+        });
+
+        it('Extreme: Hurricane Wind', () => {
+            const extremeWind = { wind: 0.45, gravity: 0.1 };
+            const result = runDuel(SingularityAI, null, extremeWind, 2);
+            expect(result).toBeGreaterThan(0);
+            expect(result).toBeLessThanOrEqual(2);
+        });
+
+        it('Targeting: Into a Deep Pit', () => {
+            const pitEnv = {
+                wind: 0,
+                gravity: 0.1,
+                checkTerrain: (x, y) => {
+                    if (x >= 600 && x <= 800) return y > 800; 
+                    if (x < 200) return y > 550;
+                    return y > 500;
+                }
+            };
+            const result = runDuel(SingularityAI, null, pitEnv, 2, 100, 500, 700, 750);
+            expect(result).toBeGreaterThan(0);
+            expect(result).toBeLessThanOrEqual(2);
+        });
+
+        it('Edge-Aware: Reflect Ceiling Shot', () => {
+            state.activeEdgeBehavior = 'reflect';
+            state.canvas = { width: 1200, height: 600 };
+            const wallEnv = {
+                wind: 0,
+                gravity: 0.1,
+                checkTerrain: (x, y) => {
+                    if (x > 300 && x < 500) return y > 100;
+                    return y > 500;
+                }
+            };
+            const result = runDuel(SingularityAI, null, wallEnv, 2, 100, 500, 700, 500);
             expect(result).toBeGreaterThan(0);
         });
     });
