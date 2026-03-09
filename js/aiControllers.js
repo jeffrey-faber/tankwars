@@ -2128,10 +2128,17 @@ export class GhostAI extends AIController {
         const tx = target.x + target.width / 2;
         const ty = target.y - target.height / 2;
         const side = tx > myTankX ? 1 : -1;
+        const targetName = target?.name || 'unknown';
         
-        // 0.8 Damping per turn (learning cycle)
-        this.sharedOffset.x *= 0.8;
-        this.sharedOffset.y *= 0.8;
+        // Power-scaled Damping per turn
+        const lastMeta = this.lastShotMeta.get(targetName);
+        const lastPower = lastMeta?.power || 50;
+        let damping = 0.8;
+        if (lastPower < 35) damping = 1.0;
+        else if (lastPower <= 40) damping = 0.9;
+
+        this.sharedOffset.x *= damping;
+        this.sharedOffset.y *= damping;
 
         // GLOBAL LEARNING: Apply error correction (ActualTarget - Impact) to shared knowledge
         // We store x offset relative to the direction of fire (directional offset)
@@ -2142,7 +2149,6 @@ export class GhostAI extends AIController {
         const canvasWidth = state.canvas?.width || 1200;
         const sideHit = impactX <= 2 || impactX >= (canvasWidth - 2);
         const edgeMode = state.activeEdgeBehavior || 'impact';
-        const targetName = target?.name || 'unknown';
         const sideHitInImpactMode = sideHit && edgeMode === 'impact';
 
         if (sideHitInImpactMode) {
