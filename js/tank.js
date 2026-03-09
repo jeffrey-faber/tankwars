@@ -112,6 +112,7 @@ export class Tank {
         this.inventory = [];
         this.selectedWeapon = 'default';
         this.vy = 0; // Vertical velocity for falling
+        this.vx = 0; // Horizontal velocity for momentum
         
         // Fall Damage Properties
         this.safeFallHeight = 30; // px
@@ -917,62 +918,76 @@ export class Tank {
 
     handleBlackHoleImpact(proj) {
         const { x, y, type, explosionRadius } = proj;
-        const weaponItem = this.inventory.find(i => i.id === type) || { effect: { pullStrength: 10, size: 'small' } };
-        const pullStrength = weaponItem.effect.pullStrength || 10;
-        const size = weaponItem.effect.size || 'small';
+        
+        // Find the weapon profile in any tank's inventory (or source tank if known)
+        let weaponItem = null;
+        for (const t of state.tanks) {
+            weaponItem = t.inventory?.find(i => i.id === type);
+            if (weaponItem) break;
+        }
+        
+        const pullStrength = weaponItem?.effect?.pullStrength || 10;
+        const size = weaponItem?.effect?.size || 'small';
 
         console.log(`BLACK HOLE ACTIVATED! Type: ${type}, Pos: ${Math.round(x)},${Math.round(y)}`);
 
-        // 1. Pull Tanks
-        state.tanks.forEach(tank => {
-            if (!tank.alive) return;
-            const dx = x - (tank.x + tank.width / 2);
-            const dy = y - (tank.y - tank.height / 2);
+        // 1. Pull Tanks with Momentum
+        state.tanks.forEach(otherTank => {
+            if (!otherTank.alive) return;
+            const dx = x - (otherTank.x + otherTank.width / 2);
+            const dy = y - (otherTank.y - otherTank.height / 2);
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < explosionRadius) {
                 const force = (1 - dist / explosionRadius) * pullStrength;
                 const angle = Math.atan2(dy, dx);
                 
-                // Displace tank
-                tank.x += Math.cos(angle) * force * 5;
-                tank.y += Math.sin(angle) * force * 5;
+                // Strong initial displacement to "snap" them towards it
+                otherTank.x += Math.cos(angle) * force * 8;
+                otherTank.y += Math.sin(angle) * force * 8;
                 
-                // Add velocity for "throw" effect
-                tank.vy = Math.sin(angle) * force;
-                tank.lastSolidY = tank.y; // Ensure fall damage calculation starts from pull height
+                // Assign persistent momentum (both X and Y)
+                const impulse = force * 1.5;
+                otherTank.vx = Math.cos(angle) * impulse;
+                otherTank.vy = Math.sin(angle) * impulse;
+                
+                otherTank.lastSolidY = otherTank.y; 
             }
         });
 
-        // 2. Terrain Manipulation
-        if (size === 'medium' || size === 'large') {
-            // Remove dirt at center
-            if (state.terrain.explode) {
-                state.terrain.explode(x, y, explosionRadius * 0.4);
-            }
+        // 2. Terrain Manipulation: BUFFED
+        // All sizes now remove terrain, larger ones remove MUCH more
+        const removalScale = size === 'large' ? 0.8 : (size === 'medium' ? 0.5 : 0.2);
+        if (state.terrain.explode) {
+            state.terrain.explode(x, y, explosionRadius * removalScale);
+        }
 
+        if (size === 'medium' || size === 'large') {
             // Throw small amount of dirt everywhere (Simulated by adding tiny dirtballs)
             if (state.terrain.addTerrain) {
-                const dirtCount = size === 'large' ? 12 : 6;
+                const dirtCount = size === 'large' ? 20 : 10;
                 for (let i = 0; i < dirtCount; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const dist = Math.random() * explosionRadius;
+                    const dist = (0.3 + Math.random() * 0.7) * explosionRadius;
                     const dx = Math.cos(angle) * dist;
                     const dy = Math.sin(angle) * dist;
-                    state.terrain.addTerrain(x + dx, y + dy, 5 + Math.random() * 5);
+                    state.terrain.addTerrain(x + dx, y + dy, 5 + Math.random() * 8);
                 }
             }
         }
 
-        // 3. Visuals
+        // 3. Visuals: Increased impact
+        triggerScreenShake(size === 'large' ? 15 : 8, 400);
         if (state.ctx && state.canvas && draw) {
             const color = size === 'large' ? 'purple' : (size === 'medium' ? '#333' : '#000');
             createExplosion(x, y, explosionRadius, color);
-            // Flash effect
-            state.activeExplosions.push({
-                x, y, radius: explosionRadius * 0.2, color: 'white',
-                startTime: performance.now(), duration: 200
-            });
+            // Multi-flash effect
+            for (let i = 0; i < 3; i++) {
+                state.activeExplosions.push({
+                    x, y, radius: explosionRadius * (0.1 + i * 0.1), color: 'white',
+                    startTime: performance.now() + i * 50, duration: 200
+                });
+            }
         }
 
         if (state.terrain?.updateCanvas) {
@@ -999,6 +1014,14 @@ export class Tank {
     applyGravity(terrain) {
         // If tank gravity is frozen (e.g. during earthquake), skip physics
         if (state.freezeTankGravity) return;
+
+        // Handle horizontal momentum (e.g. from explosions or black holes)
+        if (Math.abs(this.vx) > 0.1) {
+            this.x += this.vx;
+            this.vx *= 0.95; // Air friction
+        } else {
+            this.vx = 0;
+        }
 
         const leftX = Math.floor(this.x);
         const centerX = Math.floor(this.x + this.width / 2);

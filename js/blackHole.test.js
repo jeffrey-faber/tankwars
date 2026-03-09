@@ -15,6 +15,8 @@ describe('Black Hole Weapon Logic', () => {
         };
         tank = new Tank(100, 500, false, 0, 'Shooter');
         target = new Tank(200, 500, false, 0, 'Target');
+        tank.alive = true;
+        target.alive = true;
         state.tanks = [tank, target];
     });
 
@@ -58,6 +60,29 @@ describe('Black Hole Weapon Logic', () => {
         
         // Impact is above target (400 vs 500). Target should have negative vy (moving up).
         expect(target.vy).toBeLessThan(0);
+    });
+
+    it('should apply horizontal momentum (vx)', () => {
+        const proj = {
+            x: 50, // Impact at 50
+            y: 500,
+            type: 'blackhole_s',
+            explosionRadius: 500, // Large radius
+            sourcePlayerId: 0
+        };
+        target.x = 200; // Target at 200
+        target.alive = true;
+        state.tanks = [tank, target];
+        
+        tank.inventory.push({ 
+            id: 'blackhole_s', 
+            effect: { pullStrength: 50, size: 'small' } 
+        });
+
+        tank.handleBlackHoleImpact(proj);
+        
+        // Target is at 200, impact is at 50. Pull direction is left.
+        expect(target.vx).toBeLessThan(0);
     });
 
     it('should remove and add terrain for medium/large sizes', () => {
