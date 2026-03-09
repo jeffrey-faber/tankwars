@@ -80,7 +80,7 @@ export function startTurn(index) {
             if (!state.suddenDeath.active) {
                 state.suddenDeath.active = true;
                 if (state.suddenDeath.type === 'random') {
-                    const options = ['nuke_growth', 'teleport_chaos', 'health_decay'];
+                    const options = ['nuke_growth', 'teleport_chaos', 'health_decay', 'blackhole_storm'];
                     state.suddenDeath.activeType = options[Math.floor(Math.random() * options.length)];
                 } else {
                     state.suddenDeath.activeType = state.suddenDeath.type;
@@ -96,6 +96,8 @@ export function startTurn(index) {
                 applySuddenDeathTeleport();
             } else if (state.suddenDeath.activeType === 'health_decay') {
                 applySuddenDeathDecay();
+            } else if (state.suddenDeath.activeType === 'blackhole_storm') {
+                applySuddenDeathBlackHole();
             }
         }
     }
@@ -196,6 +198,100 @@ function applySuddenDeathDecay() {
     });
 }
 
+function applySuddenDeathBlackHole() {
+    const canvasWidth = state.canvas?.width || 1200;
+    const canvasHeight = state.canvas?.height || 600;
+    
+    // Pick a random location reasonably within bounds
+    const rx = Math.random() * (canvasWidth - 200) + 100;
+    const ry = Math.random() * (canvasHeight - 200) + 100;
+    
+    // Escalating sizes
+    const baseRadius = 120;
+    // Every 5 turns after activation, increase size tier? 
+    // Or just scale it linearly.
+    const turnsActive = state.suddenDeath.currentTurnCount - state.suddenDeath.startTurn;
+    const scale = 1.0 + (turnsActive * 0.1); // 10% bigger per turn
+    const radius = baseRadius * scale;
+    
+    // Pick size tier for effects
+    let size = 'medium';
+    if (scale > 1.5) size = 'large';
+    
+    triggerBlackHoleEffect(rx, ry, radius, 15 * scale, size);
+}
+
+export function triggerBlackHoleEffect(x, y, radius, pullStrength, size = 'medium') {
+    console.log(`BLACK HOLE EFFECT! Pos: ${Math.round(x)},${Math.round(y)}, Radius: ${Math.round(radius)}`);
+
+    // 1. Pull Tanks with Momentum
+    state.tanks.forEach(otherTank => {
+        if (!otherTank.alive) return;
+        const dx = x - (otherTank.x + otherTank.width / 2);
+        const dy = y - (otherTank.y - otherTank.height / 2);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < radius) {
+            const force = (1 - dist / radius) * pullStrength;
+            const angle = Math.atan2(dy, dx);
+            
+            // Strong initial displacement to "snap" them towards it
+            otherTank.x += Math.cos(angle) * force * 8;
+            otherTank.y += Math.sin(angle) * force * 8;
+            
+            // Assign persistent momentum (both X and Y)
+            const impulse = force * 1.5;
+            otherTank.vx = (otherTank.vx || 0) + Math.cos(angle) * impulse;
+            otherTank.vy = (otherTank.vy || 0) + Math.sin(angle) * impulse;
+            
+            otherTank.lastSolidY = otherTank.y; 
+        }
+    });
+
+    // 2. Terrain Manipulation
+    const removalScale = size === 'large' ? 0.8 : (size === 'medium' ? 0.5 : 0.2);
+    if (state.terrain && state.terrain.explode) {
+        state.terrain.explode(x, y, radius * removalScale);
+    }
+
+    if (size === 'medium' || size === 'large') {
+        if (state.terrain && state.terrain.addTerrain) {
+            const dirtCount = size === 'large' ? 20 : 10;
+            for (let i = 0; i < dirtCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = (0.3 + Math.random() * 0.7) * radius;
+                const dx = Math.cos(angle) * dist;
+                const dy = Math.sin(angle) * dist;
+                state.terrain.addTerrain(x + dx, y + dy, 5 + Math.random() * 8);
+            }
+        }
+    }
+
+    // 3. Visuals
+    triggerScreenShake(size === 'large' ? 15 : 8, 400);
+    if (state.ctx && state.canvas) {
+        const color = size === 'large' ? 'purple' : (size === 'medium' ? '#333' : '#000');
+        // We can't use createExplosion here directly easily without importing, 
+        // but we can push to activeExplosions.
+        state.activeExplosions.push({
+            x, y, radius, color,
+            startTime: performance.now(), duration: 500
+        });
+        
+        // Multi-flash effect
+        for (let i = 0; i < 3; i++) {
+            state.activeExplosions.push({
+                x, y, radius: radius * (0.1 + i * 0.1), color: 'white',
+                startTime: performance.now() + i * 50, duration: 200
+            });
+        }
+    }
+
+    if (state.terrain?.updateCanvas) {
+        state.terrain.updateCanvas();
+    }
+}
+
 export function drawHUD() {
     const tank = state.tanks[state.currentPlayer];
     if (!tank) return;
@@ -255,6 +351,7 @@ export function drawHUD() {
         if (state.suddenDeath.activeType === 'nuke_growth') label += "ESCALATING NUKES (" + (state.suddenDeath.nukeScale * 100).toFixed(0) + "%)";
         else if (state.suddenDeath.activeType === 'teleport_chaos') label += "QUANTUM COLLAPSE (" + (state.suddenDeath.teleportFocus * 100).toFixed(0) + "%)";
         else if (state.suddenDeath.activeType === 'health_decay') label += "SPECTRAL DECAY";
+        else if (state.suddenDeath.activeType === 'blackhole_storm') label += "SINGULARITY EVENT";
         state.ctx.fillText(label, 10, currentY);
     }
 }

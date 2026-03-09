@@ -86,7 +86,7 @@ export class Store {
                 id: 'laser_heavy',
                 name: 'Heavy Laser',
                 description: 'High-power plasma beam. Wider tunnel, much higher damage and penetration.',
-                price: 150,
+                price: 225,
                 category: 'weapons',
                 effect: {
                     type: 'weapon',

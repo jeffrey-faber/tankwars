@@ -1,5 +1,5 @@
 import { getRandomColor, createExplosion } from './utils.js';
-import { state, getNextAliveTankIndex, draw, triggerScreenShake, startTurn } from './gameContext.js';
+import { state, getNextAliveTankIndex, draw, triggerScreenShake, startTurn, triggerBlackHoleEffect } from './gameContext.js';
 import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI, NemesisAI, BitwiseCommanderAI, GhostAI, SingularityAI } from './aiControllers.js';
 
 const ECONOMY_MULTIPLIER = 1;
@@ -937,70 +937,7 @@ export class Tank {
         const pullStrength = weaponItem?.effect?.pullStrength || 10;
         const size = weaponItem?.effect?.size || 'small';
 
-        console.log(`BLACK HOLE ACTIVATED! Type: ${type}, Pos: ${Math.round(x)},${Math.round(y)}`);
-
-        // 1. Pull Tanks with Momentum
-        state.tanks.forEach(otherTank => {
-            if (!otherTank.alive) return;
-            const dx = x - (otherTank.x + otherTank.width / 2);
-            const dy = y - (otherTank.y - otherTank.height / 2);
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < explosionRadius) {
-                const force = (1 - dist / explosionRadius) * pullStrength;
-                const angle = Math.atan2(dy, dx);
-                
-                // Strong initial displacement to "snap" them towards it
-                otherTank.x += Math.cos(angle) * force * 8;
-                otherTank.y += Math.sin(angle) * force * 8;
-                
-                // Assign persistent momentum (both X and Y)
-                const impulse = force * 1.5;
-                otherTank.vx = Math.cos(angle) * impulse;
-                otherTank.vy = Math.sin(angle) * impulse;
-                
-                otherTank.lastSolidY = otherTank.y; 
-            }
-        });
-
-        // 2. Terrain Manipulation: BUFFED
-        // All sizes now remove terrain, larger ones remove MUCH more
-        const removalScale = size === 'large' ? 0.8 : (size === 'medium' ? 0.5 : 0.2);
-        if (state.terrain.explode) {
-            state.terrain.explode(x, y, explosionRadius * removalScale);
-        }
-
-        if (size === 'medium' || size === 'large') {
-            // Throw small amount of dirt everywhere (Simulated by adding tiny dirtballs)
-            if (state.terrain.addTerrain) {
-                const dirtCount = size === 'large' ? 20 : 10;
-                for (let i = 0; i < dirtCount; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const dist = (0.3 + Math.random() * 0.7) * explosionRadius;
-                    const dx = Math.cos(angle) * dist;
-                    const dy = Math.sin(angle) * dist;
-                    state.terrain.addTerrain(x + dx, y + dy, 5 + Math.random() * 8);
-                }
-            }
-        }
-
-        // 3. Visuals: Increased impact
-        triggerScreenShake(size === 'large' ? 15 : 8, 400);
-        if (state.ctx && state.canvas && draw) {
-            const color = size === 'large' ? 'purple' : (size === 'medium' ? '#333' : '#000');
-            createExplosion(x, y, explosionRadius, color);
-            // Multi-flash effect
-            for (let i = 0; i < 3; i++) {
-                state.activeExplosions.push({
-                    x, y, radius: explosionRadius * (0.1 + i * 0.1), color: 'white',
-                    startTime: performance.now() + i * 50, duration: 200
-                });
-            }
-        }
-
-        if (state.terrain?.updateCanvas) {
-            state.terrain.updateCanvas();
-        }
+        triggerBlackHoleEffect(x, y, explosionRadius, pullStrength, size);
     }
     
     useItem(itemId) {
