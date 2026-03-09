@@ -74,7 +74,7 @@ export class Store {
                 name: 'Laser',
                 description: 'Utility beam. Carves thin tunnels, low direct-hit damage, penetration scales with power.',
                 price: 40,
-                category: 'utility',
+                category: 'weapons',
                 effect: {
                     type: 'weapon',
                     radius: 4,
@@ -87,7 +87,7 @@ export class Store {
                 name: 'Heavy Laser',
                 description: 'High-power plasma beam. Wider tunnel, much higher damage and penetration.',
                 price: 150,
-                category: 'utility',
+                category: 'weapons',
                 effect: {
                     type: 'weapon',
                     radius: 12,
@@ -461,7 +461,7 @@ export class Store {
             case 'mega_nuke': return '☢️';
             case 'cluster_bomb': return '🎆';
             case 'laser': return '⚡';
-            case 'laser_heavy': return '🩸';
+            case 'laser_heavy': return '🔴';
             case 'shield': return '🛡️';
             case 'health': return '❤️';
             case 'dirtball': return '🟤';
