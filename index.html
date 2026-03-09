@@ -84,9 +84,19 @@
                         <span id="deathTriggerValue">10%</span>
                     </div>
                 </div>
-                <div class="setting-group disabled">
+                <div class="setting-group">
                     <label>Sudden Death</label>
-                    <span class="coming-soon">COMING SOON</span>
+                    <select id="suddenDeathType">
+                        <option value="none" selected>None</option>
+                        <option value="nuke_growth">Escalating Nukes</option>
+                        <option value="teleport_chaos">Quantum Collapse</option>
+                        <option value="health_decay">Spectral Decay</option>
+                        <option value="random">Random Chaos</option>
+                    </select>
+                </div>
+                <div class="setting-group" id="suddenDeathTurnGroup">
+                    <label>Start Turn</label>
+                    <input type="number" id="suddenDeathTurn" min="1" max="50" value="10">
                 </div>
             </section>
         </div>

@@ -134,6 +134,15 @@ function initGameFromConfig(config) {
     state.currentGameIndex = 0;
     state.numPlayers = config.players.length;
 
+    if (config.suddenDeath) {
+        state.suddenDeath.type = config.suddenDeath.type;
+        state.suddenDeath.startTurn = config.suddenDeath.startTurn;
+        state.suddenDeath.active = false;
+        state.suddenDeath.currentTurnCount = 0;
+        state.suddenDeath.nukeScale = 1.0;
+        state.suddenDeath.teleportFocus = 0.0;
+    }
+
     // Set canvas dimensions
     const canvasWidth = 1200;
     const canvasHeight = 600;
@@ -253,6 +262,13 @@ function resetRound() {
     state.needsRedraw = true;
     startTurn(0);
     state.wind = calculateWind(state.windIntensity || 'normal');
+
+    if (state.suddenDeath) {
+        state.suddenDeath.active = false;
+        state.suddenDeath.currentTurnCount = 0;
+        state.suddenDeath.nukeScale = 1.0;
+        state.suddenDeath.teleportFocus = 0.0;
+    }
 
     // Selection of active edge behavior for this round
     if (state.edgeBehavior === 'random') {

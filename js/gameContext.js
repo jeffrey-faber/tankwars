@@ -27,6 +27,15 @@ export const state = {
     windIntensity: 'normal',
     turnTimer: { enabled: false, seconds: 30 },
     remainingTurnTime: 0,
+    // Sudden Death
+    suddenDeath: {
+        active: false,
+        type: 'none',
+        startTurn: 10,
+        currentTurnCount: 0,
+        nukeScale: 1.0,
+        teleportFocus: 0.0 // 0 = random, 1 = perfectly on top of each other
+    },
     // Edge Behaviors
     edgeBehavior: 'impact', // Default setting (from setup)
     activeEdgeBehavior: 'impact', // Actual rule for current round
@@ -64,6 +73,33 @@ export function getNextAliveTankIndex(startIndex) {
 export function startTurn(index) {
     state.currentPlayer = index;
     
+    // Sudden Death Progression
+    if (state.suddenDeath && state.suddenDeath.type !== 'none') {
+        state.suddenDeath.currentTurnCount++;
+        if (state.suddenDeath.currentTurnCount >= state.suddenDeath.startTurn) {
+            if (!state.suddenDeath.active) {
+                state.suddenDeath.active = true;
+                if (state.suddenDeath.type === 'random') {
+                    const options = ['nuke_growth', 'teleport_chaos', 'health_decay'];
+                    state.suddenDeath.activeType = options[Math.floor(Math.random() * options.length)];
+                } else {
+                    state.suddenDeath.activeType = state.suddenDeath.type;
+                }
+                console.log(`SUDDEN DEATH ACTIVE: ${state.suddenDeath.activeType}`);
+            }
+            
+            // Per-turn growth effects
+            if (state.suddenDeath.activeType === 'nuke_growth') {
+                state.suddenDeath.nukeScale += 0.15; // 15% growth per turn
+            } else if (state.suddenDeath.activeType === 'teleport_chaos') {
+                state.suddenDeath.teleportFocus = Math.min(1.0, state.suddenDeath.teleportFocus + 0.05); // Converge slowly
+                applySuddenDeathTeleport();
+            } else if (state.suddenDeath.activeType === 'health_decay') {
+                applySuddenDeathDecay();
+            }
+        }
+    }
+
     // Clear any pending AI turn safety timeouts
     if (state.aiTurnTimeout) {
         clearTimeout(state.aiTurnTimeout);
@@ -106,6 +142,58 @@ export function showGameOverOverlay(message) {
     const messageElement = document.getElementById('gameOverMessage');
     if (messageElement) messageElement.textContent = message;
     if (overlay) overlay.classList.remove('hidden');
+}
+
+function applySuddenDeathTeleport() {
+    if (!state.tanks) return;
+    const aliveTanks = state.tanks.filter(t => t.alive);
+    if (aliveTanks.length < 2) return;
+
+    // Calculate average center of alive tanks
+    let avgX = 0;
+    aliveTanks.forEach(t => avgX += t.x + t.width / 2);
+    avgX /= aliveTanks.length;
+
+    aliveTanks.forEach(tank => {
+        const canvasWidth = state.canvas?.width || 1200;
+        const randomX = Math.random() * (canvasWidth - 100) + 50;
+        
+        // Blend between random position and the average center based on focus
+        const targetX = randomX * (1 - state.suddenDeath.teleportFocus) + avgX * state.suddenDeath.teleportFocus;
+        
+        tank.x = targetX - tank.width / 2;
+        tank.y = 50; // teleport to air
+        tank.vy = 0;
+        tank.teleportImmunity = true;
+        
+        if (state.ctx && state.canvas) {
+            const centerX = tank.x + tank.width / 2;
+            const centerY = tank.y - tank.height / 2;
+            state.activeExplosions.push({
+                x: centerX, y: centerY, radius: 30, color: '#00f7ff',
+                startTime: performance.now(), duration: 400
+            });
+        }
+    });
+}
+
+function applySuddenDeathDecay() {
+    if (!state.tanks) return;
+    state.tanks.forEach(tank => {
+        if (tank.alive) {
+            const loss = Math.max(1, Math.floor(tank.maxHealth * 0.1));
+            tank.health -= loss;
+            if (tank.health <= 0) tank.die();
+            
+            // Visual feedback
+            const centerX = tank.x + tank.width / 2;
+            const centerY = tank.y - tank.height / 2;
+            state.activeExplosions.push({
+                x: centerX, y: centerY, radius: 20, color: 'rgba(255, 0, 0, 0.5)',
+                startTime: performance.now(), duration: 300
+            });
+        }
+    });
 }
 
 export function drawHUD() {
@@ -159,6 +247,16 @@ export function drawHUD() {
 
     state.ctx.fillStyle = 'blue';
     state.ctx.fillText('Edge Rule: ' + state.activeEdgeBehavior.toUpperCase(), 10, currentY);
+    currentY += 20;
+
+    if (state.suddenDeath && state.suddenDeath.active) {
+        state.ctx.fillStyle = 'red';
+        let label = "SUDDEN DEATH: ";
+        if (state.suddenDeath.activeType === 'nuke_growth') label += "ESCALATING NUKES (" + (state.suddenDeath.nukeScale * 100).toFixed(0) + "%)";
+        else if (state.suddenDeath.activeType === 'teleport_chaos') label += "QUANTUM COLLAPSE (" + (state.suddenDeath.teleportFocus * 100).toFixed(0) + "%)";
+        else if (state.suddenDeath.activeType === 'health_decay') label += "SPECTRAL DECAY";
+        state.ctx.fillText(label, 10, currentY);
+    }
 }
 
 export function draw() {

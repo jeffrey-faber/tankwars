@@ -61,6 +61,10 @@ export class MatchSetup {
         if (config.windIntensity) document.getElementById('windIntensity').value = config.windIntensity;
         if (config.mapStyle) document.getElementById('mapStyle').value = config.mapStyle;
         if (config.edgeBehavior) document.getElementById('edgeBehavior').value = config.edgeBehavior;
+        if (config.suddenDeath) {
+            document.getElementById('suddenDeathType').value = config.suddenDeath.type || 'none';
+            document.getElementById('suddenDeathTurn').value = config.suddenDeath.startTurn || 10;
+        }
         
         if (config.deathTriggerChance !== undefined) {
             const val = Math.round(config.deathTriggerChance * 100);
@@ -169,6 +173,10 @@ export class MatchSetup {
             turnTimer: {
                 enabled: this.timerToggle.checked,
                 seconds: parseInt(this.timerSeconds.value)
+            },
+            suddenDeath: {
+                type: document.getElementById('suddenDeathType').value,
+                startTurn: parseInt(document.getElementById('suddenDeathTurn').value)
             }
         };
     }

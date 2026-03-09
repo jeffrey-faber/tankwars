@@ -657,6 +657,13 @@ export class Tank {
             projectileColor = '#555555';
             special = 'earthquake';
         }
+
+        // Sudden Death: Nuke Growth
+        if (state.suddenDeath?.active && state.suddenDeath.activeType === 'nuke_growth') {
+            explosionRadius *= (state.suddenDeath.nukeScale || 1);
+            damage *= (state.suddenDeath.nukeScale || 1);
+            if (state.suddenDeath.nukeScale > 1.5) projectileColor = 'red';
+        }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
         let x = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
