@@ -135,6 +135,7 @@ function initGameFromConfig(config) {
     state.numPlayers = config.players.length;
 
     if (config.suddenDeath) {
+        state.suddenDeath = state.suddenDeath || {};
         state.suddenDeath.type = config.suddenDeath.type;
         state.suddenDeath.startTurn = config.suddenDeath.startTurn;
         state.suddenDeath.active = false;
@@ -264,6 +265,7 @@ function resetRound() {
     state.wind = calculateWind(state.windIntensity || 'normal');
 
     if (state.suddenDeath) {
+        state.suddenDeath = state.suddenDeath || {};
         state.suddenDeath.active = false;
         state.suddenDeath.currentTurnCount = 0;
         state.suddenDeath.nukeScale = 1.0;

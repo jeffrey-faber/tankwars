@@ -26,13 +26,15 @@ describe('Game State Machine', () => {
     
 
         it('should have correct initial edge behavior state', () => {
-
             expect(state.edgeBehavior).toBe('impact');
-
             expect(state.activeEdgeBehavior).toBe('impact');
-
         });
 
+        it('should have correct initial sudden death state', () => {
+            expect(state.suddenDeath).toBeDefined();
+            expect(state.suddenDeath.active).toBe(false);
+            expect(state.suddenDeath.type).toBe('none');
+        });
     });
 
     
