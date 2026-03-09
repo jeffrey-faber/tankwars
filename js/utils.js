@@ -49,7 +49,7 @@ export function getRandomColor() {
 export function createExplosion(x, y, radius, color = 'orange', duration = 500) {
     if (state.activeExplosions) {
         state.activeExplosions.push({
-            x, y, radius, color,
+            x, y, radius: Math.max(0, radius), color,
             startTime: performance.now(),
             duration: duration
         });

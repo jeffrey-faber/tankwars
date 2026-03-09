@@ -293,13 +293,15 @@ export function draw() {
         state.activeExplosions = state.activeExplosions.filter(exp => exp.startTime + exp.duration > now);
         for (const exp of state.activeExplosions) {
             const elapsed = now - exp.startTime;
-            const progress = elapsed / exp.duration;
-            const currentRadius = exp.radius * (0.2 + 0.8 * Math.sin(progress * Math.PI)); // Expand then stay/shrink slightly
+            if (elapsed < 0) continue; // Skip if scheduled for the future
+
+            const progress = Math.min(1, elapsed / exp.duration);
+            const currentRadius = Math.max(0, exp.radius * (0.2 + 0.8 * Math.sin(progress * Math.PI)));
             const alpha = 1 - progress;
 
             state.ctx.beginPath();
             state.ctx.save();
-            state.ctx.globalAlpha = alpha;
+            state.ctx.globalAlpha = Math.max(0, alpha);
             state.ctx.arc(exp.x, exp.y, currentRadius, 0, 2 * Math.PI);
             state.ctx.fillStyle = exp.color || 'orange';
             state.ctx.fill();
