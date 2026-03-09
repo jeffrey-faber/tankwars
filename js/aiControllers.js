@@ -593,23 +593,32 @@ export class StandardAI extends AIController {
 
 export class StupidAI extends AIController {
     shop(store, tank, allTanks = null) {
-        // Stupid: Loves chaos (Cluster, Nuke)
-        if (tank.currency >= 150 && Math.random() < 0.5) {
-            store.buyItem('cluster_bomb');
-            return;
-        }
-        if (tank.currency >= 500 && Math.random() < 0.5) {
-            store.buyItem('mega_nuke');
-            return;
+        // Stupid: Loves chaos and dangerous things
+        const chaosItems = ['mega_nuke', 'blackhole_l', 'titan_shell', 'cluster_bomb', 'blackhole_m', 'earthquake_l'];
+        
+        // Loop aggressively: keep buying crazy items as long as he can afford at least one
+        let loopSafety = 0;
+        while (loopSafety < 30) {
+            loopSafety++;
+            const affordableChaos = chaosItems
+                .map(id => store.items.find(i => i.id === id))
+                .filter(item => item && tank.currency >= item.price);
+            
+            if (affordableChaos.length === 0) break;
+
+            // Pick a random crazy item he can afford and buy it
+            const item = affordableChaos[Math.floor(Math.random() * affordableChaos.length)];
+            store.buyItem(item.id);
         }
 
-        // Randomly buy things
-        if (Math.random() < 0.5) {
+        // Spend any remaining pocket change on absolutely anything
+        loopSafety = 0;
+        while (loopSafety < 10 && Math.random() < 0.7) {
+            loopSafety++;
             const affordable = store.items.filter(i => i.price <= tank.currency);
-            if (affordable.length > 0) {
-                const item = affordable[Math.floor(Math.random() * affordable.length)];
-                store.buyItem(item.id);
-            }
+            if (affordable.length === 0) break;
+            const item = affordable[Math.floor(Math.random() * affordable.length)];
+            store.buyItem(item.id);
         }
     }
 

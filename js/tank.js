@@ -587,9 +587,8 @@ export class Tank {
         if (this.selectedWeapon === 'health') {
             const item = this.inventory.find(i => i.id === 'health');
             if (item) {
-                const amount = item.effect.amount || 50;
-                this.health = Math.min(this.maxHealth, this.health + amount);
-                this.showMessage(`Healed +${amount} HP!`);
+                this.health = this.maxHealth;
+                console.log(`${this.name} healed to full health!`);
                 
                 if (state.ctx && state.canvas && draw) {
                     // Green flash effect
@@ -652,12 +651,13 @@ export class Tank {
             damage = 0;
             projectileColor = '#3d2b1f';
             special = 'add_terrain';
-        } else if (this.selectedWeapon === 'shovel') {
-            explosionRadius = 40;
-            damage = 0;
-            projectileColor = '#aaaaaa';
-            special = 'remove_terrain_cone';
-        } else if (this.selectedWeapon.startsWith('earthquake')) {
+                } else if (this.selectedWeapon === 'shovel') {
+                    explosionRadius = 60;
+                    damage = 0;
+                    projectileColor = '#aaaaaa';
+                    special = 'remove_terrain_cone';
+                }
+         else if (this.selectedWeapon.startsWith('earthquake')) {
             const weaponItem = this.inventory.find(i => i.id === this.selectedWeapon);
             explosionRadius = weaponItem?.effect?.radius || 100;
             damage = weaponItem?.effect?.damage || 20;
@@ -876,12 +876,13 @@ export class Tank {
             if (state.terrain.addTerrain) {
                 state.terrain.addTerrain(x, y, explosionRadius);
             }
-        } else if (special === 'remove_terrain_cone') {
-            if (state.terrain.removeTerrainCone) {
-                const angle = Math.atan2(-(y - (this.y - this.height)), x - (this.x + this.width / 2));
-                state.terrain.removeTerrainCone(x, y, explosionRadius, angle, Math.PI / 2);
-            }
-        } else if (special === 'earthquake') {
+                } else if (special === 'remove_terrain_cone') {
+                    if (state.terrain.removeTerrainCone) {
+                        const angle = Math.atan2(-(y - (this.y - this.height)), x - (this.x + this.width / 2));
+                        state.terrain.removeTerrainCone(x, y, explosionRadius, angle, Math.PI * 2 / 3); // 120 degrees
+                    }
+                }
+         else if (special === 'earthquake') {
             // Apply zero-damage impact first to tag all nearby tanks with lastAttackerId
             // This ensures fall deaths during the quake are attributed to the shooter.
             applyExplosionDamage(x, y, state.tanks, explosionRadius, 0, sourcePlayerId);

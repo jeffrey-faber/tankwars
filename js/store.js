@@ -74,7 +74,7 @@ export class Store {
                 name: 'Laser',
                 description: 'Utility beam. Carves thin tunnels, low direct-hit damage, penetration scales with power.',
                 price: 40,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 4,
@@ -96,13 +96,13 @@ export class Store {
             {
                 id: 'health',
                 name: 'Health Pack',
-                description: 'Heals 50 HP. Consumes your turn.',
+                description: 'Restores tank to FULL health. Consumes your turn.',
                 price: 25,
                 packSize: 1,
                 category: 'utility',
                 effect: {
                     type: 'healing',
-                    amount: 50
+                    amount: 100
                 }
             },
             {
@@ -121,7 +121,7 @@ export class Store {
                 name: 'Dirt Ball',
                 description: 'Creates terrain on impact. No damage.',
                 price: 35,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 30,
@@ -134,7 +134,7 @@ export class Store {
                 name: 'Mound',
                 description: 'Creates a medium amount of terrain. No damage.',
                 price: 75,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 60,
@@ -147,7 +147,7 @@ export class Store {
                 name: 'Mountain',
                 description: 'Creates a massive amount of terrain. No damage.',
                 price: 150,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 120,
@@ -158,12 +158,13 @@ export class Store {
             {
                 id: 'shovel',
                 name: 'Shovel',
-                description: 'Removes terrain in a cone. No damage to tanks.',
+                description: 'Removes terrain in a large cone. Useful for unburying or dropping enemies.',
                 price: 20,
-                category: 'weapons',
+                packSize: 2,
+                category: 'utility',
                 effect: {
                     type: 'weapon',
-                    radius: 40,
+                    radius: 60,
                     damage: 0,
                     special: 'remove_terrain_cone'
                 }
@@ -228,7 +229,7 @@ export class Store {
                 description: 'Small gravitational pull. Hits on impact. Good for pulling tanks off ledges.',
                 price: 45,
                 packSize: 3,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 60,
@@ -243,7 +244,7 @@ export class Store {
                 name: 'Black Hole',
                 description: 'Medium gravitational pull. Removes dirt and pulls entrenched tanks.',
                 price: 120,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 120,
@@ -258,7 +259,7 @@ export class Store {
                 name: 'Event Horizon',
                 description: 'Massive gravitational pull. Triggers at the peak of flight. Devastating terrain displacement.',
                 price: 300,
-                category: 'weapons',
+                category: 'utility',
                 effect: {
                     type: 'weapon',
                     radius: 250,
@@ -629,7 +630,7 @@ export class Store {
         
         filteredItems.forEach(item => {
             const count = (this.currentTank.inventory || []).filter(i => i.id === item.id).length;
-            let ownershipText = item.effect.type === 'healing' ? 'Instant Use' : `Owned: ${count}`;
+            let ownershipText = `Owned: ${count}`;
             let isMaxed = false;
 
             if (item.id === 'shield') {
@@ -640,6 +641,8 @@ export class Store {
                 const maxPara = this.currentTank.maxHealth;
                 ownershipText = `Durability: ${Math.ceil(this.currentTank.parachuteDurability)}/${maxPara}`;
                 if (this.currentTank.parachuteDurability >= maxPara) isMaxed = true;
+            } else if (item.id === 'health') {
+                if (count >= 1) isMaxed = true;
             }
 
             const packText = item.packSize > 1 ? `<div style="color: #ff00ff; font-size: 10px; margin-bottom: 5px;">Pack of ${item.packSize}</div>` : '';
@@ -688,6 +691,13 @@ export class Store {
         if (itemId === 'parachute' && this.currentTank.parachuteDurability >= this.currentTank.maxHealth) {
             this.showMessage("Parachute already at max!");
             return;
+        }
+        if (itemId === 'health') {
+            const count = (this.currentTank.inventory || []).filter(i => i.id === 'health').length;
+            if (count >= 1) {
+                this.showMessage("Already carrying a health pack!");
+                return;
+            }
         }
         
         if (this.currentTank.currency >= item.price) {
