@@ -194,6 +194,20 @@ export class Store {
                 }
             },
             {
+                id: 'impact_piston',
+                name: 'Impact Piston',
+                description: 'Deals minimal damage but delivers a massive mechanical impulse. Hits to the base can launch tanks into re-entry velocity.',
+                price: 125,
+                packSize: 2,
+                category: 'weapons',
+                effect: {
+                    type: 'weapon',
+                    radius: 35,
+                    damage: 15,
+                    special: 'piston'
+                }
+            },
+            {
                 id: 'earthquake_s',
                 name: 'Earthquake (S)',
                 description: 'Small tremor. Freezes gravity, creates a few cracks.',
@@ -560,6 +574,7 @@ export class Store {
             case 'earthquake_s': return '📉';
             case 'earthquake_m': return '📊';
             case 'earthquake_l': return '🌋';
+            case 'impact_piston': return '🥊';
             case 'blackhole_s': return '🕳️';
             case 'blackhole_m': return '🌀';
             case 'blackhole_l': return '🌌';

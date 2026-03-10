@@ -785,6 +785,11 @@ export class Tank {
             damage = 30; // Damage of sub-munitions
             projectileColor = '#ff00ff';
             special = 'cluster';
+        } else if (this.selectedWeapon === 'impact_piston') {
+            explosionRadius = 35;
+            damage = 15;
+            projectileColor = '#888888';
+            special = 'piston';
         } else if (this.selectedWeapon === 'dirtball') {
             explosionRadius = 30;
             damage = 0;
@@ -1038,6 +1043,40 @@ export class Tank {
 
         if (special === 'black_hole') {
             this.handleBlackHoleImpact(proj);
+            return;
+        }
+
+        if (special === 'piston') {
+            console.log("PISTON IMPACT!");
+            state.tanks.forEach(otherTank => {
+                if (!otherTank.alive) return;
+                const dx = (otherTank.x + otherTank.width / 2) - x;
+                const dy = (otherTank.y - otherTank.height / 2) - y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < explosionRadius) {
+                    const force = (1 - dist / explosionRadius);
+                    const angle = Math.atan2(dy, dx);
+                    
+                    // Mechanical Piston Logic: Skill shot based on proximity
+                    // Base impulse is high (25) to potentially reach re-entry speed (12+)
+                    const impulse = force * 25; 
+                    
+                    otherTank.vx += Math.cos(angle) * impulse;
+                    otherTank.vy += Math.sin(angle) * impulse;
+                    
+                    // If hit from below (dy < 0), bias the force upwards for a clean launch
+                    if (dy > 0) {
+                        otherTank.vy -= force * 10;
+                    }
+
+                    otherTank.lastSolidY = otherTank.y;
+                }
+            });
+            triggerScreenShake(10, 300);
+            createExplosion(x, y, 15, '#888888', 300); // Small, sharp visual
+            // Low terrain removal
+            if (state.terrain.explode) state.terrain.explode(x, y, 10);
             return;
         }
 
