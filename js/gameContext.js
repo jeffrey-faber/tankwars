@@ -409,7 +409,7 @@ export function draw() {
             while (state.windParticles.length < particleCount) {
                 state.windParticles.push({
                     x: Math.random() * state.canvas.width,
-                    y: Math.random() * state.canvas.height,
+                    y: Math.random() * (state.canvas.height / 5), // Only top 1/5th
                     speed: 1.2 + Math.random() * 3.0,
                     length: 6 + Math.random() * 10 // Smaller streaks
                 });
