@@ -156,15 +156,24 @@ export class Tank {
         }
     }
 
-    handleLanding(currentY) {
+    handleLanding(currentY, impactVelocity = 0) {
         const fallDistance = currentY - this.lastSolidY;
         
+        // Calculate damage based on both DISTANCE and VELOCITY
+        // This ensures high-speed launches are lethal even if the ground moved up to meet them.
+        let damage = 0;
         if (fallDistance > this.safeFallHeight) {
+            const excess = fallDistance - this.safeFallHeight;
+            damage += Math.floor(excess * this.fallDamageMultiplier);
+        }
+
+        // Add velocity-based damage (any impact over 10vy is dangerous)
+        if (impactVelocity > 10) {
+            damage += Math.floor((impactVelocity - 8) * 15);
+        }
+        
+        if (damage > 0) {
             if (!this.isInitialSpawn && !this.teleportImmunity) {
-                const excess = fallDistance - this.safeFallHeight;
-                let damage = Math.floor(excess * this.fallDamageMultiplier);
-                
-                if (damage > 0) {
                     // Parachute mitigation
                     if (this.parachuteDurability > 0) {
                         const absorbed = Math.min(damage, this.parachuteDurability);
@@ -1175,18 +1184,32 @@ export class Tank {
             // Sub-pixel safety: if we crossed stable ground, land
             if (this.y >= finalStableY) {
                 this.y = finalStableY;
+                const finalVy = this.vy;
                 this.vy = 0;
-                this.handleLanding(this.y);
+                this.handleLanding(this.y, finalVy);
             }
         } else if (this.y > finalGroundY) {
             // BURIED: Snap to surface
             this.y = finalGroundY;
             this.vy = 0;
-            this.lastSolidY = this.y;
+            // DO NOT update lastSolidY here to ensure buried-to-surface doesn't reset fall distance
         } else {
             // ON STABLE GROUND
             this.vy = 0;
             this.lastSolidY = this.y;
+
+            // Slope Sliding Logic: If the surface is very uneven, add some VX
+            if (Math.abs(highestStableGround - highestGround) > 5) {
+                // Determine direction of slope
+                const leftY = this.samplePoint(terrain, leftX);
+                const rightY = this.samplePoint(terrain, rightX);
+                if (leftY !== null && rightY !== null) {
+                    const slope = rightY - leftY;
+                    if (Math.abs(slope) > 8) {
+                        this.vx += (slope > 0 ? -0.5 : 0.5); // Slide down
+                    }
+                }
+            }
         }
         
         this.checkBuried(terrain);
@@ -1203,6 +1226,14 @@ export class Tank {
                 break;
             }
         }
+    }
+
+    samplePoint(terrain, x) {
+        const canvasHeight = state.canvas?.height || 800;
+        for (let y = 0; y < canvasHeight; y++) {
+            if (terrain.isSolid(x, y)) return y;
+        }
+        return null;
     }
 
     aiFire() {
