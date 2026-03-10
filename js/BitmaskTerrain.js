@@ -186,6 +186,26 @@ export class BitmaskTerrain {
         this.updateCanvas();
     }
 
+    shiftColumn(x, distance) {
+        if (x < 0 || x >= this.width) return;
+        if (Math.abs(distance) < 1) return;
+
+        const pixels = [];
+        for (let y = 0; y < this.height - 1; y++) {
+            if (this.isSolid(x, y)) {
+                pixels.push(y);
+                this.setSolid(x, y, false);
+            }
+        }
+
+        pixels.forEach(y => {
+            const newY = Math.floor(y + distance);
+            if (newY >= 0 && newY < this.height - 1) {
+                this.setSolid(x, newY, true);
+            }
+        });
+    }
+
     removeTerrainCone(centerX, centerY, radius, centralAngle, spread) {
         const r2 = radius * radius;
         const xMin = Math.max(0, Math.floor(centerX - radius));

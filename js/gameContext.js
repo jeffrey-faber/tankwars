@@ -44,7 +44,8 @@ export const state = {
     activeExplosions: [], // Centralized explosion tracking
     screenShake: { intensity: 0, startTime: 0, duration: 0 },
     laserBeams: [], // transient beam visuals: { x1, y1, x2, y2, width, color, expiresAt, duration }
-    windParticles: [] // visual only particles for wind
+    windParticles: [], // visual only particles for wind
+    activeGlobalWaves: [] // global map effects: { x, speed, amplitude, frequency }
 };
 
 export const EDGE_BEHAVIORS = {

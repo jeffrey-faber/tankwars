@@ -328,6 +328,19 @@ export class Store {
                     damage: 0,
                     special: 'terrain_shove'
                 }
+            },
+            {
+                id: 'global_wave',
+                name: 'Seismic Harmonic Oscillator',
+                description: 'Sends a devastating tectonic ripple across the entire map. The world is but a wave.',
+                price: 400,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 0, // Global
+                    damage: 0,
+                    special: 'global_wave'
+                }
             }
         ];
         
@@ -528,6 +541,7 @@ export class Store {
             case 'wind_shuffler': return '🎲';
             case 'wind_extreme': return '🌪️';
             case 'wind_cyclone': return '🌬️';
+            case 'global_wave': return '🌊';
             default: return '❓';
         }
     }

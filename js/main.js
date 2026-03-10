@@ -391,6 +391,43 @@ function gameLoop() {
             state.terrain.updateGravity();
         }
 
+        // Process Global Waves (Tectonic Ripple)
+        if (state.activeGlobalWaves && state.activeGlobalWaves.length > 0) {
+            for (let i = state.activeGlobalWaves.length - 1; i >= 0; i--) {
+                const wave = state.activeGlobalWaves[i];
+                const prevX = wave.x;
+                wave.x += wave.speed;
+
+                // Apply effect to every X between prevX and current wave.x
+                const startX = Math.floor(prevX);
+                const endX = Math.min(state.canvas.width, Math.floor(wave.x));
+                
+                for (let x = startX; x < endX; x++) {
+                    const shiftY = Math.sin(x * wave.frequency + wave.phase) * wave.amplitude;
+                    state.terrain.shiftColumn(x, shiftY);
+                    
+                    // Shift tanks in this column
+                    state.tanks.forEach(tank => {
+                        if (!tank.alive) return;
+                        const tx = Math.floor(tank.x + tank.width / 2);
+                        if (tx === x) {
+                            tank.y += shiftY;
+                            tank.lastSolidY = tank.y;
+                        }
+                    });
+                }
+
+                if (startX < state.canvas.width) {
+                    state.terrain.updateCanvas();
+                }
+
+                // Remove when it leaves the screen
+                if (wave.x > state.canvas.width + 100) {
+                    state.activeGlobalWaves.splice(i, 1);
+                }
+            }
+        }
+
         draw();
         
         if (state.projectiles.length === 0) {

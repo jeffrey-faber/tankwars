@@ -742,6 +742,11 @@ export class Tank {
             damage = 0;
             projectileColor = '#ffffff';
             special = 'terrain_shove';
+        } else if (this.selectedWeapon === 'global_wave') {
+            explosionRadius = 0;
+            damage = 0;
+            projectileColor = '#00ffff';
+            special = 'global_wave';
         }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
@@ -952,21 +957,34 @@ export class Tank {
             }
 
             // Shift tanks in range
-            state.tanks.forEach(tank => {
-                if (!tank.alive) return;
-                const dx = x - (tank.x + tank.width / 2);
-                const dy = y - (tank.y - tank.height / 2);
+            state.tanks.forEach(otherTank => {
+                if (!otherTank.alive) return;
+                const dx = x - (otherTank.x + otherTank.width / 2);
+                const dy = y - (otherTank.y - otherTank.height / 2);
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < explosionRadius) {
-                    tank.x += distance;
-                    tank.lastSolidY = tank.y; // Update for fall damage if they were pushed off a ledge
+                    otherTank.x += distance;
+                    otherTank.lastSolidY = otherTank.y; // Update for fall damage if they were pushed off a ledge
                 }
             });
 
             // Effects
             triggerScreenShake(15, 600);
             createExplosion(x, y, explosionRadius, 'rgba(255, 255, 255, 0.3)');
+            return;
+        }
+
+        if (special === 'global_wave') {
+            console.log("TECTONIC RIPPLE TRIGGERED!");
+            state.activeGlobalWaves.push({
+                x: 0,
+                speed: 15,
+                amplitude: 40 + Math.random() * 40,
+                frequency: 0.02 + Math.random() * 0.03,
+                phase: Math.random() * Math.PI * 2
+            });
+            triggerScreenShake(20, 2000);
             return;
         }
 
