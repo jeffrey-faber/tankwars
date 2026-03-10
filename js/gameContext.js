@@ -145,7 +145,10 @@ export function isSettling() {
     // 1. Projectiles in flight?
     if (state.projectiles.length > 0) return true;
     
-    // 2. Terrain frozen or Tank gravity frozen (Earthquake sequence)?
+    // 2. Tectonic ripples in progress?
+    if (state.activeGlobalWaves && state.activeGlobalWaves.length > 0) return true;
+    
+    // 3. Terrain frozen or Tank gravity frozen (Earthquake sequence)?
     if (state.terrain && state.terrain.freezeGravity) return true;
     if (state.freezeTankGravity) return true;
     

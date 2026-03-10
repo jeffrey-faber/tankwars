@@ -341,6 +341,19 @@ export class Store {
                     damage: 0,
                     special: 'global_wave'
                 }
+            },
+            {
+                id: 'global_wave_crazy',
+                name: 'Tectonic Catapult System',
+                description: 'ULTRA-EXPERIMENTAL. High-frequency tectonic ripple that launches tanks skyward. Pure chaos.',
+                price: 600,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 0, // Global
+                    damage: 0,
+                    special: 'global_wave_crazy'
+                }
             }
         ];
         
@@ -542,6 +555,7 @@ export class Store {
             case 'wind_extreme': return '🌪️';
             case 'wind_cyclone': return '🌬️';
             case 'global_wave': return '🌊';
+            case 'global_wave_crazy': return '🌋';
             default: return '❓';
         }
     }

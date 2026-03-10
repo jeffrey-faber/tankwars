@@ -747,6 +747,11 @@ export class Tank {
             damage = 0;
             projectileColor = '#00ffff';
             special = 'global_wave';
+        } else if (this.selectedWeapon === 'global_wave_crazy') {
+            explosionRadius = 0;
+            damage = 0;
+            projectileColor = '#ff00ff';
+            special = 'global_wave_crazy';
         }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
@@ -982,9 +987,24 @@ export class Tank {
                 speed: 15,
                 amplitude: 40 + Math.random() * 40,
                 frequency: 0.02 + Math.random() * 0.03,
-                phase: Math.random() * Math.PI * 2
+                phase: Math.random() * Math.PI * 2,
+                launch: false
             });
             triggerScreenShake(20, 2000);
+            return;
+        }
+
+        if (special === 'global_wave_crazy') {
+            console.log("CRAZY TECTONIC WAVE TRIGGERED!");
+            state.activeGlobalWaves.push({
+                x: 0,
+                speed: 20, // Faster
+                amplitude: 80 + Math.random() * 60, // Much higher peaks
+                frequency: 0.04 + Math.random() * 0.04, // Sharper peaks
+                phase: Math.random() * Math.PI * 2,
+                launch: true // Enable launching logic
+            });
+            triggerScreenShake(30, 2500);
             return;
         }
 

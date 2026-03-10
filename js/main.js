@@ -413,6 +413,14 @@ function gameLoop() {
                         if (tx === x) {
                             tank.y += shiftY;
                             tank.lastSolidY = tank.y;
+
+                            // CRAZY MODE: Launch tanks if the shift is upwards (negative) and significant
+                            if (wave.launch && shiftY < -5) {
+                                // Add upward velocity proportional to the wave shift
+                                tank.vy = (tank.vy || 0) + (shiftY * 0.4); 
+                                // Add a small amount of horizontal drift too
+                                tank.vx = (tank.vx || 0) + (Math.cos(wave.phase) * 5);
+                            }
                         }
                     });
                 }
