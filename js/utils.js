@@ -72,7 +72,7 @@ export function selectRandomEdgeBehavior() {
 export function calculateWind(intensity) {
     let actualIntensity = intensity;
     if (intensity === 'random') {
-        const options = ['none', 'low', 'normal', 'high'];
+        const options = ['none', 'low', 'normal', 'high', 'extreme'];
         actualIntensity = options[Math.floor(Math.random() * options.length)];
     }
 
@@ -82,7 +82,11 @@ export function calculateWind(intensity) {
         case 'low':
             return (Math.random() * 2 - 1) * 0.005;
         case 'high':
-            return (Math.random() * 2 - 1) * 0.04;
+            return (Math.random() * 2 - 1) * 0.06;
+        case 'extreme':
+            // Minimum of 0.1 (absolute) to ensure it's always powerful
+            const dir = Math.random() > 0.5 ? 1 : -1;
+            return dir * (0.1 + Math.random() * 0.05); 
         case 'normal':
         default:
             return (Math.random() * 2 - 1) * 0.015;

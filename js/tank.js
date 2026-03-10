@@ -647,8 +647,8 @@ export class Tank {
         if (this.selectedWeapon === 'wind_extreme') {
             const item = this.inventory.find(i => i.id === 'wind_extreme');
             if (item) {
-                // Force extreme wind (high intensity)
-                state.wind = calculateWind('high');
+                // Force extreme wind (new extreme intensity)
+                state.wind = calculateWind('extreme');
                 console.log(`EXTREME WIND TRIGGERED: ${state.wind}`);
                 if (state.ctx && state.canvas && draw) {
                     createExplosion(this.x + this.width/2, this.y - this.height/2, 80, '#aaaaff');

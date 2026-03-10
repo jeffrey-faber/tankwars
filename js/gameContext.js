@@ -401,22 +401,22 @@ export function draw() {
         
         // Render Wind Particles (Visual only)
         const windIntensity = Math.abs(state.wind);
-        if (windIntensity > 0.008) { // Only show for Med to High wind
-            const particleCount = Math.floor(windIntensity * 1500);
+        if (windIntensity > 0.002) { // Lowered threshold (was 0.008)
+            const particleCount = Math.floor(windIntensity * 2500); // Increased density (was 1500)
             
             // Add new particles if needed
             while (state.windParticles.length < particleCount) {
                 state.windParticles.push({
                     x: Math.random() * state.canvas.width,
                     y: Math.random() * state.canvas.height,
-                    speed: 0.5 + Math.random() * 2
+                    speed: 0.8 + Math.random() * 2.5
                 });
             }
             
-            state.ctx.fillStyle = 'rgba(200, 200, 255, 0.4)';
+            state.ctx.fillStyle = 'rgba(220, 220, 255, 0.6)'; // More opaque (was 0.4)
             for (let i = state.windParticles.length - 1; i >= 0; i--) {
                 const p = state.windParticles[i];
-                p.x += state.wind * p.speed * 100;
+                p.x += state.wind * p.speed * 150; // Faster motion (was 100)
                 
                 // Wrap around
                 if (p.x < 0) p.x = state.canvas.width;
