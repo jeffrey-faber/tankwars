@@ -315,6 +315,19 @@ export class Store {
                     type: 'utility',
                     special: 'extreme_wind'
                 }
+            },
+            {
+                id: 'wind_cyclone',
+                name: 'Aeolian Tectonic Shifter',
+                description: 'Deploys a super-cyclone that physically shoves the landscape. Tanks drift with the terrain.',
+                price: 200,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 300,
+                    damage: 0,
+                    special: 'terrain_shove'
+                }
             }
         ];
         
@@ -514,6 +527,7 @@ export class Store {
             case 'wind_nullifier': return '🛑';
             case 'wind_shuffler': return '🎲';
             case 'wind_extreme': return '🌪️';
+            case 'wind_cyclone': return '🌬️';
             default: return '❓';
         }
     }

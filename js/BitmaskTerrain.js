@@ -152,6 +152,40 @@ export class BitmaskTerrain {
         }
     }
 
+    shiftTerrain(centerX, centerY, radius, distance) {
+        const r2 = radius * radius;
+        const xMin = Math.max(0, Math.floor(centerX - radius));
+        const xMax = Math.min(this.width - 1, Math.floor(centerX + radius));
+        const yMin = Math.max(0, Math.floor(centerY - radius));
+        const yMax = Math.min(this.height - 2, Math.floor(centerY + radius));
+
+        const pixelsToMove = [];
+
+        // 1. Collect solid pixels and clear them from the source
+        for (let y = yMin; y <= yMax; y++) {
+            for (let x = xMin; x <= xMax; x++) {
+                const dx = x - centerX;
+                const dy = y - centerY;
+                if (dx * dx + dy * dy <= r2) {
+                    if (this.isSolid(x, y)) {
+                        pixelsToMove.push({ x, y });
+                        this.setSolid(x, y, false);
+                    }
+                }
+            }
+        }
+
+        // 2. Re-set them at the new displaced location
+        pixelsToMove.forEach(p => {
+            const newX = Math.floor(p.x + distance);
+            if (newX >= 0 && newX < this.width) {
+                this.setSolid(newX, p.y, true);
+            }
+        });
+
+        this.updateCanvas();
+    }
+
     removeTerrainCone(centerX, centerY, radius, centralAngle, spread) {
         const r2 = radius * radius;
         const xMin = Math.max(0, Math.floor(centerX - radius));

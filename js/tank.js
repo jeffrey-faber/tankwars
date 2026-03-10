@@ -386,6 +386,8 @@ export class Tank {
             ctx.strokeStyle = '#440044';
         } else if (this.selectedWeapon === 'blackhole_l') {
             ctx.strokeStyle = '#aa00ff';
+        } else if (this.selectedWeapon === 'wind_cyclone') {
+            ctx.strokeStyle = '#ffffff';
         } else {
             ctx.strokeStyle = 'black';
         }
@@ -735,6 +737,11 @@ export class Tank {
             explosionRadius *= (state.suddenDeath.nukeScale || 1);
             damage *= (state.suddenDeath.nukeScale || 1);
             if (state.suddenDeath.nukeScale > 1.5) projectileColor = 'red';
+        } else if (this.selectedWeapon === 'wind_cyclone') {
+            explosionRadius = 300;
+            damage = 0;
+            projectileColor = '#ffffff';
+            special = 'terrain_shove';
         }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
@@ -928,6 +935,38 @@ export class Tank {
 
         if (special === 'black_hole') {
             this.handleBlackHoleImpact(proj);
+            return;
+        }
+
+        if (special === 'terrain_shove') {
+            // Calculate shift distance based on wind
+            // If wind is 0, use a default small random shift
+            const baseShift = 100;
+            const windMultiplier = 2000;
+            const distance = (state.wind === 0) 
+                ? (Math.random() > 0.5 ? baseShift : -baseShift) 
+                : state.wind * windMultiplier;
+
+            if (state.terrain.shiftTerrain) {
+                state.terrain.shiftTerrain(x, y, explosionRadius, distance);
+            }
+
+            // Shift tanks in range
+            state.tanks.forEach(tank => {
+                if (!tank.alive) return;
+                const dx = x - (tank.x + tank.width / 2);
+                const dy = y - (tank.y - tank.height / 2);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < explosionRadius) {
+                    tank.x += distance;
+                    tank.lastSolidY = tank.y; // Update for fall damage if they were pushed off a ledge
+                }
+            });
+
+            // Effects
+            triggerScreenShake(15, 600);
+            createExplosion(x, y, explosionRadius, 'rgba(255, 255, 255, 0.3)');
             return;
         }
 
