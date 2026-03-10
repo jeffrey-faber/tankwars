@@ -396,10 +396,12 @@ export function drawHUD() {
         currentY += 20;
     }
 
-    if (isSettling()) {
+    if (state.isTerrainSettling) {
         state.ctx.fillStyle = 'orange';
-        state.ctx.font = 'bold 16px Arial';
-        state.ctx.fillText("SETTLING...", state.canvas.width / 2 - 50, state.canvas.height / 2);
+        state.ctx.font = 'bold 14px Arial';
+        state.ctx.textAlign = 'center';
+        state.ctx.fillText("TERRAIN SETTLING...", state.canvas.width / 2, 30);
+        state.ctx.textAlign = 'left'; // Reset
     }
 }
 
