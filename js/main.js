@@ -122,8 +122,9 @@ function initGameFromConfig(config) {
     state.deathTriggerChance = config.deathTriggerChance !== undefined ? config.deathTriggerChance : 0.1;
     state.edgeBehavior = config.edgeBehavior || 'impact';
     state.windIntensity = config.windIntensity || 'normal';
+    state.mapStyle = config.mapStyle || 'random';
     state.wind = calculateWind(state.windIntensity);
-    state.mapStyle = urlParams.map || config.mapStyle || 'random';
+    state.mapStyle = urlParams.map || state.mapStyle;
     state.turnTimer = config.turnTimer || { enabled: false, seconds: 30 };
     if (state.edgeBehavior === 'random') {
         state.activeEdgeBehavior = selectRandomEdgeBehavior();

@@ -643,6 +643,23 @@ export class Tank {
             }
             return;
         }
+
+        if (this.selectedWeapon === 'wind_extreme') {
+            const item = this.inventory.find(i => i.id === 'wind_extreme');
+            if (item) {
+                // Force extreme wind (high intensity)
+                state.wind = calculateWind('high');
+                console.log(`EXTREME WIND TRIGGERED: ${state.wind}`);
+                if (state.ctx && state.canvas && draw) {
+                    createExplosion(this.x + this.width/2, this.y - this.height/2, 80, '#aaaaff');
+                }
+                const index = this.inventory.findIndex(item => item.id === 'wind_extreme');
+                if (index !== -1) this.inventory.splice(index, 1);
+                this.selectedWeapon = 'default';
+                startTurn(getNextAliveTankIndex(state.currentPlayer));
+            }
+            return;
+        }
         
         let explosionRadius = 15; 
         let damage = 50; // Default reduced to 50
@@ -978,7 +995,7 @@ export class Tank {
         
         const item = this.inventory[index];
         
-        if (item.effect.type === 'weapon' || item.effect.type === 'teleport' || item.effect.type === 'terrain_remover' || item.effect.type === 'healing') {
+        if (item.effect.type === 'weapon' || item.effect.type === 'teleport' || item.effect.type === 'terrain_remover' || item.effect.type === 'healing' || item.effect.type === 'utility') {
             // Select the item
             this.selectedWeapon = item.id;
             return true;

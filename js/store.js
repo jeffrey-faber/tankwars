@@ -304,6 +304,17 @@ export class Store {
                     type: 'utility',
                     special: 'randomize_wind'
                 }
+            },
+            {
+                id: 'wind_extreme',
+                name: 'Cyclone Engine',
+                description: 'Forces an extreme, high-velocity wind event. Use with caution.',
+                price: 120,
+                category: 'experimental',
+                effect: {
+                    type: 'utility',
+                    special: 'extreme_wind'
+                }
             }
         ];
         
@@ -502,6 +513,7 @@ export class Store {
             case 'blackhole_l': return '🌌';
             case 'wind_nullifier': return '🛑';
             case 'wind_shuffler': return '🎲';
+            case 'wind_extreme': return '🌪️';
             default: return '❓';
         }
     }
