@@ -402,9 +402,8 @@ export class BitmaskTerrain {
         if (moved) {
             // Only upload texture to GPU if something changed
             this.ctx.putImageData(this.imageData, 0, 0);
-            if (Math.random() < 0.01) console.log(`Gravity moved ${moveCount} pixels`);
         }
-        return moved;
+        return moveCount;
     }
 
     draw(ctx) {

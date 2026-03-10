@@ -388,7 +388,8 @@ function gameLoop() {
 
     if (!state.isGameOver) {
         if (state.terrain.updateGravity) {
-            state.isTerrainSettling = state.terrain.updateGravity();
+            const pixelsMoved = state.terrain.updateGravity();
+            state.isTerrainSettling = pixelsMoved > 50; // Threshold for "settled" (e.g. ignore tiny drifts)
         }
 
         // Process Global Waves (Tectonic Ripple)
