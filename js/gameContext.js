@@ -402,26 +402,26 @@ export function draw() {
         // Render Wind Particles (Visual only)
         const windIntensity = Math.abs(state.wind);
         if (windIntensity > 0.001) { 
-            // Fewer particles (multiplier reduced from 5000 to 800)
-            const particleCount = Math.floor(windIntensity * 800) + 5; 
+            // Keep count low (multiplier at 600)
+            const particleCount = Math.floor(windIntensity * 600) + 3; 
             
             // Add new particles if needed
             while (state.windParticles.length < particleCount) {
                 state.windParticles.push({
                     x: Math.random() * state.canvas.width,
                     y: Math.random() * state.canvas.height,
-                    speed: 1.5 + Math.random() * 4.0,
-                    length: 20 + Math.random() * 30 // Much longer streaks
+                    speed: 1.2 + Math.random() * 3.0,
+                    length: 6 + Math.random() * 10 // Smaller streaks
                 });
             }
             
-            state.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; // More opaque white
-            state.ctx.lineWidth = 3; // Much thicker lines
-            state.ctx.lineCap = 'round';
+            state.ctx.strokeStyle = 'rgba(40, 40, 40, 0.6)'; // Dark grey/black for subtlety
+            state.ctx.lineWidth = 1.5; // Thinner lines
+            state.ctx.lineCap = 'butt';
             
             for (let i = state.windParticles.length - 1; i >= 0; i--) {
                 const p = state.windParticles[i];
-                const moveSpeed = state.wind * p.speed * 250;
+                const moveSpeed = state.wind * p.speed * 200;
                 
                 state.ctx.beginPath();
                 state.ctx.moveTo(p.x, p.y);
@@ -431,8 +431,8 @@ export function draw() {
                 p.x += moveSpeed;
                 
                 // Wrap around
-                if (p.x < -100) p.x = state.canvas.width + 100;
-                if (p.x > state.canvas.width + 100) p.x = -100;
+                if (p.x < -50) p.x = state.canvas.width + 50;
+                if (p.x > state.canvas.width + 50) p.x = -50;
                 
                 if (i > particleCount) {
                     state.windParticles.splice(i, 1);
