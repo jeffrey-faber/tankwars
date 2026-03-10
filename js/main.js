@@ -147,6 +147,8 @@ function initGameFromConfig(config) {
         state.suddenDeath.isResolving = false;
     }
 
+    state.activeGlobalWaves = [];
+
     // Set canvas dimensions
     const canvasWidth = 1200;
     const canvasHeight = 600;
@@ -276,6 +278,8 @@ function resetRound() {
         state.suddenDeath.isResolving = false;
     }
 
+    state.activeGlobalWaves = [];
+
     // Selection of active edge behavior for this round
     if (state.edgeBehavior === 'random') {
         state.activeEdgeBehavior = selectRandomEdgeBehavior();
@@ -391,7 +395,7 @@ function gameLoop() {
     if (!state.isGameOver) {
         if (state.terrain.updateGravity) {
             const pixelsMoved = state.terrain.updateGravity();
-            state.isTerrainSettling = pixelsMoved > 50; // Threshold for "settled" (e.g. ignore tiny drifts)
+            state.isTerrainSettling = pixelsMoved > 100; 
         }
 
         // Process Global Waves (Tectonic Ripple)

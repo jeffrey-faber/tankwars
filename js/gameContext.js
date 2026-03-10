@@ -393,6 +393,13 @@ export function drawHUD() {
         else if (state.suddenDeath.activeType === 'health_decay') label += "SPECTRAL DECAY";
         else if (state.suddenDeath.activeType === 'blackhole_storm') label += "SINGULARITY EVENT";
         state.ctx.fillText(label, 10, currentY);
+        currentY += 20;
+    }
+
+    if (isSettling()) {
+        state.ctx.fillStyle = 'orange';
+        state.ctx.font = 'bold 16px Arial';
+        state.ctx.fillText("SETTLING...", state.canvas.width / 2 - 50, state.canvas.height / 2);
     }
 }
 
