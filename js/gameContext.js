@@ -402,26 +402,33 @@ export function draw() {
         // Render Wind Particles (Visual only)
         const windIntensity = Math.abs(state.wind);
         if (windIntensity > 0.001) { 
-            // Keep count low (multiplier at 600)
-            const particleCount = Math.floor(windIntensity * 600) + 3; 
+            // Increase base multiplier to account for full-height distribution
+            const particleCount = Math.floor(windIntensity * 1500) + 5; 
             
             // Add new particles if needed
             while (state.windParticles.length < particleCount) {
+                // Use squared random for vertical distribution (skews heavily towards top)
+                const skewedY = Math.pow(Math.random(), 2.5) * state.canvas.height;
+                
                 state.windParticles.push({
                     x: Math.random() * state.canvas.width,
-                    y: Math.random() * (state.canvas.height / 5), // Only top 1/5th
+                    y: skewedY,
                     speed: 1.2 + Math.random() * 3.0,
-                    length: 6 + Math.random() * 10 // Smaller streaks
+                    length: 2 + Math.random() * 4 // Shorter streaks (was 6-16)
                 });
             }
             
-            state.ctx.strokeStyle = 'rgba(40, 40, 40, 0.6)'; // Dark grey/black for subtlety
-            state.ctx.lineWidth = 1.5; // Thinner lines
+            state.ctx.strokeStyle = 'rgba(40, 40, 40, 0.6)'; 
+            state.ctx.lineWidth = 1.5; 
             state.ctx.lineCap = 'butt';
             
             for (let i = state.windParticles.length - 1; i >= 0; i--) {
                 const p = state.windParticles[i];
                 const moveSpeed = state.wind * p.speed * 200;
+                
+                // Fade opacity based on height (top is clearer, bottom is invisible)
+                const heightFactor = 1 - (p.y / state.canvas.height);
+                state.ctx.globalAlpha = heightFactor; 
                 
                 state.ctx.beginPath();
                 state.ctx.moveTo(p.x, p.y);
@@ -429,6 +436,7 @@ export function draw() {
                 state.ctx.stroke();
 
                 p.x += moveSpeed;
+                state.ctx.globalAlpha = 1.0; // Reset
                 
                 // Wrap around
                 if (p.x < -50) p.x = state.canvas.width + 50;
