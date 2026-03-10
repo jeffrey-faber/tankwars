@@ -2139,22 +2139,28 @@ export class GhostAI extends AIController {
         const side = tx > myTankX ? 1 : -1;
         const targetName = target?.name || 'unknown';
         
-        // Power-scaled Damping per turn
+        // 1. DIRECTIONAL ERROR CALCULATION
+        // If we fired Right (side 1) and impact was short (impactX < tx), error is positive (tx - impactX).
+        // If we fired Left (side -1) and impact was short (impactX > tx), error is negative (tx - impactX).
+        // By multiplying by side, we get a consistent "How much further forward should I have aimed" value.
+        const rawErrorX = tx - impactX;
+        const errorX = rawErrorX * side;
+        const errorY = ty - impactY;
+
+        // 2. DAMPING (Persistence)
+        // Only damp if the shot was a total miss or side hit. 
+        // If it was a reasonable shot, we want to KEEP this knowledge.
         const lastMeta = this.lastShotMeta.get(targetName);
         const lastPower = lastMeta?.power || 50;
-        let damping = 0.8;
+        
+        let damping = 0.95; // Much higher persistence by default
         if (lastPower < 35) damping = 1.0;
-        else if (lastPower <= 40) damping = 0.9;
+        else if (lastPower <= 45) damping = 0.98;
 
         this.sharedOffset.x *= damping;
         this.sharedOffset.y *= damping;
 
-        // GLOBAL LEARNING: Apply error correction (ActualTarget - Impact) to shared knowledge
-        // We store x offset relative to the direction of fire (directional offset)
-        const rawErrorX = tx - impactX;
-        const errorX = rawErrorX * side;
-        const errorY = ty - impactY;
-        
+        // 3. ACCUMULATION
         const canvasWidth = state.canvas?.width || 1200;
         const sideHit = impactX <= 2 || impactX >= (canvasWidth - 2);
         const edgeMode = state.activeEdgeBehavior || 'impact';
@@ -2163,25 +2169,14 @@ export class GhostAI extends AIController {
         if (sideHitInImpactMode) {
             const streak = Math.min(4, (this.sideHitStreaks.get(targetName) || 0) + 1);
             this.sideHitStreaks.set(targetName, streak);
-
-            // Side-wall misses produce huge X error; damp learning to avoid orbiting feedback loops.
-            this.sharedOffset.x += errorX * 0.2;
-            this.sharedOffset.y += errorY * 0.35;
-
-            // Power-cut response:
-            // first side hit: strong trim; repeated side hits: hard half-power clamp.
-            const currentScale = this.powerScaleByTarget.get(targetName) || 1;
-            const cutFactor = streak >= 2 ? 0.5 : 0.62;
-            this.powerScaleByTarget.set(targetName, Math.max(0.2, currentScale * cutFactor));
+            // Damp learning on side hits to avoid feedback loops
+            this.sharedOffset.x += errorX * 0.3;
+            this.sharedOffset.y += errorY * 0.4;
         } else {
             this.sideHitStreaks.set(targetName, 0);
-            this.sharedOffset.x += errorX;
-            this.sharedOffset.y += errorY;
-
-            // Recover power scale slowly after non-side impacts.
-            const currentScale = this.powerScaleByTarget.get(targetName) || 1;
-            const recovered = currentScale + ((1 - currentScale) * 0.2);
-            this.powerScaleByTarget.set(targetName, Math.max(0.2, Math.min(1, recovered)));
+            // Strong learning for valid field impacts
+            this.sharedOffset.x += errorX * 0.8; 
+            this.sharedOffset.y += errorY * 0.8;
         }
 
         // CAP OFFSET: Prevent ghost target from flying out of realistic bounds
@@ -2196,7 +2191,9 @@ export class GhostAI extends AIController {
         const tankX = tank.x + tank.width / 2;
         const side = targetX > tankX ? 1 : -1;
 
-        // 1. Create the "Ghost Target" (Aim Point = Actual Target + Directional Shared Knowledge)
+        // 1. Create the "Ghost Target" 
+        // sharedOffset.x is stored as 'extra forward distance'. 
+        // We add it to the base target position in the direction of fire.
         const aimX = targetX + (this.sharedOffset.x * side);
         const aimY = (target.y - target.height / 2) + this.sharedOffset.y;
 
