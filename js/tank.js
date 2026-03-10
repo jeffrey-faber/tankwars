@@ -170,6 +170,21 @@ export class Tank {
         // Add velocity-based damage (any impact over 10vy is dangerous)
         if (impactVelocity > 10) {
             damage += Math.floor((impactVelocity - 8) * 15);
+
+            // Kinetic Impact Crater
+            const craterRadius = impactVelocity * 1.8;
+            const centerX = this.x + this.width / 2;
+            const centerY = this.y - this.height / 2;
+
+            if (state.terrain && state.terrain.explode) {
+                console.log(`KINETIC IMPACT! Velocity: ${Math.round(impactVelocity)}, Crater: ${Math.round(craterRadius)}`);
+                state.terrain.explode(centerX, centerY, craterRadius);
+                state.terrain.updateCanvas();
+            }
+
+            // Visual explosion for the impact
+            createExplosion(centerX, centerY, craterRadius, '#555555', 600);
+            triggerScreenShake(impactVelocity * 0.5, 400);
         }
         
         if (damage > 0) {
@@ -353,6 +368,39 @@ export class Tank {
     }
 
     draw(ctx) {
+        // Re-entry Trail / Velocity Visuals
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > 12) {
+            ctx.save();
+            const angle = Math.atan2(this.vy, this.vx);
+            const centerX = this.x + this.width / 2;
+            const centerY = this.y - this.height / 2;
+            
+            // Draw flame streak
+            const gradient = ctx.createLinearGradient(0, 0, -speed * 5, 0);
+            gradient.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.4)');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.translate(centerX, centerY);
+            ctx.rotate(angle);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(-this.width, -this.height / 2, -speed * 4, this.height);
+            
+            // Add some "sparks"
+            if (Math.random() > 0.5) {
+                state.activeExplosions.push({
+                    x: centerX - Math.cos(angle) * 20,
+                    y: centerY - Math.sin(angle) * 20,
+                    radius: 5 + Math.random() * 10,
+                    color: Math.random() > 0.5 ? 'orange' : 'white',
+                    startTime: performance.now(),
+                    duration: 200
+                });
+            }
+            ctx.restore();
+        }
+
         // Off-screen indicator (if tank is above the ceiling)
         if (this.y < 0) {
             ctx.fillStyle = this.color;
