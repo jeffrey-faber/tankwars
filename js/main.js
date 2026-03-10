@@ -388,7 +388,7 @@ function gameLoop() {
 
     if (!state.isGameOver) {
         if (state.terrain.updateGravity) {
-            state.terrain.updateGravity();
+            state.isTerrainSettling = state.terrain.updateGravity();
         }
 
         // Process Global Waves (Tectonic Ripple)

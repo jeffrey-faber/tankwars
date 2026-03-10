@@ -27,6 +27,7 @@ export const state = {
     windIntensity: 'normal',
     turnTimer: { enabled: false, seconds: 30 },
     remainingTurnTime: 0,
+    isTerrainSettling: false, 
     // Sudden Death
     suddenDeath: {
         active: false,
@@ -148,16 +149,19 @@ export function isSettling() {
     // 2. Tectonic ripples in progress?
     if (state.activeGlobalWaves && state.activeGlobalWaves.length > 0) return true;
     
-    // 3. Terrain frozen or Tank gravity frozen (Earthquake sequence)?
+    // 3. Terrain falling?
+    if (state.isTerrainSettling) return true;
+
+    // 4. Terrain frozen or Tank gravity frozen (Earthquake sequence)?
     if (state.terrain && state.terrain.freezeGravity) return true;
     if (state.freezeTankGravity) return true;
     
-    // 3. AI is currently thinking/preparing to fire?
+    // 5. AI is currently thinking/preparing to fire?
     if (!state.aiReadyToFire) return true;
     
-    // 4. Any tanks still falling?
-    const fallingTank = state.tanks.find(t => t.alive && Math.abs(t.vy) > 0.1);
-    if (fallingTank) return true;
+    // 6. Any tanks still falling or drifting with momentum?
+    const movingTank = state.tanks.find(t => t.alive && (Math.abs(t.vy) > 0.1 || Math.abs(t.vx) > 0.1));
+    if (movingTank) return true;
 
     return false;
 }
