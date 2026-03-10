@@ -2136,66 +2136,45 @@ export class GhostAI extends AIController {
         const myTankX = myTank.x + myTank.width / 2;
         const tx = target.x + target.width / 2;
         const ty = target.y - target.height / 2;
-        const side = tx > myTankX ? 1 : -1;
         const targetName = target?.name || 'unknown';
         
-        // 1. DIRECTIONAL ERROR CALCULATION
-        // If we fired Right (side 1) and impact was short (impactX < tx), error is positive (tx - impactX).
-        // If we fired Left (side -1) and impact was short (impactX > tx), error is negative (tx - impactX).
-        // By multiplying by side, we get a consistent "How much further forward should I have aimed" value.
-        const rawErrorX = tx - impactX;
-        const errorX = rawErrorX * side;
-        const errorY = ty - impactY;
-
-        // 2. DAMPING (Persistence)
-        // Only damp if the shot was a total miss or side hit. 
-        // If it was a reasonable shot, we want to KEEP this knowledge.
+        // 1. DAMPING (Persistence)
+        // Adjust Ghost: 0.8 damping effect per turn (as requested previously)
+        // Scaled by power (as requested previously)
         const lastMeta = this.lastShotMeta.get(targetName);
         const lastPower = lastMeta?.power || 50;
-        
-        let damping = 0.95; // Much higher persistence by default
+        let damping = 0.8; 
         if (lastPower < 35) damping = 1.0;
-        else if (lastPower <= 45) damping = 0.98;
+        else if (lastPower <= 40) damping = 0.9;
 
         this.sharedOffset.x *= damping;
         this.sharedOffset.y *= damping;
 
-        // 3. ACCUMULATION
-        const canvasWidth = state.canvas?.width || 1200;
-        const sideHit = impactX <= 2 || impactX >= (canvasWidth - 2);
-        const edgeMode = state.activeEdgeBehavior || 'impact';
-        const sideHitInImpactMode = sideHit && edgeMode === 'impact';
+        // 2. ERROR ACCUMULATION
+        // "adjusts its shot by how much it missed firing at a target exactly x diff y diff of the previous shot"
+        // error = Target - Impact
+        const errorX = tx - impactX;
+        const errorY = ty - impactY;
 
-        if (sideHitInImpactMode) {
-            const streak = Math.min(4, (this.sideHitStreaks.get(targetName) || 0) + 1);
-            this.sideHitStreaks.set(targetName, streak);
-            // Damp learning on side hits to avoid feedback loops
-            this.sharedOffset.x += errorX * 0.3;
-            this.sharedOffset.y += errorY * 0.4;
-        } else {
-            this.sideHitStreaks.set(targetName, 0);
-            // Strong learning for valid field impacts
-            this.sharedOffset.x += errorX * 0.8; 
-            this.sharedOffset.y += errorY * 0.8;
-        }
+        // Add 100% of the miss to the offset for instant adjustment
+        this.sharedOffset.x += errorX;
+        this.sharedOffset.y += errorY;
 
-        // CAP OFFSET: Prevent ghost target from flying out of realistic bounds
+        // Cap offset to reasonable screen bounds
         this.sharedOffset.x = Math.max(-1200, Math.min(1200, this.sharedOffset.x));
         this.sharedOffset.y = Math.max(-600, Math.min(600, this.sharedOffset.y));
 
-        console.log(`Ghost knowledge update. Directional Offset:`, this.sharedOffset);
+        console.log(`Ghost memory updated. Target miss was: ${Math.round(errorX)},${Math.round(errorY)}`);
     }
 
     calculateShot(tank, target, env) {
         const targetX = target.x + target.width / 2;
-        const tankX = tank.x + tank.width / 2;
-        const side = targetX > tankX ? 1 : -1;
+        const targetY = target.y - target.height / 2;
+        const targetName = target?.name || 'unknown';
 
-        // 1. Create the "Ghost Target" 
-        // sharedOffset.x is stored as 'extra forward distance'. 
-        // We add it to the base target position in the direction of fire.
-        const aimX = targetX + (this.sharedOffset.x * side);
-        const aimY = (target.y - target.height / 2) + this.sharedOffset.y;
+        // 1. Aim at Target + Accumulated Miss Offset
+        const aimX = targetX + this.sharedOffset.x;
+        const aimY = targetY + this.sharedOffset.y;
 
         const ghostProxy = { 
             x: aimX - target.width / 2, 
@@ -2205,51 +2184,18 @@ export class GhostAI extends AIController {
             name: target.name + "-ghost"
         };
 
-        // 2. Parabolic Math (Includes wind as requested: "It can calculate for wind simply on the first shot")
+        // 2. Pure Calculation (No random noise)
         const weaponId = tank.selectedWeapon || 'default';
         const planned = this.planShot(tank, ghostProxy, env, weaponId);
         
-        if (!planned || !Number.isFinite(planned.angle)) {
-            // DETERMINISTIC FALLBACK: Point directly at ghost target
-            const originX = tank.x + tank.width / 2;
-            const originY = tank.y - tank.height;
-            const dx = aimX - originX;
-            const dy = aimY - originY;
-            return {
-                angle: this.clampAngle(Math.atan2(-dy, dx)),
-                power: 60
-            };
-        }
-
-        // Restrict power to 60 or less on the very first shot of the match (no knowledge yet)
-        const isMatchStart = this.sharedOffset.x === 0 && this.sharedOffset.y === 0;
-        const targetName = target?.name || 'unknown';
-        const originX = tank.x + tank.width / 2;
-        const dx = Math.abs(targetX - originX);
-        const gravity = Math.max(0.05, env?.gravity ?? state.gravity ?? 0.1);
-
-        // Simple 80s-style range cap: prevents unnecessary "skyline" power.
-        const ballisticCap = Math.max(30, Math.min(100, (1.35 * Math.sqrt(dx * gravity)) / 0.2));
-        const streak = this.sideHitStreaks.get(targetName) || 0;
-        const streakCapFactor = 1 - Math.min(0.25, streak * 0.1);
-        const powerCap = Math.max(25, Math.min(100, ballisticCap * streakCapFactor));
-        const scale = this.powerScaleByTarget.get(targetName) || 1;
-
-        let power = planned.power * scale;
-        if (isMatchStart) {
-            power = Math.min(60, power);
-        }
-        power = Math.max(10, Math.min(powerCap, power));
-
         this.lastShotMeta.set(targetName, {
-            power,
-            angle: planned.angle,
-            edgeMode: state.activeEdgeBehavior || 'impact'
+            power: planned.power,
+            angle: planned.angle
         });
         
         return {
             angle: planned.angle,
-            power: power
+            power: planned.power
         };
     }
 }
