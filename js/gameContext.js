@@ -401,34 +401,42 @@ export function draw() {
         
         // Render Wind Particles (Visual only)
         const windIntensity = Math.abs(state.wind);
-        if (windIntensity > 0.002) { // Lowered threshold (was 0.008)
-            const particleCount = Math.floor(windIntensity * 2500); // Increased density (was 1500)
+        if (windIntensity > 0.001) { // Lowered threshold further
+            // Scale particle count: more particles for higher wind
+            const particleCount = Math.floor(windIntensity * 5000); 
             
             // Add new particles if needed
             while (state.windParticles.length < particleCount) {
                 state.windParticles.push({
                     x: Math.random() * state.canvas.width,
                     y: Math.random() * state.canvas.height,
-                    speed: 0.8 + Math.random() * 2.5
+                    speed: 1.0 + Math.random() * 3.0,
+                    length: 4 + Math.random() * 8 // Random length for "streak" effect
                 });
             }
             
-            state.ctx.fillStyle = 'rgba(220, 220, 255, 0.6)'; // More opaque (was 0.4)
+            state.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Use white for better contrast
+            state.ctx.lineWidth = 1.5;
             for (let i = state.windParticles.length - 1; i >= 0; i--) {
                 const p = state.windParticles[i];
-                p.x += state.wind * p.speed * 150; // Faster motion (was 100)
+                const moveSpeed = state.wind * p.speed * 200;
+                
+                // Draw as a line (streak) instead of a tiny rect
+                state.ctx.beginPath();
+                state.ctx.moveTo(p.x, p.y);
+                state.ctx.lineTo(p.x + (state.wind > 0 ? p.length : -p.length), p.y);
+                state.ctx.stroke();
+
+                p.x += moveSpeed;
                 
                 // Wrap around
-                if (p.x < 0) p.x = state.canvas.width;
-                if (p.x > state.canvas.width) p.x = 0;
+                if (p.x < -20) p.x = state.canvas.width + 20;
+                if (p.x > state.canvas.width + 20) p.x = -20;
                 
                 // Remove excess particles if wind dies down
                 if (i > particleCount) {
                     state.windParticles.splice(i, 1);
-                    continue;
                 }
-                
-                state.ctx.fillRect(p.x, p.y, 2, 1);
             }
         } else {
             state.windParticles = [];
