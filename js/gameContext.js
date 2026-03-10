@@ -43,7 +43,8 @@ export const state = {
     // Visual Effects
     activeExplosions: [], // Centralized explosion tracking
     screenShake: { intensity: 0, startTime: 0, duration: 0 },
-    laserBeams: [] // transient beam visuals: { x1, y1, x2, y2, width, color, expiresAt, duration }
+    laserBeams: [], // transient beam visuals: { x1, y1, x2, y2, width, color, expiresAt, duration }
+    windParticles: [] // visual only particles for wind
 };
 
 export const EDGE_BEHAVIORS = {
@@ -397,6 +398,42 @@ export function draw() {
 
         state.ctx.clearRect(-offsetX, -offsetY, state.canvas.width, state.canvas.height);
         state.terrain.draw(state.ctx);
+        
+        // Render Wind Particles (Visual only)
+        const windIntensity = Math.abs(state.wind);
+        if (windIntensity > 0.008) { // Only show for Med to High wind
+            const particleCount = Math.floor(windIntensity * 1500);
+            
+            // Add new particles if needed
+            while (state.windParticles.length < particleCount) {
+                state.windParticles.push({
+                    x: Math.random() * state.canvas.width,
+                    y: Math.random() * state.canvas.height,
+                    speed: 0.5 + Math.random() * 2
+                });
+            }
+            
+            state.ctx.fillStyle = 'rgba(200, 200, 255, 0.4)';
+            for (let i = state.windParticles.length - 1; i >= 0; i--) {
+                const p = state.windParticles[i];
+                p.x += state.wind * p.speed * 100;
+                
+                // Wrap around
+                if (p.x < 0) p.x = state.canvas.width;
+                if (p.x > state.canvas.width) p.x = 0;
+                
+                // Remove excess particles if wind dies down
+                if (i > particleCount) {
+                    state.windParticles.splice(i, 1);
+                    continue;
+                }
+                
+                state.ctx.fillRect(p.x, p.y, 2, 1);
+            }
+        } else {
+            state.windParticles = [];
+        }
+
         state.tanks.forEach(tank => {
             if (tank.alive) {
                 tank.draw(state.ctx);

@@ -1,4 +1,4 @@
-import { getRandomColor, createExplosion } from './utils.js';
+import { getRandomColor, createExplosion, calculateWind } from './utils.js';
 import { state, getNextAliveTankIndex, draw, triggerScreenShake, startTurn, triggerBlackHoleEffect } from './gameContext.js';
 import { StandardAI, StupidAI, LobberAI, SniperAI, MastermindAI, NemesisAI, BitwiseCommanderAI, GhostAI, SingularityAI } from './aiControllers.js';
 
@@ -607,6 +607,38 @@ export class Tank {
                 if (index !== -1) this.inventory.splice(index, 1);
                 this.selectedWeapon = 'default';
                 
+                startTurn(getNextAliveTankIndex(state.currentPlayer));
+            }
+            return;
+        }
+
+        if (this.selectedWeapon === 'wind_nullifier') {
+            const item = this.inventory.find(i => i.id === 'wind_nullifier');
+            if (item) {
+                state.wind = 0;
+                console.log(`WIND NULLIFIED!`);
+                if (state.ctx && state.canvas && draw) {
+                    createExplosion(this.x + this.width/2, this.y - this.height/2, 60, 'white');
+                }
+                const index = this.inventory.findIndex(item => item.id === 'wind_nullifier');
+                if (index !== -1) this.inventory.splice(index, 1);
+                this.selectedWeapon = 'default';
+                startTurn(getNextAliveTankIndex(state.currentPlayer));
+            }
+            return;
+        }
+
+        if (this.selectedWeapon === 'wind_shuffler') {
+            const item = this.inventory.find(i => i.id === 'wind_shuffler');
+            if (item) {
+                state.wind = calculateWind(state.windIntensity || 'normal');
+                console.log(`WIND SHUFFLED: ${state.wind}`);
+                if (state.ctx && state.canvas && draw) {
+                    createExplosion(this.x + this.width/2, this.y - this.height/2, 60, 'cyan');
+                }
+                const index = this.inventory.findIndex(item => item.id === 'wind_shuffler');
+                if (index !== -1) this.inventory.splice(index, 1);
+                this.selectedWeapon = 'default';
                 startTurn(getNextAliveTankIndex(state.currentPlayer));
             }
             return;

@@ -267,6 +267,7 @@ function resetRound() {
     if (state.suddenDeath) {
         state.suddenDeath = state.suddenDeath || {};
         state.suddenDeath.active = false;
+        state.suddenDeath.activeType = null; // Clear the specific active mode
         state.suddenDeath.currentTurnCount = 0;
         state.suddenDeath.nukeScale = 1.0;
         state.suddenDeath.teleportFocus = 0.0;

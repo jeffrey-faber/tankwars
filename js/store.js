@@ -281,6 +281,29 @@ export class Store {
                     pullStrength: 25,
                     size: 'large'
                 }
+            },
+            {
+                id: 'wind_nullifier',
+                name: 'Aero-Static Nullifier',
+                description: 'Deploys a localized field that completely eliminates all atmospheric movement. Wind set to 0.0.',
+                price: 150,
+                category: 'experimental',
+                effect: {
+                    type: 'utility',
+                    special: 'set_wind',
+                    value: 0
+                }
+            },
+            {
+                id: 'wind_shuffler',
+                name: 'Chaos Atmospheric Shuffler',
+                description: 'Violently disrupts the troposphere, forcing a random recalculation of global wind vectors.',
+                price: 80,
+                category: 'experimental',
+                effect: {
+                    type: 'utility',
+                    special: 'randomize_wind'
+                }
             }
         ];
         
@@ -378,6 +401,7 @@ export class Store {
                     <button class="store-tab active" data-category="weapons">WEAPONS</button>
                     <button class="store-tab" data-category="defense">DEFENSE</button>
                     <button class="store-tab" data-category="utility">UTILITY</button>
+                    <button class="store-tab" data-category="experimental">EXPERIMENTAL</button>
                 </div>
                 <div class="store-items-grid"></div>
                 <div class="store-controls">
@@ -476,6 +500,8 @@ export class Store {
             case 'blackhole_s': return '🕳️';
             case 'blackhole_m': return '🌀';
             case 'blackhole_l': return '🌌';
+            case 'wind_nullifier': return '🛑';
+            case 'wind_shuffler': return '🎲';
             default: return '❓';
         }
     }
