@@ -631,8 +631,11 @@ export class Tank {
         if (this.selectedWeapon === 'wind_shuffler') {
             const item = this.inventory.find(i => i.id === 'wind_shuffler');
             if (item) {
-                state.wind = calculateWind(state.windIntensity || 'normal');
-                console.log(`WIND SHUFFLED: ${state.wind}`);
+                // Ignore match settings, pick a totally random intensity
+                const intensities = ['none', 'low', 'normal', 'high', 'extreme'];
+                const randomIntensity = intensities[Math.floor(Math.random() * intensities.length)];
+                state.wind = calculateWind(randomIntensity);
+                console.log(`WIND SHUFFLED (Intensity: ${randomIntensity}): ${state.wind}`);
                 if (state.ctx && state.canvas && draw) {
                     createExplosion(this.x + this.width/2, this.y - this.height/2, 60, 'cyan');
                 }
