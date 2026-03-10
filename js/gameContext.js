@@ -34,7 +34,8 @@ export const state = {
         startTurn: 10,
         currentTurnCount: 0,
         nukeScale: 1.0,
-        teleportFocus: 0.0 // 0 = random, 1 = perfectly on top of each other
+        teleportFocus: 0.0, // 0 = random, 1 = perfectly on top of each other
+        isResolving: false 
     },
     // Edge Behaviors
     edgeBehavior: 'impact', // Default setting (from setup)
@@ -76,29 +77,43 @@ export function startTurn(index) {
     // Sudden Death Progression
     if (state.suddenDeath && state.suddenDeath.type !== 'none') {
         state.suddenDeath.currentTurnCount++;
+        
         if (state.suddenDeath.currentTurnCount >= state.suddenDeath.startTurn) {
-            if (!state.suddenDeath.active) {
-                state.suddenDeath.active = true;
-                if (state.suddenDeath.type === 'random') {
-                    const options = ['nuke_growth', 'teleport_chaos', 'health_decay', 'blackhole_storm'];
-                    state.suddenDeath.activeType = options[Math.floor(Math.random() * options.length)];
-                } else {
-                    state.suddenDeath.activeType = state.suddenDeath.type;
+            // Signal that we are processing an event (pauses UI/AI)
+            state.suddenDeath.isResolving = true;
+
+            // Wait 200ms before triggering the effect
+            setTimeout(() => {
+                if (!state.suddenDeath.active) {
+                    state.suddenDeath.active = true;
+                    if (state.suddenDeath.type === 'random') {
+                        const options = ['nuke_growth', 'teleport_chaos', 'health_decay', 'blackhole_storm'];
+                        state.suddenDeath.activeType = options[Math.floor(Math.random() * options.length)];
+                    } else {
+                        state.suddenDeath.activeType = state.suddenDeath.type;
+                    }
+                    console.log(`SUDDEN DEATH ACTIVE: ${state.suddenDeath.activeType}`);
                 }
-                console.log(`SUDDEN DEATH ACTIVE: ${state.suddenDeath.activeType}`);
-            }
-            
-            // Per-turn growth effects
-            if (state.suddenDeath.activeType === 'nuke_growth') {
-                state.suddenDeath.nukeScale += 0.15; // 15% growth per turn
-            } else if (state.suddenDeath.activeType === 'teleport_chaos') {
-                state.suddenDeath.teleportFocus = Math.min(1.0, state.suddenDeath.teleportFocus + 0.05); // Converge slowly
-                applySuddenDeathTeleport();
-            } else if (state.suddenDeath.activeType === 'health_decay') {
-                applySuddenDeathDecay();
-            } else if (state.suddenDeath.activeType === 'blackhole_storm') {
-                applySuddenDeathBlackHole();
-            }
+                
+                // Trigger the effect
+                if (state.suddenDeath.activeType === 'nuke_growth') {
+                    state.suddenDeath.nukeScale += 0.15;
+                } else if (state.suddenDeath.activeType === 'teleport_chaos') {
+                    state.suddenDeath.teleportFocus = Math.min(1.0, state.suddenDeath.teleportFocus + 0.05);
+                    applySuddenDeathTeleport();
+                } else if (state.suddenDeath.activeType === 'health_decay') {
+                    applySuddenDeathDecay();
+                } else if (state.suddenDeath.activeType === 'blackhole_storm') {
+                    applySuddenDeathBlackHole();
+                }
+
+                // Allow a short duration for the immediate impact to register (e.g. black hole pull)
+                // before letting the standard isSettling() physics check take over.
+                setTimeout(() => {
+                    state.suddenDeath.isResolving = false;
+                }, 300); 
+
+            }, 200);
         }
     }
 
@@ -122,6 +137,9 @@ export function startTurn(index) {
 }
 
 export function isSettling() {
+    // 0. Sudden Death event in progress?
+    if (state.suddenDeath?.isResolving) return true;
+
     // 1. Projectiles in flight?
     if (state.projectiles.length > 0) return true;
     
