@@ -1272,6 +1272,35 @@ export class Tank {
         
         const canvasHeight = state.canvas?.height || 800;
         const checkPoints = [leftX, centerX, rightX];
+
+        // TERRAIN TUNNELING: If moving fast enough, carve through dirt instead of stopping
+        if (currentSpeed > 5 && this.y > 0 && this.y < canvasHeight) {
+            let dirtHit = false;
+            for (let x of checkPoints) {
+                if (terrain.isSolid(x, Math.floor(this.y))) {
+                    dirtHit = true;
+                    break;
+                }
+            }
+
+            if (dirtHit) {
+                // We are inside dirt while moving fast - CARVE!
+                if (terrain.explode) {
+                    terrain.explode(this.x + this.width / 2, this.y - this.height / 2, 15);
+                    terrain.updateCanvas();
+                }
+                
+                // DAMPEN velocity (physically harder to move through dirt)
+                // Lose 15% velocity per frame while tunneling
+                this.vx *= 0.85;
+                this.vy *= 0.85;
+                
+                // Add a visual "dirt spray"
+                if (Math.random() > 0.3) {
+                    createExplosion(this.x + this.width / 2, this.y - this.height / 2, 8, '#3d2b1f', 200);
+                }
+            }
+        }
         
         let highestGround = canvasHeight;
         let highestStableGround = canvasHeight;
