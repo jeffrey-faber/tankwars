@@ -344,6 +344,20 @@ export class Tank {
     }
 
     draw(ctx) {
+        // Off-screen indicator (if tank is above the ceiling)
+        if (this.y < 0) {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, 5);
+            ctx.lineTo(this.x + this.width / 2 - 5, 15);
+            ctx.lineTo(this.x + this.width / 2 + 5, 15);
+            ctx.fill();
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(Math.abs(Math.round(this.y)), this.x + this.width / 2, 28);
+            ctx.textAlign = 'left';
+        }
+
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
         
@@ -752,6 +766,11 @@ export class Tank {
             damage = 0;
             projectileColor = '#ff00ff';
             special = 'global_wave_crazy';
+        } else if (this.selectedWeapon === 'terrain_invert') {
+            explosionRadius = 0;
+            damage = 0;
+            projectileColor = '#000000';
+            special = 'terrain_invert';
         }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
@@ -1008,6 +1027,19 @@ export class Tank {
             return;
         }
 
+        if (special === 'terrain_invert') {
+            console.log("REALITY INVERTED!");
+            if (state.terrain.invertTerrain) {
+                state.terrain.invertTerrain();
+            }
+            // Give tanks a moment to realize they might be in the air now
+            state.tanks.forEach(t => { 
+                if (t.alive) t.vy = Math.max(t.vy, 0.1); 
+            });
+            triggerScreenShake(25, 1000);
+            return;
+        }
+
         if (special === 'add_terrain') {
             if (state.terrain.addTerrain) {
                 state.terrain.addTerrain(x, y, explosionRadius);
@@ -1089,10 +1121,20 @@ export class Tank {
         // If tank gravity is frozen (e.g. during earthquake), skip physics
         if (state.freezeTankGravity) return;
 
-        // Handle horizontal momentum (e.g. from explosions or black holes)
+        // Handle horizontal momentum (e.g. from explosions, black holes, or waves)
         if (Math.abs(this.vx) > 0.1) {
             this.x += this.vx;
-            this.vx *= 0.95; // Air friction
+            this.vx *= 0.98; // Lower air friction for longer drifts
+
+            // Boundary Bounce
+            const canvasWidth = state.canvas?.width || 1200;
+            if (this.x < 0) {
+                this.x = 0;
+                this.vx = Math.abs(this.vx) * 0.5; // Bounce back with energy loss
+            } else if (this.x > canvasWidth - this.width) {
+                this.x = canvasWidth - this.width;
+                this.vx = -Math.abs(this.vx) * 0.5;
+            }
         } else {
             this.vx = 0;
         }

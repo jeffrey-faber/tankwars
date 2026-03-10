@@ -206,6 +206,25 @@ export class BitmaskTerrain {
         });
     }
 
+    invertTerrain() {
+        for (let i = 0; i < (this.height - 1) * this.width; i++) {
+            const current = this.data[i];
+            const newValue = current === 1 ? 0 : 1;
+            this.data[i] = newValue;
+            
+            const pIdx = i * 4;
+            if (newValue === 1) {
+                this.pixels[pIdx] = 57;     
+                this.pixels[pIdx + 1] = 255; 
+                this.pixels[pIdx + 2] = 20;  
+                this.pixels[pIdx + 3] = 255; 
+            } else {
+                this.pixels[pIdx + 3] = 0;   
+            }
+        }
+        this.updateCanvas();
+    }
+
     removeTerrainCone(centerX, centerY, radius, centralAngle, spread) {
         const r2 = radius * radius;
         const xMin = Math.max(0, Math.floor(centerX - radius));

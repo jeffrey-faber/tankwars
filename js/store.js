@@ -354,6 +354,19 @@ export class Store {
                     damage: 0,
                     special: 'global_wave_crazy'
                 }
+            },
+            {
+                id: 'terrain_invert',
+                name: 'Matter-Antimatter Transposer',
+                description: 'A global phase-shift that inverts reality. Dirt becomes air, air becomes dirt. Gravity will sort them out.',
+                price: 500,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 0, // Global
+                    damage: 0,
+                    special: 'terrain_invert'
+                }
             }
         ];
         
@@ -556,6 +569,7 @@ export class Store {
             case 'wind_cyclone': return '🌬️';
             case 'global_wave': return '🌊';
             case 'global_wave_crazy': return '🌋';
+            case 'terrain_invert': return '☯️';
             default: return '❓';
         }
     }
