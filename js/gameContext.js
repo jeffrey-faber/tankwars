@@ -173,7 +173,7 @@ export function isSettling() {
     if (!state.aiReadyToFire) return true;
     
     // 6. Any tanks still falling or drifting with momentum?
-    const movingTank = state.tanks.find(t => t.alive && (Math.abs(t.vy) > 0.1 || Math.abs(t.vx) > 0.1));
+    const movingTank = state.tanks.find(t => t.alive && (Math.abs(t.vy) > 0.02 || Math.abs(t.vx) > 0.02));
     if (movingTank) return true;
 
     return false;
@@ -401,6 +401,12 @@ export function drawHUD() {
         state.ctx.font = 'bold 14px Arial';
         state.ctx.textAlign = 'center';
         state.ctx.fillText("TERRAIN SETTLING...", state.canvas.width / 2, 30);
+        state.ctx.textAlign = 'left'; // Reset
+    } else if (isSettling()) {
+        state.ctx.fillStyle = 'yellow';
+        state.ctx.font = 'bold 14px Arial';
+        state.ctx.textAlign = 'center';
+        state.ctx.fillText("PHYSICS SETTLING...", state.canvas.width / 2, 30);
         state.ctx.textAlign = 'left'; // Reset
     }
 }

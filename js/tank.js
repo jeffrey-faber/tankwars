@@ -169,10 +169,12 @@ export class Tank {
 
         // Add velocity-based damage (any impact over 10vy is dangerous)
         if (impactVelocity > 10) {
-            damage += Math.floor((impactVelocity - 8) * 15);
+            // Kinetic impacts deal low damage but create HUGE explosions
+            const kineticDamage = Math.floor((impactVelocity - 8) * 4); 
+            damage += kineticDamage;
 
-            // Kinetic Impact Crater
-            const craterRadius = impactVelocity * 1.8;
+            // Kinetic Impact Crater - Aggressively proportional to speed
+            const craterRadius = Math.pow(impactVelocity, 1.6) * 0.5;
             const centerX = this.x + this.width / 2;
             const centerY = this.y - this.height / 2;
 
@@ -182,9 +184,16 @@ export class Tank {
                 state.terrain.updateCanvas();
             }
 
-            // Visual explosion for the impact
-            createExplosion(centerX, centerY, craterRadius, '#555555', 600);
-            triggerScreenShake(impactVelocity * 0.5, 400);
+            // Multi-layered visual explosion
+            createExplosion(centerX, centerY, craterRadius, '#ff8800', 1000);
+            if (impactVelocity > 20) {
+                createExplosion(centerX, centerY, craterRadius * 0.7, '#555555', 1500);
+            }
+            if (impactVelocity > 35) {
+                createExplosion(centerX, centerY, craterRadius * 0.4, 'white', 500);
+            }
+            
+            triggerScreenShake(impactVelocity * 0.8, 600);
         }
         
         if (damage > 0) {
@@ -375,26 +384,35 @@ export class Tank {
             const centerX = this.x + this.width / 2;
             const centerY = this.y - this.height / 2;
             
+            const isInsane = speed > 25;
+            
             // Draw flame streak
-            const gradient = ctx.createLinearGradient(0, 0, -speed * 5, 0);
-            gradient.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
-            gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.4)');
+            const trailLen = speed * (isInsane ? 12 : 5);
+            const gradient = ctx.createLinearGradient(0, 0, -trailLen, 0);
+            if (isInsane) {
+                gradient.addColorStop(0, 'white'); // White hot core
+                gradient.addColorStop(0.2, 'rgba(255, 255, 0, 0.9)');
+                gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.6)');
+            } else {
+                gradient.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.4)');
+            }
             gradient.addColorStop(1, 'transparent');
             
             ctx.translate(centerX, centerY);
             ctx.rotate(angle);
             ctx.fillStyle = gradient;
-            ctx.fillRect(-this.width, -this.height / 2, -speed * 4, this.height);
+            ctx.fillRect(-this.width, -this.height / 2, -trailLen, this.height * (isInsane ? 2 : 1));
             
             // Add some "sparks"
-            if (Math.random() > 0.5) {
+            if (Math.random() > (isInsane ? 0.2 : 0.5)) {
                 state.activeExplosions.push({
-                    x: centerX - Math.cos(angle) * 20,
-                    y: centerY - Math.sin(angle) * 20,
-                    radius: 5 + Math.random() * 10,
-                    color: Math.random() > 0.5 ? 'orange' : 'white',
+                    x: centerX - Math.cos(angle) * (20 + Math.random() * 40),
+                    y: centerY - Math.sin(angle) * (20 + Math.random() * 40),
+                    radius: (isInsane ? 10 : 5) + Math.random() * 10,
+                    color: isInsane ? (Math.random() > 0.5 ? 'white' : 'yellow') : (Math.random() > 0.5 ? 'orange' : 'white'),
                     startTime: performance.now(),
-                    duration: 200
+                    duration: isInsane ? 400 : 200
                 });
             }
             ctx.restore();
@@ -1177,9 +1195,16 @@ export class Tank {
         // If tank gravity is frozen (e.g. during earthquake), skip physics
         if (state.freezeTankGravity) return;
 
+        // "INSANE" Speed Time Dilation: Slow down physics for this tank if moving extremely fast on screen
+        let timeScale = 1.0;
+        const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (currentSpeed > 25 && this.y > -100) {
+            timeScale = 0.2; // 5x slow motion for cinematic re-entry
+        }
+
         // Handle horizontal momentum (e.g. from explosions, black holes, or waves)
         if (Math.abs(this.vx) > 0.1) {
-            this.x += this.vx;
+            this.x += this.vx * timeScale;
             this.vx *= 0.98; // Lower air friction for longer drifts
 
             // Boundary Bounce
@@ -1225,13 +1250,13 @@ export class Tank {
         
         if (this.y < finalStableY) {
             // IN AIR relative to stable ground: Apply gravity
-            this.vy += state.gravity;
-            this.y += this.vy;
+            this.vy += state.gravity * timeScale;
+            this.y += this.vy * timeScale;
             
             // Sub-pixel safety: if we crossed stable ground, land
             if (this.y >= finalStableY) {
                 this.y = finalStableY;
-                const finalVy = this.vy;
+                const finalVy = this.vy / timeScale; // Restore real velocity for damage
                 this.vy = 0;
                 this.handleLanding(this.y, finalVy);
             }
