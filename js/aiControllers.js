@@ -2129,7 +2129,6 @@ export class GhostAI extends AIController {
     }
 
     onShotResult(target, impactX, impactY) {
-        // Track proximity to self for tactical decisions (shovel logic)
         const myTank = state.tanks.find(t => t.aiController === this);
         if (!myTank) return;
 
@@ -2138,9 +2137,18 @@ export class GhostAI extends AIController {
         const ty = target.y - target.height / 2;
         const targetName = target?.name || 'unknown';
         
-        // 1. DAMPING (Persistence)
-        // Adjust Ghost: 0.8 damping effect per turn (as requested previously)
-        // Scaled by power (as requested previously)
+        // 1. DIRECTIONAL MEMORY
+        // side: 1 for right, -1 for left
+        const side = tx > myTankX ? 1 : -1;
+        
+        // Directional Error: How much 'further' or 'shorter' did we hit?
+        // If firing right (side 1) and hit 680 vs target 700, error is +20.
+        // If firing left (side -1) and hit 120 vs target 100, error is +20 (impactX - tx is 20, * -1 is -20? no)
+        // Correct: errorX = (TargetX - ImpactX) * side
+        const errorX = (tx - impactX) * side;
+        const errorY = ty - impactY;
+
+        // 2. DAMPING
         const lastMeta = this.lastShotMeta.get(targetName);
         const lastPower = lastMeta?.power || 50;
         let damping = 0.8; 
@@ -2150,30 +2158,28 @@ export class GhostAI extends AIController {
         this.sharedOffset.x *= damping;
         this.sharedOffset.y *= damping;
 
-        // 2. ERROR ACCUMULATION
-        // "adjusts its shot by how much it missed firing at a target exactly x diff y diff of the previous shot"
-        // error = Target - Impact
-        const errorX = tx - impactX;
-        const errorY = ty - impactY;
-
-        // Add 100% of the miss to the offset for instant adjustment
+        // 3. ACCUMULATION
+        // We add the exact miss to our 'directional memory'
         this.sharedOffset.x += errorX;
         this.sharedOffset.y += errorY;
 
-        // Cap offset to reasonable screen bounds
         this.sharedOffset.x = Math.max(-1200, Math.min(1200, this.sharedOffset.x));
         this.sharedOffset.y = Math.max(-600, Math.min(600, this.sharedOffset.y));
 
-        console.log(`Ghost memory updated. Target miss was: ${Math.round(errorX)},${Math.round(errorY)}`);
+        console.log(`Ghost directional memory: ${Math.round(this.sharedOffset.x)}px forward, ${Math.round(this.sharedOffset.y)}px vertical`);
     }
 
     calculateShot(tank, target, env) {
         const targetX = target.x + target.width / 2;
         const targetY = target.y - target.height / 2;
+        const tankX = tank.x + tank.width / 2;
         const targetName = target?.name || 'unknown';
+        const side = targetX > tankX ? 1 : -1;
 
-        // 1. Aim at Target + Accumulated Miss Offset
-        const aimX = targetX + this.sharedOffset.x;
+        // 1. Aim at Target + (Directional Offset * side)
+        // This ensures if we learned to aim +50px "further" on the right, 
+        // we will aim -50px (further) when looking left.
+        const aimX = targetX + (this.sharedOffset.x * side);
         const aimY = targetY + this.sharedOffset.y;
 
         const ghostProxy = { 
@@ -2184,7 +2190,7 @@ export class GhostAI extends AIController {
             name: target.name + "-ghost"
         };
 
-        // 2. Pure Calculation (No random noise)
+        // 2. Pure Baseline Calculation (The "Best Calculated Shot" we have)
         const weaponId = tank.selectedWeapon || 'default';
         const planned = this.planShot(tank, ghostProxy, env, weaponId);
         
