@@ -75,18 +75,33 @@ export function getNextAliveTankIndex(startIndex) {
 }
 
 export function startTurn(index) {
+    const currentTank = state.tanks[index];
+    if (!currentTank || !currentTank.alive) {
+        console.warn(`Attempted to start turn for dead tank ${index}, redirecting...`);
+        const nextIdx = getNextAliveTankIndex(index);
+        if (nextIdx !== index) {
+            startTurn(nextIdx);
+        }
+        return;
+    }
+
     state.currentPlayer = index;
-    
-    // Sudden Death Progression
-    if (state.suddenDeath && state.suddenDeath.type !== 'none') {
+    console.log(`TURN START: ${currentTank.name} (Index ${index})`);
+
+    // Sudden Death Progression: Only increment and trigger if NOT already resolving
+    if (state.suddenDeath && state.suddenDeath.type !== 'none' && !state.suddenDeath.isResolving) {
         state.suddenDeath.currentTurnCount++;
         
         if (state.suddenDeath.currentTurnCount >= state.suddenDeath.startTurn) {
-            // Signal that we are processing an event (pauses UI/AI)
             state.suddenDeath.isResolving = true;
 
-            // Wait 200ms before triggering the effect
             setTimeout(() => {
+                // If the player somehow died while we were waiting (rare), abort
+                if (!currentTank.alive) {
+                    state.suddenDeath.isResolving = false;
+                    return; 
+                }
+
                 if (!state.suddenDeath.active) {
                     state.suddenDeath.active = true;
                     if (state.suddenDeath.type === 'random') {
@@ -95,10 +110,8 @@ export function startTurn(index) {
                     } else {
                         state.suddenDeath.activeType = state.suddenDeath.type;
                     }
-                    console.log(`SUDDEN DEATH ACTIVE: ${state.suddenDeath.activeType}`);
                 }
                 
-                // Trigger the effect
                 if (state.suddenDeath.activeType === 'nuke_growth') {
                     state.suddenDeath.nukeScale += 0.15;
                 } else if (state.suddenDeath.activeType === 'teleport_chaos') {
@@ -110,10 +123,10 @@ export function startTurn(index) {
                     applySuddenDeathBlackHole();
                 }
 
-                // Allow a short duration for the immediate impact to register (e.g. black hole pull)
-                // before letting the standard isSettling() physics check take over.
                 setTimeout(() => {
                     state.suddenDeath.isResolving = false;
+                    // If the event killed the current player, the gameLoop fallback will now correctly
+                    // call startTurn for the NEXT guy after this settling is done.
                 }, 300); 
 
             }, 200);

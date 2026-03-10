@@ -140,9 +140,11 @@ function initGameFromConfig(config) {
         state.suddenDeath.type = config.suddenDeath.type;
         state.suddenDeath.startTurn = config.suddenDeath.startTurn;
         state.suddenDeath.active = false;
+        state.suddenDeath.activeType = null;
         state.suddenDeath.currentTurnCount = 0;
         state.suddenDeath.nukeScale = 1.0;
         state.suddenDeath.teleportFocus = 0.0;
+        state.suddenDeath.isResolving = false;
     }
 
     // Set canvas dimensions
@@ -266,12 +268,12 @@ function resetRound() {
     state.wind = calculateWind(state.windIntensity || 'normal');
 
     if (state.suddenDeath) {
-        state.suddenDeath = state.suddenDeath || {};
         state.suddenDeath.active = false;
-        state.suddenDeath.activeType = null; // Clear the specific active mode
+        state.suddenDeath.activeType = null;
         state.suddenDeath.currentTurnCount = 0;
         state.suddenDeath.nukeScale = 1.0;
         state.suddenDeath.teleportFocus = 0.0;
+        state.suddenDeath.isResolving = false;
     }
 
     // Selection of active edge behavior for this round
@@ -484,7 +486,7 @@ document.addEventListener('keydown', (event) => {
         startTurn(getNextAliveTankIndex(state.currentPlayer));
     }
 
-    if (!tank.isAI && state.store && !state.store.isOpen && state.gameState === 'PLAYING') {
+    if (!tank.isAI && state.store && !state.store.isOpen && state.gameState === 'PLAYING' && !isSettling()) {
         state.needsRedraw = true;
         if (event.key === 'ArrowLeft') {
             tank.angle += Math.PI / 180;

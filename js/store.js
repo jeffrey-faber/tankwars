@@ -285,7 +285,7 @@ export class Store {
             {
                 id: 'wind_nullifier',
                 name: 'Aero-Static Nullifier',
-                description: 'Deploys a localized field that completely eliminates all atmospheric movement. Wind set to 0.0.',
+                description: 'Deploys a localized field that completely eliminates all atmospheric movement. Wind set to 0.0. Consumes your turn.',
                 price: 150,
                 category: 'experimental',
                 effect: {
@@ -297,7 +297,7 @@ export class Store {
             {
                 id: 'wind_shuffler',
                 name: 'Chaos Atmospheric Shuffler',
-                description: 'Violently disrupts the troposphere, forcing a random recalculation of global wind vectors.',
+                description: 'Violently disrupts the troposphere, forcing a random recalculation of global wind vectors. Consumes your turn.',
                 price: 80,
                 category: 'experimental',
                 effect: {
@@ -308,7 +308,7 @@ export class Store {
             {
                 id: 'wind_extreme',
                 name: 'Cyclone Engine',
-                description: 'Forces an extreme, high-velocity wind event. Use with caution.',
+                description: 'Forces an extreme, high-velocity wind event. Use with caution. Consumes your turn.',
                 price: 120,
                 category: 'experimental',
                 effect: {
