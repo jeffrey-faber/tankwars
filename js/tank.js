@@ -1059,15 +1059,22 @@ export class Tank {
                     const angle = Math.atan2(dy, dx);
                     
                     // Mechanical Piston Logic: Skill shot based on proximity
-                    // Base impulse is high (25) to potentially reach re-entry speed (12+)
                     const impulse = force * 25; 
                     
+                    // Apply base impulse based on angle from explosion center
                     otherTank.vx += Math.cos(angle) * impulse;
                     otherTank.vy += Math.sin(angle) * impulse;
                     
-                    // If hit from below (dy < 0), bias the force upwards for a clean launch
-                    if (dy > 0) {
-                        otherTank.vy -= force * 10;
+                    // UPPERCUT LOGIC: 
+                    // If the impact is anywhere below the top half of the tank, 
+                    // or if it's within the horizontal bounds of the tank,
+                    // apply a strong upward 'lift'.
+                    const hitBelow = y > (otherTank.y - otherTank.height / 2);
+                    const hitWithinX = Math.abs(x - (otherTank.x + otherTank.width / 2)) < otherTank.width;
+                    
+                    if (hitBelow || hitWithinX) {
+                        // Force a significant portion of the impulse UPWARDS
+                        otherTank.vy -= force * 20; 
                     }
 
                     otherTank.lastSolidY = otherTank.y;
