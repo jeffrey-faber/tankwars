@@ -209,7 +209,6 @@ export class Tank {
                             this.die();
                         }
                     }
-                }
             }
         }
         
