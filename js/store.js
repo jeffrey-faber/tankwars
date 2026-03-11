@@ -385,42 +385,42 @@ export class Store {
             {
                 id: 'grav_well_s',
                 name: 'Micro-Gravity Anchor',
-                description: 'Deploys at apex. Creates a small, localized gravity well that pulls tanks and projectiles.',
+                description: 'Deploys at apex. Creates a small, localized gravity well that pulls tanks and projectiles. Lasts 2 turns.',
                 price: 150,
                 category: 'experimental',
                 effect: {
                     type: 'weapon',
                     radius: 150,
                     strength: 0.25,
-                    duration: 10000, // 10 seconds
+                    duration: 2, 
                     special: 'gravity_well'
                 }
             },
             {
                 id: 'grav_well_m',
                 name: 'Gravitational Nexus',
-                description: 'Powerful gravity well that attracts nearby matter and traps dirt.',
+                description: 'Powerful gravity well that attracts nearby matter and traps dirt. Lasts 3 turns.',
                 price: 250,
                 category: 'experimental',
                 effect: {
                     type: 'weapon',
                     radius: 250,
                     strength: 0.4,
-                    duration: 15000,
+                    duration: 3,
                     special: 'gravity_well'
                 }
             },
             {
                 id: 'grav_well_l',
                 name: 'Supermassive Singularity Core',
-                description: 'MASSIVE gravity distortion. Can pull entire teams into a single point. Generates its own orbit of debris.',
+                description: 'MASSIVE gravity distortion. Can pull entire teams into a single point. Generates its own orbit of debris. Lasts 5 turns.',
                 price: 450,
                 category: 'experimental',
                 effect: {
                     type: 'weapon',
                     radius: 400,
                     strength: 0.6,
-                    duration: 20000,
+                    duration: 5,
                     special: 'gravity_well'
                 }
             }

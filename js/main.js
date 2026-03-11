@@ -397,7 +397,7 @@ function gameLoop() {
     if (!state.isGameOver) {
         if (state.terrain.updateGravity) {
             const now = performance.now();
-            const activeWells = (state.activeGravityWells || []).filter(w => w.expiresAt > now);
+            const activeWells = state.activeGravityWells || [];
             const pixelsMoved = state.terrain.updateGravity(activeWells);
             
             const isMoving = pixelsMoved > 200;

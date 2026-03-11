@@ -48,7 +48,7 @@ export const state = {
     laserBeams: [], // transient beam visuals: { x1, y1, x2, y2, width, color, expiresAt, duration }
     windParticles: [], // visual only particles for wind
     activeGlobalWaves: [], // global map effects: { x, speed, amplitude, frequency }
-    activeGravityWells: [] // { x, y, radius, strength, expiresAt }
+    activeGravityWells: [] // { x, y, radius, strength, turnsLeft }
 };
 
 export const EDGE_BEHAVIORS = {
@@ -90,7 +90,19 @@ export function startTurn(index) {
     state.currentPlayer = index;
     console.log(`TURN START: ${currentTank.name} (Index ${index})`);
 
-    // Sudden Death Progression: Only increment and trigger if NOT already resolving
+    // Manage Gravity Wells
+    if (state.activeGravityWells) {
+        for (let i = state.activeGravityWells.length - 1; i >= 0; i--) {
+            state.activeGravityWells[i].turnsLeft--;
+            if (state.activeGravityWells[i].turnsLeft <= 0) {
+                console.log("GRAVITY WELL EXPIRED");
+                state.activeGravityWells.splice(i, 1);
+            }
+        }
+    }
+
+    // Sudden Death Progression
+: Only increment and trigger if NOT already resolving
     if (state.suddenDeath && state.suddenDeath.type !== 'none' && !state.suddenDeath.isResolving) {
         state.suddenDeath.currentTurnCount++;
         
@@ -498,10 +510,8 @@ export function draw() {
 
         // Render Gravity Wells
         if (state.activeGravityWells && state.activeGravityWells.length > 0) {
-            state.activeGravityWells = state.activeGravityWells.filter(well => well.expiresAt > now);
             state.activeGravityWells.forEach(well => {
-                const remaining = well.expiresAt - now;
-                const alpha = Math.min(0.4, remaining / 2000);
+                const alpha = Math.min(0.4, (well.turnsLeft / 5) * 0.4);
                 const pulse = 0.8 + Math.sin(now / 200) * 0.2;
                 
                 state.ctx.beginPath();

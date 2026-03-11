@@ -1188,13 +1188,13 @@ export class Tank {
             const item = this.inventory.find(i => i.id === type);
             const radius = item?.effect?.radius || 150;
             const strength = item?.effect?.strength || 0.3;
-            const duration = item?.effect?.duration || 10000;
+            const turns = item?.effect?.duration || 2;
 
             console.log(`GRAVITY WELL ACTIVATED! Type: ${type}, Pos: ${Math.round(x)},${Math.round(y)}`);
             
             state.activeGravityWells.push({
                 x, y, radius, strength,
-                expiresAt: performance.now() + duration
+                turnsLeft: turns
             });
 
             // Throw a little dirt to get stuck in it (initial debris)
