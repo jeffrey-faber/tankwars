@@ -1549,7 +1549,30 @@ export class Tank {
             const upTx = Math.round(newCx - nx * upCheckDist);
             const upTy = Math.round(newCy - ny * upCheckDist);
             const isBuried = terrain.isSolid(upTx, upTy);
-            if (isBuried) return;
+            if (isBuried) {
+                // Count contiguous solid pixels above (away from core) to measure terrain mass.
+                // More mass above = more pressure = stronger push toward core.
+                let massAbove = 0;
+                for (let d = 1; d <= 80; d++) {
+                    const tx = Math.round(newCx - nx * d);
+                    const ty = Math.round(newCy - ny * d);
+                    if (tx < 0 || tx >= canvasWidth || ty < 0 || ty >= canvasHeight) break;
+                    if (!terrain.isSolid(tx, ty)) break;
+                    massAbove++;
+                }
+                if (massAbove > 0) {
+                    const pressureForce = Math.min(massAbove * 0.02, 0.6);
+                    this.vx += nx * pressureForce;
+                    this.vy += ny * pressureForce;
+                    // Lower speed cap while buried so tank doesn't shoot through the planet
+                    const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (spd > 6) {
+                        this.vx = (this.vx / spd) * 6;
+                        this.vy = (this.vy / spd) * 6;
+                    }
+                }
+                return;
+            }
 
             // Push tank back so it sits on the surface
             const overlap = halfSize - terrainDist;
