@@ -963,8 +963,8 @@ export class Tank {
                     return;
                 }
 
-                // Apply physics
-                proj.vy += state.gravity;
+                // Apply physics (orbital mode replaces normal gravity for projectiles)
+                if (!state.gravityCenter) proj.vy += state.gravity;
                 proj.vx += state.wind;
 
                 // Sub-stepping
@@ -1325,6 +1325,12 @@ export class Tank {
         // If tank gravity is frozen (e.g. during earthquake), skip physics
         if (state.freezeTankGravity) return;
 
+        // Orbital mode: completely different physics path
+        if (state.gravityCenter) {
+            this._applyOrbitalPhysics(terrain);
+            return;
+        }
+
         // "INSANE" Speed Time Dilation: Slow down physics for this tank if moving extremely fast on screen
         let timeScale = 1.0;
         const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
@@ -1459,6 +1465,84 @@ export class Tank {
         }
         
         this.checkBuried(terrain);
+    }
+
+    _applyOrbitalPhysics(terrain) {
+        const gc = state.gravityCenter;
+        const canvasWidth = state.canvas?.width || 1200;
+        const canvasHeight = state.canvas?.height || 800;
+
+        // "Down" direction = toward gravity center from tank center
+        const cx = this.x + this.width / 2;
+        const cy = this.y - this.height / 2;
+        const ddx = gc.x - cx;
+        const ddy = gc.y - cy;
+        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+        if (dist < 1) return;
+        const nx = ddx / dist;
+        const ny = ddy / dist;
+
+        // Apply gravitational force
+        const force = gc.strength || 0.15;
+        this.vx += nx * force;
+        this.vy += ny * force;
+
+        // Speed cap to prevent runaway acceleration
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > 12) {
+            this.vx = (this.vx / speed) * 12;
+            this.vy = (this.vy / speed) * 12;
+        }
+
+        // Air friction
+        this.vx *= 0.99;
+        this.vy *= 0.99;
+
+        // Move tank
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Screen bounds
+        if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx) * 0.5; }
+        if (this.x > canvasWidth - this.width) { this.x = canvasWidth - this.width; this.vx = -Math.abs(this.vx) * 0.5; }
+
+        // Landing detection: ray cast from tank center in "down" direction
+        const halfSize = Math.max(this.width, this.height) / 2 + 2;
+        const newCx = this.x + this.width / 2;
+        const newCy = this.y - this.height / 2;
+
+        let terrainDist = null;
+        for (let d = 1; d <= halfSize + 8; d++) {
+            const tx = Math.round(newCx + nx * d);
+            const ty = Math.round(newCy + ny * d);
+            if (tx < 0 || tx >= canvasWidth || ty < 0 || ty >= canvasHeight) break;
+            if (terrain.isSolid(tx, ty)) {
+                terrainDist = d;
+                break;
+            }
+        }
+
+        if (terrainDist !== null && terrainDist < halfSize) {
+            // Push tank back so it sits on the surface
+            const overlap = halfSize - terrainDist;
+            this.x -= nx * overlap;
+            this.y -= ny * overlap;
+
+            // Cancel velocity component toward terrain
+            const vDot = this.vx * nx + this.vy * ny;
+            if (vDot > 0) {
+                this.vx -= vDot * nx;
+                this.vy -= vDot * ny;
+            }
+
+            // Landing friction
+            this.vx *= 0.7;
+            this.vy *= 0.7;
+
+            const impactSpeed = Math.max(0, vDot);
+            this.handleLanding(this.y, impactSpeed);
+            this.lastSolidY = this.y;
+        }
     }
 
     checkBuried(terrain) {

@@ -400,8 +400,7 @@ function gameLoop() {
             const activeWells = state.activeGravityWells || [];
             
             let totalMoved = 0;
-            // When global gravity is on, we do 2 sub-steps for smoother physics
-            const steps = state.gravityCenter ? 2 : 1;
+            const steps = 1;
             for (let s = 0; s < steps; s++) {
                 totalMoved += state.terrain.updateGravity(activeWells, state.gravityCenter);
             }
@@ -439,16 +438,7 @@ function gameLoop() {
                     }
                 });
 
-                // 2. Global Gravity Center
-                if (state.gravityCenter) {
-                    const dx = state.gravityCenter.x - (tank.x + tank.width / 2);
-                    const dy = state.gravityCenter.y - (tank.y - tank.height / 2);
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const force = state.gravityCenter.strength || 0.15;
-                    const angle = Math.atan2(dy, dx);
-                    tank.vx = (tank.vx || 0) + Math.cos(angle) * force;
-                    tank.vy = (tank.vy || 0) + Math.sin(angle) * force;
-                }
+                // Note: global gravity center force on tanks is handled in tank._applyOrbitalPhysics()
             });
             
             // Apply to Projectiles

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /e/development/games/tankwars/js/*.js | grep -v test | grep -v node_modules)"
+    ]
+  }
+}
