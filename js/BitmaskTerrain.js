@@ -439,21 +439,23 @@ export class BitmaskTerrain {
                     }
 
                     // 3. Standard Gravity
-                    if (this.data[yNextOffset + x] === 0) {
-                        this.setSolid(x, y, false);
-                        this.setSolid(x, y + 1, true);
-                        moved = true;
-                        moveCount++;
-                    } else {
-                        const leftOpen = x > 0 && this.data[yNextOffset + x - 1] === 0;
-                        const rightOpen = x < width - 1 && this.data[yNextOffset + x + 1] === 0;
-                        if (leftOpen || rightOpen) {
-                            const moveRight = (leftOpen && rightOpen) ? (Math.random() > 0.5) : rightOpen;
-                            const adx = moveRight ? 1 : -1;
+                    if (y + 1 < height - 1) {
+                        if (this.data[yNextOffset + x] === 0) {
                             this.setSolid(x, y, false);
-                            this.setSolid(x + adx, y + 1, true);
+                            this.setSolid(x, y + 1, true);
                             moved = true;
                             moveCount++;
+                        } else {
+                            const leftOpen = x > 0 && this.data[yNextOffset + x - 1] === 0;
+                            const rightOpen = x < width - 1 && this.data[yNextOffset + x + 1] === 0;
+                            if (leftOpen || rightOpen) {
+                                const moveRight = (leftOpen && rightOpen) ? (Math.random() > 0.5) : rightOpen;
+                                const adx = moveRight ? 1 : -1;
+                                this.setSolid(x, y, false);
+                                this.setSolid(x + adx, y + 1, true);
+                                moved = true;
+                                moveCount++;
+                            }
                         }
                     }
                 }
