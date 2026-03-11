@@ -362,15 +362,16 @@ export class BitmaskTerrain {
         }));
 
         // OPTIMIZATION: Only process rows that have potential movement
-        // (Either near a well or above an empty space)
         for (let y = height - 2; y >= 0; y--) {
             const yOffset = y * width;
             const yNextOffset = (y + 1) * width;
-            
-            // Check if this row is completely solid and has a solid row below it
-            // This is a fast way to skip 90% of the earth core
-            let rowMightMove = (globalWell !== null);
-            if (!rowMightMove) {
+
+            // Skip rows that can't possibly have anything to do.
+            // Standard gravity and globalWell always process all rows.
+            // Local-wells-only: skip rows not near any well.
+            let rowMightMove = true;
+            if (activeWells.length > 0 && globalWell === null) {
+                rowMightMove = false;
                 for (const well of activeWells) {
                     if (y >= well.minY && y <= well.maxY) {
                         rowMightMove = true;
@@ -378,6 +379,7 @@ export class BitmaskTerrain {
                     }
                 }
             }
+            if (!rowMightMove) continue;
             
             // If no wells, we only move if there is air below. 
             // We'll do a quick sample check or just proceed.
@@ -421,30 +423,42 @@ export class BitmaskTerrain {
                     if (globalWell) {
                         const dx = globalWell.x - x;
                         const dy = globalWell.y - y;
-                        if (dx*dx + dy*dy > 25) {
-                            const adx = Math.sign(dx);
-                            const ady = Math.sign(dy);
-                            
-                            // Fluid Flow: Try multiple paths to avoid getting stuck
-                            const paths = [
-                                { tx: x + adx, ty: y + ady }, // Direct diagonal
-                                { tx: x + adx, ty: y },       // Horizontal slide
-                                { tx: x, ty: y + ady }        // Vertical pull
-                            ];
+                        const dist2 = dx * dx + dy * dy;
+                        if (dist2 > 25) {
+                            // Distance-based probability gate: close pixels always move,
+                            // far pixels move less often — creates fluid gradual collapse
+                            // and greatly reduces CPU load from distant terrain
+                            const moveProbability = Math.min(1.0, 70000 / dist2); // ~265px = always
+                            if (Math.random() < moveProbability) {
+                                const adx = Math.sign(dx);
+                                const ady = Math.sign(dy);
 
-                            for (const path of paths) {
-                                if (path.tx >= 0 && path.tx < width && path.ty >= 0 && path.ty < height - 1) {
-                                    if (this.data[path.ty * width + path.tx] === 0) {
-                                        this.setSolid(x, y, false);
-                                        this.setSolid(path.tx, path.ty, true);
-                                        moved = true;
-                                        moveCount++;
-                                        break;
+                                // More paths + randomized middle pair for uniform circular flow
+                                const paths = [
+                                    { tx: x + adx, ty: y + ady }, // Direct diagonal toward core
+                                    { tx: x + adx, ty: y },       // Horizontal slide
+                                    { tx: x, ty: y + ady },       // Vertical pull
+                                    { tx: x - adx, ty: y + ady }, // Opposite diagonal (fluid spread)
+                                ];
+                                // Shuffle cardinal paths so flow is uniform, not axis-biased
+                                if (Math.random() > 0.5) {
+                                    const tmp = paths[1]; paths[1] = paths[2]; paths[2] = tmp;
+                                }
+
+                                for (const path of paths) {
+                                    if (path.tx >= 0 && path.tx < width && path.ty >= 0 && path.ty < height - 1) {
+                                        if (this.data[path.ty * width + path.tx] === 0) {
+                                            this.setSolid(x, y, false);
+                                            this.setSolid(path.tx, path.ty, true);
+                                            moved = true;
+                                            moveCount++;
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
-                        continue; 
+                        continue;
                     }
 
                     // 3. Standard Gravity

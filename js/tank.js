@@ -782,14 +782,23 @@ export class Tank {
             return;
         }
         
-        let explosionRadius = 15; 
+        let explosionRadius = 15;
         let damage = 50; // Default reduced to 50
         let projectileColor = 'black';
         let extraDistance = 0;
         let special = null;
-        
-        let vx = this.power * Math.cos(this.angle) * 0.2;
-        let vy = -this.power * Math.sin(this.angle) * 0.2;
+
+        // In orbital mode, transform the firing angle from local tank space to world space
+        let fireAngle = this.angle;
+        if (state.gravityCenter) {
+            const tcx = this.x + this.width / 2;
+            const tcy = this.y - this.height / 2;
+            const orbitalRot = Math.atan2(state.gravityCenter.y - tcy, state.gravityCenter.x - tcx) - Math.PI / 2;
+            fireAngle = this.angle - orbitalRot;
+        }
+
+        let vx = this.power * Math.cos(fireAngle) * 0.2;
+        let vy = -this.power * Math.sin(fireAngle) * 0.2;
         
         if (this.selectedWeapon === 'heavy') {
             explosionRadius = 30;
@@ -893,8 +902,19 @@ export class Tank {
         }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
-        let x = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
-        let y = this.y - this.height - barrelLength * Math.sin(this.angle);
+        let x, y;
+        if (state.gravityCenter) {
+            const tcx = this.x + this.width / 2;
+            const tcy = this.y - this.height / 2;
+            const orbitalRot = Math.atan2(state.gravityCenter.y - tcy, state.gravityCenter.x - tcx) - Math.PI / 2;
+            const localBX = barrelLength * Math.cos(this.angle);
+            const localBY = -this.height / 2 - barrelLength * Math.sin(this.angle);
+            x = tcx + localBX * Math.cos(orbitalRot) - localBY * Math.sin(orbitalRot);
+            y = tcy + localBX * Math.sin(orbitalRot) + localBY * Math.cos(orbitalRot);
+        } else {
+            x = this.x + this.width / 2 + barrelLength * Math.cos(this.angle);
+            y = this.y - this.height - barrelLength * Math.sin(this.angle);
+        }
         
         const initialProjectile = {
             x, y, vx, vy,
@@ -1539,8 +1559,11 @@ export class Tank {
             this.vx *= 0.7;
             this.vy *= 0.7;
 
+            // Only trigger landing events on actual impacts (not every resting frame)
             const impactSpeed = Math.max(0, vDot);
-            this.handleLanding(this.y, impactSpeed);
+            if (impactSpeed > 1.5) {
+                this.handleLanding(this.y, impactSpeed);
+            }
             this.lastSolidY = this.y;
         }
     }
