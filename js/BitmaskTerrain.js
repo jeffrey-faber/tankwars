@@ -368,29 +368,34 @@ export class BitmaskTerrain {
                         const r2 = well.radius * well.radius;
                         
                         if (dist2 < r2 && dist2 > 25) {
-                            // Determine attraction direction (move 1 pixel towards center)
                             const adx = Math.sign(dx);
                             const ady = Math.sign(dy);
                             
-                            const targetX = x + adx;
-                            const targetY = y + ady;
-                            
-                            if (targetX >= 0 && targetX < this.width && targetY >= 0 && targetY < this.height - 1) {
-                                // Only move if the target is EMPTY AIR.
-                                if (this.data[targetY * this.width + targetX] === 0) {
-                                    this.setSolid(x, y, false);
-                                    this.setSolid(targetX, targetY, true);
-                                    moved = true;
-                                    moveCount++;
-                                    attracted = true;
-                                    break; 
-                                } else {
-                                    // If target is blocked but we are in a well, 
-                                    // we still count as "held" by the well so we don't fall down
-                                    attracted = true;
-                                    break;
+                            // Try multiple paths towards the center (Fluid Flow)
+                            const paths = [
+                                { tx: x + adx, ty: y + ady }, // Direct diagonal
+                                { tx: x + adx, ty: y },       // Horizontal shove
+                                { tx: x, ty: y + ady }        // Vertical pull
+                            ];
+
+                            for (const path of paths) {
+                                if (path.tx >= 0 && path.tx < this.width && path.ty >= 0 && path.ty < this.height - 1) {
+                                    if (this.data[path.ty * this.width + path.tx] === 0) {
+                                        this.setSolid(x, y, false);
+                                        this.setSolid(path.tx, path.ty, true);
+                                        moved = true;
+                                        moveCount++;
+                                        attracted = true;
+                                        break;
+                                    }
                                 }
                             }
+
+                            if (!attracted) {
+                                // If already packed at center, just hold it there
+                                attracted = true;
+                            }
+                            break; 
                         }
                     }
                     if (attracted) continue;

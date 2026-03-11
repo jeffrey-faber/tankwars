@@ -186,7 +186,19 @@ export function isSettling() {
     if (!state.aiReadyToFire) return true;
     
     // 6. Any tanks still falling or drifting with momentum?
-    const movingTank = state.tanks.find(t => t.alive && (Math.abs(t.vy) > 0.02 || Math.abs(t.vx) > 0.02));
+    const movingTank = state.tanks.find(t => {
+        if (!t.alive) return false;
+        // If tank is in a gravity well, ignore its velocity for settling purposes
+        // because the well will keep it moving for many turns.
+        const inWell = state.activeGravityWells?.some(well => {
+            const dx = well.x - (t.x + t.width / 2);
+            const dy = well.y - (t.y - t.height / 2);
+            return (dx * dx + dy * dy) < (well.radius * well.radius);
+        });
+        if (inWell) return false;
+
+        return (Math.abs(t.vy) > 0.05 || Math.abs(t.vx) > 0.05);
+    });
     if (movingTank) return true;
 
     return false;
