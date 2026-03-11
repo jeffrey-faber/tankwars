@@ -364,15 +364,11 @@ export class BitmaskTerrain {
                     for (const well of wells) {
                         const dx = well.x - x;
                         const dy = well.y - y;
-                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        const dist2 = dx*dx + dy*dy;
+                        const r2 = well.radius * well.radius;
                         
-                        if (dist < well.radius && dist > 5) {
-                            // Only attract with a certain probability per frame to avoid perfectly straight lines
-                            if (Math.random() > 0.4) { 
-                                attracted = true; // Still marked as attracted so it doesn't fall down normally
-                                break; 
-                            }
-
+                        if (dist2 < r2 && dist2 > 25) {
+                            // Determine attraction direction (move 1 pixel towards center)
                             const adx = Math.sign(dx);
                             const ady = Math.sign(dy);
                             
@@ -380,7 +376,7 @@ export class BitmaskTerrain {
                             const targetY = y + ady;
                             
                             if (targetX >= 0 && targetX < this.width && targetY >= 0 && targetY < this.height - 1) {
-                                // CRITICAL: Only move if the target is EMPTY AIR.
+                                // Only move if the target is EMPTY AIR.
                                 if (this.data[targetY * this.width + targetX] === 0) {
                                     this.setSolid(x, y, false);
                                     this.setSolid(targetX, targetY, true);
@@ -388,6 +384,11 @@ export class BitmaskTerrain {
                                     moveCount++;
                                     attracted = true;
                                     break; 
+                                } else {
+                                    // If target is blocked but we are in a well, 
+                                    // we still count as "held" by the well so we don't fall down
+                                    attracted = true;
+                                    break;
                                 }
                             }
                         }
@@ -395,41 +396,43 @@ export class BitmaskTerrain {
                     if (attracted) continue;
 
                     // 2. Fallback to standard downward gravity
-                    // Check directly below - MUST BE EMPTY AIR
-                    if (this.data[(y + 1) * this.width + x] === 0) {
-                        this.setSolid(x, y, false);
-                        this.setSolid(x, y + 1, true);
-                        moved = true;
-                        moveCount++;
-                    } else {
-                        // Check diagonals - random order to avoid bias
-                        const checkLeftFirst = Math.random() > 0.5;
-                        const leftOpen = x > 0 && this.data[(y + 1) * this.width + (x - 1)] === 0;
-                        const rightOpen = x < this.width - 1 && this.data[(y + 1) * this.width + (x + 1)] === 0;
-                        
-                        if (checkLeftFirst) {
-                            if (leftOpen) {
-                                this.setSolid(x, y, false);
-                                this.setSolid(x - 1, y + 1, true);
-                                moved = true;
-                                moveCount++;
-                            } else if (rightOpen) {
-                                this.setSolid(x, y, false);
-                                this.setSolid(x + 1, y + 1, true);
-                                moved = true;
-                                moveCount++;
-                            }
+                    // Check directly below - MUST BE EMPTY AIR AND NOT BEDROCK
+                    if (y + 1 < this.height - 1) {
+                        if (this.data[(y + 1) * this.width + x] === 0) {
+                            this.setSolid(x, y, false);
+                            this.setSolid(x, y + 1, true);
+                            moved = true;
+                            moveCount++;
                         } else {
-                            if (rightOpen) {
-                                this.setSolid(x, y, false);
-                                this.setSolid(x + 1, y + 1, true);
-                                moved = true;
-                                moveCount++;
-                            } else if (leftOpen) {
-                                this.setSolid(x, y, false);
-                                this.setSolid(x - 1, y + 1, true);
-                                moved = true;
-                                moveCount++;
+                            // Check diagonals - random order to avoid bias
+                            const checkLeftFirst = Math.random() > 0.5;
+                            const leftOpen = x > 0 && this.data[(y + 1) * this.width + (x - 1)] === 0;
+                            const rightOpen = x < this.width - 1 && this.data[(y + 1) * this.width + (x + 1)] === 0;
+                            
+                            if (checkLeftFirst) {
+                                if (leftOpen) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(x - 1, y + 1, true);
+                                    moved = true;
+                                    moveCount++;
+                                } else if (rightOpen) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(x + 1, y + 1, true);
+                                    moved = true;
+                                    moveCount++;
+                                }
+                            } else {
+                                if (rightOpen) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(x + 1, y + 1, true);
+                                    moved = true;
+                                    moveCount++;
+                                } else if (leftOpen) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(x - 1, y + 1, true);
+                                    moved = true;
+                                    moveCount++;
+                                }
                             }
                         }
                     }
