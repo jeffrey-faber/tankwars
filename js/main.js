@@ -400,19 +400,16 @@ function gameLoop() {
             const activeWells = state.activeGravityWells || [];
             const pixelsMoved = state.terrain.updateGravity(activeWells);
             
-            const isMoving = pixelsMoved > 200;
-            if (isMoving) {
+            if (pixelsMoved > 1000) {
                 if (!state.isTerrainSettling) {
                     state.isTerrainSettling = true;
                     state.settleStartTime = now;
                 }
                 
                 // Hard 5 second limit
-                if (now - state.settleStartTime > 5000) {
+                if (state.settleStartTime > 0 && (now - state.settleStartTime > 5000)) {
                     console.log("Settle timeout reached. Forcing progression.");
                     state.isTerrainSettling = false;
-                    // Reset timer for next movement event
-                    state.settleStartTime = 0; 
                 }
             } else {
                 state.isTerrainSettling = false;
