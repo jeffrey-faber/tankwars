@@ -461,16 +461,30 @@ export class BitmaskTerrain {
                                 const adx = Math.sign(dx);
                                 const ady = Math.sign(dy);
 
-                                // More paths + randomized middle pair for uniform circular flow
-                                const paths = [
-                                    { tx: x + adx, ty: y + ady }, // Direct diagonal toward core
-                                    { tx: x + adx, ty: y },       // Horizontal slide
-                                    { tx: x, ty: y + ady },       // Vertical pull
-                                    { tx: x - adx, ty: y + ady }, // Opposite diagonal (fluid spread)
-                                ];
-                                // Shuffle cardinal paths so flow is uniform, not axis-biased
-                                if (Math.random() > 0.5) {
-                                    const tmp = paths[1]; paths[1] = paths[2]; paths[2] = tmp;
+                                // Build paths that strictly move toward core.
+                                // For axis-aligned pixels (adx=0 or ady=0), the naive
+                                // paths collapse to the same cell — causing 1-pixel streaks
+                                // along the cardinal axes. Add perpendicular jitter instead
+                                // so pixels spread into a circle, not a cross.
+                                const paths = [];
+                                if (adx !== 0 && ady !== 0) {
+                                    // True diagonal — three distinct paths toward core
+                                    const swap = Math.random() > 0.5;
+                                    paths.push({ tx: x + adx, ty: y + ady });
+                                    paths.push({ tx: x + (swap ? adx : 0), ty: y + (swap ? 0 : ady) });
+                                    paths.push({ tx: x + (swap ? 0 : adx), ty: y + (swap ? ady : 0) });
+                                } else if (adx !== 0) {
+                                    // On horizontal axis — add vertical jitter toward core
+                                    const py = Math.random() > 0.5 ? 1 : -1;
+                                    paths.push({ tx: x + adx, ty: y + py });
+                                    paths.push({ tx: x + adx, ty: y });
+                                    paths.push({ tx: x + adx, ty: y - py });
+                                } else {
+                                    // On vertical axis — add horizontal jitter toward core
+                                    const px = Math.random() > 0.5 ? 1 : -1;
+                                    paths.push({ tx: x + px,  ty: y + ady });
+                                    paths.push({ tx: x,       ty: y + ady });
+                                    paths.push({ tx: x - px,  ty: y + ady });
                                 }
 
                                 for (const path of paths) {
