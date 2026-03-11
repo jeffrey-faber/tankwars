@@ -378,7 +378,45 @@ export class Tank {
     draw(ctx) {
         // Re-entry Trail / Velocity Visuals
         const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-        // ... (trail logic already exists) ...
+        if (speed > 12) {
+            ctx.save();
+            const angle = Math.atan2(this.vy, this.vx);
+            const centerX = this.x + this.width / 2;
+            const centerY = this.y - this.height / 2;
+            
+            const isInsane = speed > 25;
+            
+            // Draw flame streak
+            const trailLen = speed * (isInsane ? 12 : 5);
+            const gradient = ctx.createLinearGradient(0, 0, -trailLen, 0);
+            if (isInsane) {
+                gradient.addColorStop(0, 'white'); // White hot core
+                gradient.addColorStop(0.2, 'rgba(255, 255, 0, 0.9)');
+                gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.6)');
+            } else {
+                gradient.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.4)');
+            }
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.translate(centerX, centerY);
+            ctx.rotate(angle);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(-this.width, -this.height / 2, -trailLen, this.height * (isInsane ? 2 : 1));
+            
+            // Add some "sparks"
+            if (Math.random() > (isInsane ? 0.2 : 0.5)) {
+                state.activeExplosions.push({
+                    x: centerX - Math.cos(angle) * (20 + Math.random() * 40),
+                    y: centerY - Math.sin(angle) * (20 + Math.random() * 40),
+                    radius: (isInsane ? 10 : 5) + Math.random() * 10,
+                    color: isInsane ? (Math.random() > 0.5 ? 'white' : 'yellow') : (Math.random() > 0.5 ? 'orange' : 'white'),
+                    startTime: performance.now(),
+                    duration: isInsane ? 400 : 200
+                });
+            }
+            ctx.restore();
+        }
 
         ctx.save();
         const centerX = this.x + this.width / 2;
@@ -451,11 +489,34 @@ export class Tank {
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.lineWidth = 1;
-        ctx.restore();
+        ctx.restore(); // Restore World Space before drawing UI
 
         // Off-screen indicator (Unrotated world space)
         if (this.y < 0) {
-            // ... (indicator logic) ...
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, 5);
+            ctx.lineTo(this.x + this.width / 2 - 5, 15);
+            ctx.lineTo(this.x + this.width / 2 + 5, 15);
+            ctx.fill();
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(Math.abs(Math.round(this.y)), this.x + this.width / 2, 28);
+            ctx.textAlign = 'left';
+        }
+
+        if (this.shieldDurability > 0) {
+            ctx.beginPath();
+            ctx.arc(this.x + this.width / 2, this.y - this.height / 2, 15, 0, Math.PI * 2);
+            ctx.strokeStyle = '#00f7ff';
+            ctx.globalAlpha = 0.3 + (this.shieldDurability / (this.maxHealth * 2)) * 0.7;
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+            
+            // Show shield value
+            ctx.fillStyle = '#00f7ff';
+            ctx.font = '6px Arial';
+            ctx.fillText(`${Math.ceil(this.shieldDurability)}`, this.x + this.width + 2, this.y - this.height / 2);
         }
         
         // Stats Bars (Unrotated for readability)
@@ -478,6 +539,22 @@ export class Tank {
             ctx.fillText('BURIED!', this.x + this.width / 2, this.y - this.height - 35);
         }
         ctx.textAlign = 'left'; // Reset
+
+        // Draw Parachute if falling and has durability
+        if (this.vy > 0 && this.parachuteDurability > 0) {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - this.height);
+            ctx.quadraticCurveTo(this.x + this.width / 2, this.y - this.height - 40, this.x + this.width, this.y - this.height);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y - this.height);
+            ctx.lineTo(this.x + this.width / 2, this.y - this.height - 30);
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
     }
 
     fireLaser(laserId = 'laser') {

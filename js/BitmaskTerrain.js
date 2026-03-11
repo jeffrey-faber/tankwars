@@ -424,14 +424,23 @@ export class BitmaskTerrain {
                         if (dx*dx + dy*dy > 25) {
                             const adx = Math.sign(dx);
                             const ady = Math.sign(dy);
-                            const targetX = x + adx;
-                            const targetY = y + ady;
-                            if (targetX >= 0 && targetX < width && targetY >= 0 && targetY < height - 1) {
-                                if (this.data[targetY * width + targetX] === 0) {
-                                    this.setSolid(x, y, false);
-                                    this.setSolid(targetX, targetY, true);
-                                    moved = true;
-                                    moveCount++;
+                            
+                            // Fluid Flow: Try multiple paths to avoid getting stuck
+                            const paths = [
+                                { tx: x + adx, ty: y + ady }, // Direct diagonal
+                                { tx: x + adx, ty: y },       // Horizontal slide
+                                { tx: x, ty: y + ady }        // Vertical pull
+                            ];
+
+                            for (const path of paths) {
+                                if (path.tx >= 0 && path.tx < width && path.ty >= 0 && path.ty < height - 1) {
+                                    if (this.data[path.ty * width + path.tx] === 0) {
+                                        this.setSolid(x, y, false);
+                                        this.setSolid(path.tx, path.ty, true);
+                                        moved = true;
+                                        moveCount++;
+                                        break;
+                                    }
                                 }
                             }
                         }
