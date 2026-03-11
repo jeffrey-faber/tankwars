@@ -101,8 +101,7 @@ export function startTurn(index) {
         }
     }
 
-    // Sudden Death Progression
-: Only increment and trigger if NOT already resolving
+    // Sudden Death Progression: Only increment and trigger if NOT already resolving
     if (state.suddenDeath && state.suddenDeath.type !== 'none' && !state.suddenDeath.isResolving) {
         state.suddenDeath.currentTurnCount++;
         
