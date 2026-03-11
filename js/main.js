@@ -10,6 +10,35 @@ import { saveMatchSettings, loadMatchSettings } from './sessionPersistence.js';
 import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSettling, startTurn } from './gameContext.js';
 import { initMobileMode, setMobileControlsVisibility } from './mobileManager.js';
 
+// ─── Orbital map constants & helpers ────────────────────────────────────────
+const ORBIT_CX = 600;
+const ORBIT_CY = 300;
+const ORBIT_RADIUS = 210;
+
+function initOrbitalRound() {
+    state.terrain.bakeOrbitMap(ORBIT_CX, ORBIT_CY, ORBIT_RADIUS);
+    state.gravityCenter = { x: ORBIT_CX, y: ORBIT_CY, strength: 0.2, turnsLeft: Infinity };
+    state.isOrbitalMap = true;
+    state.wind = 0;
+}
+
+function getOrbitalTankPositions(count) {
+    const positions = [];
+    for (let i = 0; i < count; i++) {
+        // Evenly distribute around the planet, starting from the top
+        const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+        const dist = ORBIT_RADIUS + 20;
+        positions.push({
+            x: ORBIT_CX + dist * Math.cos(angle) - 10,
+            y: ORBIT_CY + dist * Math.sin(angle),
+        });
+    }
+    return positions;
+}
+
+// Throttle terrain gravity for weapon-triggered orbital (every 2nd frame)
+let gravityFrameCounter = 0;
+
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -157,13 +186,20 @@ function initGameFromConfig(config) {
     canvas.height = canvasHeight;
 
     // Initialize Terrain
-    const oldTerrain = new Terrain(canvasWidth, canvasHeight, state.mapStyle);
+    state.isOrbitalMap = false;
     state.terrain = new BitmaskTerrain(canvasWidth, canvasHeight);
-    state.terrain.bakeHeightmap(oldTerrain.points);
+    let tankPositions;
+    if (state.mapStyle === 'orbit') {
+        initOrbitalRound();
+        tankPositions = getOrbitalTankPositions(state.numPlayers);
+    } else {
+        const oldTerrain = new Terrain(canvasWidth, canvasHeight, state.mapStyle);
+        state.terrain.bakeHeightmap(oldTerrain.points);
+        tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain);
+    }
 
     // Initialize Tanks
     state.tanks = [];
-    const tankPositions = getRandomTankPositions(state.numPlayers, oldTerrain);
     
     config.players.forEach((p, i) => {
         const isAI = p.type.startsWith('bot');
@@ -289,10 +325,17 @@ function resetRound() {
         state.activeEdgeBehavior = state.edgeBehavior;
     }
 
-    const newOldTerrain = new Terrain(state.canvas.width, state.canvas.height, state.mapStyle);
-    state.terrain.bakeHeightmap(newOldTerrain.points);
-
-    const newTankPositions = getRandomTankPositions(state.numPlayers, newOldTerrain);
+    state.gravityCenter = null;
+    let newTankPositions;
+    if (state.mapStyle === 'orbit') {
+        initOrbitalRound();
+        newTankPositions = getOrbitalTankPositions(state.numPlayers);
+    } else {
+        state.isOrbitalMap = false;
+        const newOldTerrain = new Terrain(state.canvas.width, state.canvas.height, state.mapStyle);
+        state.terrain.bakeHeightmap(newOldTerrain.points);
+        newTankPositions = getRandomTankPositions(state.numPlayers, newOldTerrain);
+    }
     state.tanks.forEach((tank, i) => {
         tank.x = newTankPositions[i].x;
         tank.y = newTankPositions[i].y;
@@ -398,11 +441,15 @@ function gameLoop() {
         if (state.terrain.updateGravity) {
             const now = performance.now();
             const activeWells = state.activeGravityWells || [];
-            
+
+            // Weapon-triggered orbital: throttle to every 2nd frame to reduce putImageData cost.
+            // Orbital map: terrain is pre-settled, no throttle needed (moved=0 → no putImageData).
+            const weaponOrbital = state.gravityCenter && !state.isOrbitalMap;
+            const skipFrame = weaponOrbital && (gravityFrameCounter++ % 2 === 1);
+
             let totalMoved = 0;
-            const steps = 1;
-            for (let s = 0; s < steps; s++) {
-                totalMoved += state.terrain.updateGravity(activeWells, state.gravityCenter);
+            if (!skipFrame) {
+                totalMoved = state.terrain.updateGravity(activeWells, state.gravityCenter);
             }
             
             if (totalMoved > 5000) { // Much higher threshold for planetary chaos

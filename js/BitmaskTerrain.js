@@ -57,6 +57,34 @@ export class BitmaskTerrain {
         }
     }
 
+    bakeOrbitMap(centerX, centerY, radius) {
+        this.data.fill(0);
+        this.pixels.fill(0);
+
+        // Bedrock row
+        for (let x = 0; x < this.width; x++) {
+            const idx = (this.height - 1) * this.width + x;
+            const pIdx = idx * 4;
+            this.pixels[pIdx] = 30;
+            this.pixels[pIdx + 1] = 30;
+            this.pixels[pIdx + 2] = 30;
+            this.pixels[pIdx + 3] = 255;
+        }
+
+        // Fill circular planet
+        const r2 = radius * radius;
+        for (let y = 0; y < this.height - 1; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const dx = x - centerX;
+                const dy = y - centerY;
+                if (dx * dx + dy * dy <= r2) {
+                    this.setSolid(x, y, true);
+                }
+            }
+        }
+        this.updateCanvas();
+    }
+
     bakeHeightmap(points) {
         // Clear terrain first
         this.data.fill(0);
