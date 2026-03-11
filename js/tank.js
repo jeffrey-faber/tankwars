@@ -1211,6 +1211,23 @@ export class Tank {
             return;
         }
 
+        if (special === 'planetary_gravity') {
+            const item = this.inventory.find(i => i.id === type);
+            const strength = item?.effect?.strength || 0.2;
+            const turns = item?.effect?.duration || 3;
+
+            console.log(`PLANETARY CORE ACTIVATED at ${Math.round(x)},${Math.round(y)}`);
+            
+            state.gravityCenter = {
+                x, y, strength,
+                turnsLeft: turns
+            };
+
+            triggerScreenShake(30, 1500);
+            createExplosion(x, y, 100, 'rgba(0, 255, 255, 0.5)');
+            return;
+        }
+
         if (special === 'add_terrain') {
             if (state.terrain.addTerrain) {
                 state.terrain.addTerrain(x, y, explosionRadius);
