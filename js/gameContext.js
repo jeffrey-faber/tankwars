@@ -48,7 +48,8 @@ export const state = {
     laserBeams: [], // transient beam visuals: { x1, y1, x2, y2, width, color, expiresAt, duration }
     windParticles: [], // visual only particles for wind
     activeGlobalWaves: [], // global map effects: { x, speed, amplitude, frequency }
-    activeGravityWells: [] // { x, y, radius, strength, turnsLeft }
+    activeGravityWells: [], // { x, y, radius, strength, turnsLeft }
+    gravityCenter: null // { x, y, strength, turnsLeft } - Global orbital gravity override
 };
 
 export const EDGE_BEHAVIORS = {
@@ -98,6 +99,15 @@ export function startTurn(index) {
                 console.log("GRAVITY WELL EXPIRED");
                 state.activeGravityWells.splice(i, 1);
             }
+        }
+    }
+
+    // Manage Global Gravity Center
+    if (state.gravityCenter) {
+        state.gravityCenter.turnsLeft--;
+        if (state.gravityCenter.turnsLeft <= 0) {
+            console.log("GLOBAL GRAVITY CORE EXPIRED");
+            state.gravityCenter = null;
         }
     }
 
@@ -541,6 +551,26 @@ export function draw() {
                 state.ctx.arc(well.x, well.y, 3, 0, Math.PI * 2);
                 state.ctx.fill();
             });
+        }
+
+        // Render Global Gravity Center (Experimental)
+        if (state.gravityCenter) {
+            const pulse = 1.0 + Math.sin(now / 150) * 0.3;
+            state.ctx.save();
+            state.ctx.beginPath();
+            const grad = state.ctx.createRadialGradient(state.gravityCenter.x, state.gravityCenter.y, 0, state.gravityCenter.x, state.gravityCenter.y, 40 * pulse);
+            grad.addColorStop(0, 'rgba(0, 255, 255, 0.6)');
+            grad.addColorStop(1, 'transparent');
+            state.ctx.fillStyle = grad;
+            state.ctx.arc(state.gravityCenter.x, state.gravityCenter.y, 40 * pulse, 0, Math.PI * 2);
+            state.ctx.fill();
+            
+            // Central core
+            state.ctx.beginPath();
+            state.ctx.fillStyle = 'white';
+            state.ctx.arc(state.gravityCenter.x, state.gravityCenter.y, 5, 0, Math.PI * 2);
+            state.ctx.fill();
+            state.ctx.restore();
         }
 
         // Render Explosions (Centralized System)

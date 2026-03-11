@@ -398,16 +398,13 @@ function gameLoop() {
         if (state.terrain.updateGravity) {
             const now = performance.now();
             const activeWells = state.activeGravityWells || [];
-            const pixelsMoved = state.terrain.updateGravity(activeWells);
+            const pixelsMoved = state.terrain.updateGravity(activeWells, state.gravityCenter);
             
             if (pixelsMoved > 1000) {
                 if (!state.isTerrainSettling) {
                     state.isTerrainSettling = true;
                     state.settleStartTime = now;
-                }
-                
-                // Hard 5 second limit
-                if (state.settleStartTime > 0 && (now - state.settleStartTime > 5000)) {
+                } else if (now - state.settleStartTime > 5000) {
                     console.log("Settle timeout reached. Forcing progression.");
                     state.isTerrainSettling = false;
                 }
@@ -418,25 +415,60 @@ function gameLoop() {
         }
 
         // Apply Gravity Wells to Tanks
-        if (state.activeGravityWells && state.activeGravityWells.length > 0) {
+        if ((state.activeGravityWells && state.activeGravityWells.length > 0) || state.gravityCenter) {
             const now = performance.now();
-            // ... (tank logic already added) ...
+            state.tanks.forEach(tank => {
+                if (!tank.alive) return;
+                
+                // 1. Local Wells
+                state.activeGravityWells.forEach(well => {
+                    const dx = well.x - (tank.x + tank.width / 2);
+                    const dy = well.y - (tank.y - tank.height / 2);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < well.radius) {
+                        const force = (1 - dist / well.radius) * well.strength;
+                        const angle = Math.atan2(dy, dx);
+                        tank.vx = (tank.vx || 0) + Math.cos(angle) * force;
+                        tank.vy = (tank.vy || 0) + Math.sin(angle) * force;
+                    }
+                });
+
+                // 2. Global Gravity Center
+                if (state.gravityCenter) {
+                    const dx = state.gravityCenter.x - (tank.x + tank.width / 2);
+                    const dy = state.gravityCenter.y - (tank.y - tank.height / 2);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const force = state.gravityCenter.strength || 0.15;
+                    const angle = Math.atan2(dy, dx);
+                    tank.vx = (tank.vx || 0) + Math.cos(angle) * force;
+                    tank.vy = (tank.vy || 0) + Math.sin(angle) * force;
+                }
+            });
             
             // Apply to Projectiles
             state.projectiles.forEach(proj => {
+                // 1. Local Wells
                 state.activeGravityWells.forEach(well => {
-                    if (well.expiresAt > now) {
-                        const dx = well.x - proj.x;
-                        const dy = well.y - proj.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < well.radius) {
-                            const force = (1 - dist / well.radius) * well.strength * 0.5;
-                            const angle = Math.atan2(dy, dx);
-                            proj.vx += Math.cos(angle) * force;
-                            proj.vy += Math.sin(angle) * force;
-                        }
+                    const dx = well.x - proj.x;
+                    const dy = well.y - proj.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < well.radius) {
+                        const force = (1 - dist / well.radius) * well.strength * 0.5;
+                        const angle = Math.atan2(dy, dx);
+                        proj.vx += Math.cos(angle) * force;
+                        proj.vy += Math.sin(angle) * force;
                     }
                 });
+
+                // 2. Global Gravity Center
+                if (state.gravityCenter) {
+                    const dx = state.gravityCenter.x - proj.x;
+                    const dy = state.gravityCenter.y - proj.y;
+                    const force = (state.gravityCenter.strength || 0.15) * 0.5;
+                    const angle = Math.atan2(dy, dx);
+                    proj.vx += Math.cos(angle) * force;
+                    proj.vy += Math.sin(angle) * force;
+                }
             });
         }
 

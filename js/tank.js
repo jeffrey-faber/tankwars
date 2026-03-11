@@ -1376,17 +1376,32 @@ export class Tank {
         
         if (this.y < finalStableY) {
             // IN AIR relative to stable ground: Apply gravity
-            this.vy += state.gravity * timeScale;
+            if (state.gravityCenter) {
+                // Orbital Gravity
+                const dx = state.gravityCenter.x - (this.x + this.width / 2);
+                const dy = state.gravityCenter.y - (this.y - this.height / 2);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const force = state.gravityCenter.strength || 0.15;
+                const angle = Math.atan2(dy, dx);
+
+                this.vx += Math.cos(angle) * force * timeScale;
+                this.vy += Math.sin(angle) * force * timeScale;
+            } else {
+                // Normal Downward Gravity
+                this.vy += state.gravity * timeScale;
+            }
+
             this.y += this.vy * timeScale;
-            
+
             // Sub-pixel safety: if we crossed stable ground, land
-            if (this.y >= finalStableY) {
+            if (this.y >= finalStableY && (!state.gravityCenter || this.y > state.gravityCenter.y)) {
                 this.y = finalStableY;
                 const finalVy = this.vy / timeScale; // Restore real velocity for damage
                 this.vy = 0;
                 this.handleLanding(this.y, finalVy);
             }
-        } else if (this.y > finalGroundY) {
+        }
+ else if (this.y > finalGroundY) {
             // BURIED: Snap to surface
             this.y = finalGroundY;
             this.vy = 0;

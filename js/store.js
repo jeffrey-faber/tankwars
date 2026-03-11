@@ -390,7 +390,7 @@ export class Store {
                 category: 'experimental',
                 effect: {
                     type: 'weapon',
-                    radius: 150,
+                    radius: 112,
                     strength: 0.25,
                     duration: 2, 
                     special: 'gravity_well'
@@ -404,7 +404,7 @@ export class Store {
                 category: 'experimental',
                 effect: {
                     type: 'weapon',
-                    radius: 250,
+                    radius: 187,
                     strength: 0.4,
                     duration: 3,
                     special: 'gravity_well'
@@ -418,10 +418,24 @@ export class Store {
                 category: 'experimental',
                 effect: {
                     type: 'weapon',
-                    radius: 400,
+                    radius: 300,
                     strength: 0.6,
                     duration: 5,
                     special: 'gravity_well'
+                }
+            },
+            {
+                id: 'grav_planetary',
+                name: 'Planetary Core Generator',
+                description: 'ULTRA-EXPERIMENTAL. Replaces downward gravity with a localized core at the point of impact. Lasts 3 turns. Pure orbital chaos.',
+                price: 800,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 0, // Global
+                    strength: 0.2,
+                    duration: 3,
+                    special: 'planetary_gravity'
                 }
             }
         ];

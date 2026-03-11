@@ -344,7 +344,7 @@ export class BitmaskTerrain {
         return floating;
     }
 
-    updateGravity(wells = []) {
+    updateGravity(wells = [], globalWell = null) {
         if (this.freezeGravity) return false;
         let moved = false;
         let moveCount = 0;
@@ -361,46 +361,60 @@ export class BitmaskTerrain {
                 if (this.isSolid(x, y)) {
                     // 1. Check for Gravity Well Influence
                     let attracted = false;
-                    for (const well of wells) {
+                    let totalDx = 0;
+                    let totalDy = 0;
+                    let inAnyWell = false;
+
+                    // Combined list of local and global wells
+                    const allWells = [...wells];
+                    if (globalWell) allWells.push(globalWell);
+
+                    for (const well of allWells) {
                         const dx = well.x - x;
                         const dy = well.y - y;
                         const dist2 = dx*dx + dy*dy;
-                        const r2 = well.radius * well.radius;
+                        // For globalWell, radius is effectively infinite if not specified
+                        const r2 = well.radius ? (well.radius * well.radius) : 10000000;
                         
-                        if (dist2 < r2 && dist2 > 25) {
-                            const adx = Math.sign(dx);
-                            const ady = Math.sign(dy);
-                            
-                            // Try multiple paths towards the center (Fluid Flow)
-                            const paths = [
-                                { tx: x + adx, ty: y + ady }, // Direct diagonal
-                                { tx: x + adx, ty: y },       // Horizontal shove
-                                { tx: x, ty: y + ady }        // Vertical pull
-                            ];
-
-                            for (const path of paths) {
-                                if (path.tx >= 0 && path.tx < this.width && path.ty >= 0 && path.ty < this.height - 1) {
-                                    if (this.data[path.ty * this.width + path.tx] === 0) {
-                                        this.setSolid(x, y, false);
-                                        this.setSolid(path.tx, path.ty, true);
-                                        moved = true;
-                                        moveCount++;
-                                        attracted = true;
-                                        break;
-                                    }
-                                }
+                        if (dist2 < r2) {
+                            inAnyWell = true;
+                            if (dist2 > 25) {
+                                // Add to attraction vector
+                                totalDx += dx / Math.sqrt(dist2);
+                                totalDy += dy / Math.sqrt(dist2);
                             }
-
-                            if (!attracted) {
-                                // If already packed at center, just hold it there
-                                attracted = true;
-                            }
-                            break; 
                         }
                     }
+
+                    if (inAnyWell) {
+                        const adx = Math.round(totalDx ? totalDx / Math.abs(totalDx || 1) : 0);
+                        const ady = Math.round(totalDy ? totalDy / Math.abs(totalDy || 1) : 0);
+                        
+                        if (adx !== 0 || ady !== 0) {
+                            const targetX = x + adx;
+                            const targetY = y + ady;
+                            
+                            if (targetX >= 0 && targetX < this.width && targetY >= 0 && targetY < this.height - 1) {
+                                if (this.data[targetY * this.width + targetX] === 0) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(targetX, targetY, true);
+                                    moved = true;
+                                    moveCount++;
+                                    attracted = true;
+                                }
+                            }
+                        }
+                        // If blocked but in globalWell, we don't fall down normally
+                        if (globalWell && !attracted) attracted = true; 
+                        // For local wells, we only count as held if we are already clumped
+                        if (!attracted && inAnyWell && !globalWell) attracted = true; 
+                    }
+
                     if (attracted) continue;
 
                     // 2. Fallback to standard downward gravity
+                    // ONLY if no global gravity override is active
+                    if (globalWell) continue; 
                     // Check directly below - MUST BE EMPTY AIR AND NOT BEDROCK
                     if (y + 1 < this.height - 1) {
                         if (this.data[(y + 1) * this.width + x] === 0) {
