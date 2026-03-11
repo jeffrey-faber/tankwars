@@ -463,6 +463,21 @@ export class Tank {
         const healthPercent = Math.max(0, this.health / this.maxHealth);
         ctx.fillStyle = this.health < 30 ? 'red' : this.health < 60 ? 'yellow' : 'green';
         ctx.fillRect(this.x, this.y - this.height - 15, healthBarWidth * healthPercent, 3);
+
+        ctx.font = '10px Arial';
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x + this.width / 2, this.y - this.height - 25);
+        
+        ctx.font = '8px Arial';
+        ctx.fillStyle = 'white';
+        ctx.fillText(this.selectedWeapon, this.x + this.width / 2, this.y - this.height - 5);
+        
+        if (this.isBuried) {
+            ctx.fillStyle = 'red';
+            ctx.fillText('BURIED!', this.x + this.width / 2, this.y - this.height - 35);
+        }
+        ctx.textAlign = 'left'; // Reset
     }
 
     fireLaser(laserId = 'laser') {

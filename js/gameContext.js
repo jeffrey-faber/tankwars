@@ -179,12 +179,12 @@ export function isSettling() {
     // 0. Sudden Death event in progress?
     if (state.suddenDeath?.isResolving) return true;
 
-    // 1. Tectonic ripples or Global Gravity overrides in progress?
+    // 1. Tectonic ripples in progress?
     if (state.activeGlobalWaves && state.activeGlobalWaves.length > 0) return true;
-    if (state.gravityCenter) return true;
     
     // 2. Terrain falling? (Controlled by 5s timeout in main.js)
-    if (state.isTerrainSettling) return true;
+    // While planetary gravity is on, we ALLOW turns because terrain may never stop moving.
+    if (state.isTerrainSettling && !state.gravityCenter) return true;
 
     // 3. Projectiles in flight?
     if (state.projectiles.length > 0) return true;
@@ -199,7 +199,11 @@ export function isSettling() {
     // 6. Any tanks still falling or drifting with momentum?
     const movingTank = state.tanks.find(t => {
         if (!t.alive) return false;
-        // If tank is in a gravity well, ignore its velocity for settling purposes
+        
+        // While planetary gravity is active, we ignore orbit velocity for turn progression
+        if (state.gravityCenter) return false;
+
+        // If tank is in a local gravity well, ignore its velocity for settling purposes
         const inWell = state.activeGravityWells?.some(well => {
             const dx = well.x - (t.x + t.width / 2);
             const dy = well.y - (t.y - t.height / 2);
@@ -207,7 +211,7 @@ export function isSettling() {
         });
         if (inWell) return false;
 
-        // Threshold check (0.1 is standard, 0.02 was too sensitive)
+        // Standard Threshold check
         return (Math.abs(t.vy) > 0.1 || Math.abs(t.vx) > 0.1);
     });
     if (movingTank) return true;
