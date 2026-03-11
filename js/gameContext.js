@@ -158,15 +158,15 @@ export function isSettling() {
     // 0. Sudden Death event in progress?
     if (state.suddenDeath?.isResolving) return true;
 
-    // 1. Projectiles in flight?
-    if (state.projectiles.length > 0) return true;
-    
-    // 2. Tectonic ripples in progress?
+    // 1. Tectonic ripples in progress?
     if (state.activeGlobalWaves && state.activeGlobalWaves.length > 0) return true;
     
-    // 3. Terrain falling?
+    // 2. Terrain falling? (Controlled by 5s timeout in main.js)
     if (state.isTerrainSettling) return true;
 
+    // 3. Projectiles in flight?
+    if (state.projectiles.length > 0) return true;
+    
     // 4. Terrain frozen or Tank gravity frozen (Earthquake sequence)?
     if (state.terrain && state.terrain.freezeGravity) return true;
     if (state.freezeTankGravity) return true;

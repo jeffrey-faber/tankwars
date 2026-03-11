@@ -367,22 +367,27 @@ export class BitmaskTerrain {
                         const dist = Math.sqrt(dx*dx + dy*dy);
                         
                         if (dist < well.radius && dist > 5) {
-                            // Determine attraction direction
+                            // Only attract with a certain probability per frame to avoid perfectly straight lines
+                            if (Math.random() > 0.4) { 
+                                attracted = true; // Still marked as attracted so it doesn't fall down normally
+                                break; 
+                            }
+
                             const adx = Math.sign(dx);
                             const ady = Math.sign(dy);
                             
-                            // Try to move towards well center
                             const targetX = x + adx;
                             const targetY = y + ady;
                             
                             if (targetX >= 0 && targetX < this.width && targetY >= 0 && targetY < this.height - 1) {
-                                if (!this.isSolid(targetX, targetY)) {
+                                // CRITICAL: Only move if the target is EMPTY AIR.
+                                if (this.data[targetY * this.width + targetX] === 0) {
                                     this.setSolid(x, y, false);
                                     this.setSolid(targetX, targetY, true);
                                     moved = true;
                                     moveCount++;
                                     attracted = true;
-                                    break; // Only influenced by one well at a time
+                                    break; 
                                 }
                             }
                         }
@@ -390,8 +395,8 @@ export class BitmaskTerrain {
                     if (attracted) continue;
 
                     // 2. Fallback to standard downward gravity
-                    // Check directly below
-                    if (!this.isSolid(x, y + 1)) {
+                    // Check directly below - MUST BE EMPTY AIR
+                    if (this.data[(y + 1) * this.width + x] === 0) {
                         this.setSolid(x, y, false);
                         this.setSolid(x, y + 1, true);
                         moved = true;
@@ -399,8 +404,8 @@ export class BitmaskTerrain {
                     } else {
                         // Check diagonals - random order to avoid bias
                         const checkLeftFirst = Math.random() > 0.5;
-                        const leftOpen = x > 0 && !this.isSolid(x - 1, y + 1);
-                        const rightOpen = x < this.width - 1 && !this.isSolid(x + 1, y + 1);
+                        const leftOpen = x > 0 && this.data[(y + 1) * this.width + (x - 1)] === 0;
+                        const rightOpen = x < this.width - 1 && this.data[(y + 1) * this.width + (x + 1)] === 0;
                         
                         if (checkLeftFirst) {
                             if (leftOpen) {

@@ -411,9 +411,12 @@ function gameLoop() {
                 if (now - state.settleStartTime > 5000) {
                     console.log("Settle timeout reached. Forcing progression.");
                     state.isTerrainSettling = false;
+                    // Reset timer for next movement event
+                    state.settleStartTime = 0; 
                 }
             } else {
                 state.isTerrainSettling = false;
+                state.settleStartTime = 0;
             }
         }
 
