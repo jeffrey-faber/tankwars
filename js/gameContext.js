@@ -28,6 +28,7 @@ export const state = {
     turnTimer: { enabled: false, seconds: 30 },
     remainingTurnTime: 0,
     isTerrainSettling: false, 
+    settleStartTime: 0, // Track when settling began
     // Sudden Death
     suddenDeath: {
         active: false,
@@ -297,13 +298,14 @@ export function triggerBlackHoleEffect(x, y, radius, pullStrength, size = 'mediu
 
     if (size === 'medium' || size === 'large') {
         if (state.terrain && state.terrain.addTerrain) {
-            const dirtCount = size === 'large' ? 20 : 10;
+            // Spawn a tiny amount of dirt (reduced count and size)
+            const dirtCount = size === 'large' ? 5 : 3; 
             for (let i = 0; i < dirtCount; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const dist = (0.3 + Math.random() * 0.7) * radius;
+                const dist = (0.1 + Math.random() * 0.4) * radius;
                 const dx = Math.cos(angle) * dist;
                 const dy = Math.sin(angle) * dist;
-                state.terrain.addTerrain(x + dx, y + dy, 5 + Math.random() * 8);
+                state.terrain.addTerrain(x + dx, y + dy, 3 + Math.random() * 3);
             }
         }
     }

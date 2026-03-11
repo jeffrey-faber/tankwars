@@ -399,7 +399,22 @@ function gameLoop() {
             const now = performance.now();
             const activeWells = (state.activeGravityWells || []).filter(w => w.expiresAt > now);
             const pixelsMoved = state.terrain.updateGravity(activeWells);
-            state.isTerrainSettling = pixelsMoved > 200; 
+            
+            const isMoving = pixelsMoved > 200;
+            if (isMoving) {
+                if (!state.isTerrainSettling) {
+                    state.isTerrainSettling = true;
+                    state.settleStartTime = now;
+                }
+                
+                // Hard 5 second limit
+                if (now - state.settleStartTime > 5000) {
+                    console.log("Settle timeout reached. Forcing progression.");
+                    state.isTerrainSettling = false;
+                }
+            } else {
+                state.isTerrainSettling = false;
+            }
         }
 
         // Apply Gravity Wells to Tanks

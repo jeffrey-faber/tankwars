@@ -1199,10 +1199,10 @@ export class Tank {
 
             // Throw a little dirt to get stuck in it (initial debris)
             if (state.terrain.addTerrain) {
-                for (let i = 0; i < 8; i++) {
+                for (let i = 0; i < 3; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const dist = Math.random() * radius * 0.5;
-                    state.terrain.addTerrain(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, 10);
+                    const dist = Math.random() * radius * 0.3;
+                    state.terrain.addTerrain(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, 5);
                 }
                 state.terrain.updateCanvas();
             }
