@@ -1543,6 +1543,14 @@ export class Tank {
         }
 
         if (terrainDist !== null && terrainDist < halfSize) {
+            // Check if buried: terrain also exists in the "up" direction (away from core).
+            // If so, don't eject — let the tank stay buried.
+            const upCheckDist = halfSize - 1;
+            const upTx = Math.round(newCx - nx * upCheckDist);
+            const upTy = Math.round(newCy - ny * upCheckDist);
+            const isBuried = terrain.isSolid(upTx, upTy);
+            if (isBuried) return;
+
             // Push tank back so it sits on the surface
             const overlap = halfSize - terrainDist;
             this.x -= nx * overlap;
