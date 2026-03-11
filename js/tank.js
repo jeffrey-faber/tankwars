@@ -850,6 +850,12 @@ export class Tank {
             damage = 0;
             projectileColor = '#000000';
             special = 'terrain_invert';
+        } else if (this.selectedWeapon === 'grav_planetary') {
+            const item = this.inventory.find(i => i.id === this.selectedWeapon);
+            explosionRadius = 0;
+            damage = 0;
+            projectileColor = '#00ffff';
+            special = 'planetary_gravity';
         } else if (this.selectedWeapon.startsWith('grav_well')) {
             const item = this.inventory.find(i => i.id === this.selectedWeapon);
             explosionRadius = item?.effect?.radius || 150;
@@ -1150,24 +1156,6 @@ export class Tank {
                 launch: true // Enable launching logic
             });
             triggerScreenShake(30, 2500);
-            return;
-        }
-
-        if (special === 'terrain_invert') {
-            // ... (existing terrain_invert logic) ...
-            return;
-        }
-
-        if (special === 'terrain_invert') {
-            console.log("REALITY INVERTED!");
-            if (state.terrain.invertTerrain) {
-                state.terrain.invertTerrain();
-            }
-            // Give tanks a moment to realize they might be in the air now
-            state.tanks.forEach(t => { 
-                if (t.alive) t.vy = Math.max(t.vy, 0.1); 
-            });
-            triggerScreenShake(25, 1000);
             return;
         }
 

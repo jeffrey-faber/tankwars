@@ -345,123 +345,122 @@ export class BitmaskTerrain {
     }
 
     updateGravity(wells = [], globalWell = null) {
-        if (this.freezeGravity) return false;
+        if (this.freezeGravity) return 0;
+        
         let moved = false;
         let moveCount = 0;
-        
-        // Iterate from bottom to top (excluding bottom-most row)
-        for (let y = this.height - 2; y >= 0; y--) {
-            // Randomize x direction to prevent bias
-            const xStart = Math.random() > 0.5 ? 0 : this.width - 1;
-            const xDir = xStart === 0 ? 1 : -1;
+        const width = this.width;
+        const height = this.height;
+
+        // Pre-calculate well bounding boxes
+        const activeWells = wells.map(w => ({
+            x: w.x, y: w.y, r2: w.radius * w.radius,
+            minX: Math.max(0, w.x - w.radius),
+            maxX: Math.min(width - 1, w.x + w.radius),
+            minY: Math.max(0, w.y - w.radius),
+            maxY: Math.min(height - 2, w.y + w.radius)
+        }));
+
+        // OPTIMIZATION: Only process rows that have potential movement
+        // (Either near a well or above an empty space)
+        for (let y = height - 2; y >= 0; y--) {
+            const yOffset = y * width;
+            const yNextOffset = (y + 1) * width;
             
-            for (let i = 0; i < this.width; i++) {
-                const x = xStart + (i * xDir);
+            // Check if this row is completely solid and has a solid row below it
+            // This is a fast way to skip 90% of the earth core
+            let rowMightMove = (globalWell !== null);
+            if (!rowMightMove) {
+                for (const well of activeWells) {
+                    if (y >= well.minY && y <= well.maxY) {
+                        rowMightMove = true;
+                        break;
+                    }
+                }
+            }
+            
+            // If no wells, we only move if there is air below. 
+            // We'll do a quick sample check or just proceed.
+            
+            const xStart = Math.random() > 0.5 ? 0 : width - 1;
+            const xStep = xStart === 0 ? 1 : -1;
+
+            for (let i = 0; i < width; i++) {
+                const x = xStart + (i * xStep);
                 
-                if (this.isSolid(x, y)) {
-                    // 1. Check for Gravity Well Influence
+                if (this.data[yOffset + x] === 1) {
+                    // Optimization: A solid pixel with 4 solid neighbors and no well influence cannot move.
+                    // But checking 4 neighbors is expensive. Let's stick to the core logic.
+                    
                     let attracted = false;
-                    let totalDx = 0;
-                    let totalDy = 0;
-                    let inAnyWell = false;
 
-                    // Combined list of local and global wells
-                    const allWells = [...wells];
-                    if (globalWell) allWells.push(globalWell);
-
-                    for (const well of allWells) {
-                        const dx = well.x - x;
-                        const dy = well.y - y;
-                        const dist2 = dx*dx + dy*dy;
-                        // For globalWell, radius is effectively infinite if not specified
-                        const r2 = well.radius ? (well.radius * well.radius) : 10000000;
-                        
-                        if (dist2 < r2) {
-                            inAnyWell = true;
-                            if (dist2 > 25) {
-                                // Add to attraction vector
-                                totalDx += dx / Math.sqrt(dist2);
-                                totalDy += dy / Math.sqrt(dist2);
+                    // 1. Local Wells
+                    for (const well of activeWells) {
+                        if (x >= well.minX && x <= well.maxX && y >= well.minY && y <= well.maxY) {
+                            const dx = well.x - x;
+                            const dy = well.y - y;
+                            const dist2 = dx*dx + dy*dy;
+                            if (dist2 < well.r2 && dist2 > 25) {
+                                const adx = Math.sign(dx);
+                                const ady = Math.sign(dy);
+                                const targetIdx = (y + ady) * width + (x + adx);
+                                if (this.data[targetIdx] === 0) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(x + adx, y + ady, true);
+                                    moved = true;
+                                    moveCount++;
+                                }
+                                attracted = true; 
+                                break;
                             }
                         }
                     }
+                    if (attracted) continue;
 
-                    if (inAnyWell) {
-                        const adx = Math.round(totalDx ? totalDx / Math.abs(totalDx || 1) : 0);
-                        const ady = Math.round(totalDy ? totalDy / Math.abs(totalDy || 1) : 0);
-                        
-                        if (adx !== 0 || ady !== 0) {
+                    // 2. Global Core
+                    if (globalWell) {
+                        const dx = globalWell.x - x;
+                        const dy = globalWell.y - y;
+                        if (dx*dx + dy*dy > 25) {
+                            const adx = Math.sign(dx);
+                            const ady = Math.sign(dy);
                             const targetX = x + adx;
                             const targetY = y + ady;
-                            
-                            if (targetX >= 0 && targetX < this.width && targetY >= 0 && targetY < this.height - 1) {
-                                if (this.data[targetY * this.width + targetX] === 0) {
+                            if (targetX >= 0 && targetX < width && targetY >= 0 && targetY < height - 1) {
+                                if (this.data[targetY * width + targetX] === 0) {
                                     this.setSolid(x, y, false);
                                     this.setSolid(targetX, targetY, true);
                                     moved = true;
                                     moveCount++;
-                                    attracted = true;
                                 }
                             }
                         }
-                        // If blocked but in globalWell, we don't fall down normally
-                        if (globalWell && !attracted) attracted = true; 
-                        // For local wells, we only count as held if we are already clumped
-                        if (!attracted && inAnyWell && !globalWell) attracted = true; 
+                        continue; 
                     }
 
-                    if (attracted) continue;
-
-                    // 2. Fallback to standard downward gravity
-                    // ONLY if no global gravity override is active
-                    if (globalWell) continue; 
-                    // Check directly below - MUST BE EMPTY AIR AND NOT BEDROCK
-                    if (y + 1 < this.height - 1) {
-                        if (this.data[(y + 1) * this.width + x] === 0) {
+                    // 3. Standard Gravity
+                    if (this.data[yNextOffset + x] === 0) {
+                        this.setSolid(x, y, false);
+                        this.setSolid(x, y + 1, true);
+                        moved = true;
+                        moveCount++;
+                    } else {
+                        const leftOpen = x > 0 && this.data[yNextOffset + x - 1] === 0;
+                        const rightOpen = x < width - 1 && this.data[yNextOffset + x + 1] === 0;
+                        if (leftOpen || rightOpen) {
+                            const moveRight = (leftOpen && rightOpen) ? (Math.random() > 0.5) : rightOpen;
+                            const adx = moveRight ? 1 : -1;
                             this.setSolid(x, y, false);
-                            this.setSolid(x, y + 1, true);
+                            this.setSolid(x + adx, y + 1, true);
                             moved = true;
                             moveCount++;
-                        } else {
-                            // Check diagonals - random order to avoid bias
-                            const checkLeftFirst = Math.random() > 0.5;
-                            const leftOpen = x > 0 && this.data[(y + 1) * this.width + (x - 1)] === 0;
-                            const rightOpen = x < this.width - 1 && this.data[(y + 1) * this.width + (x + 1)] === 0;
-                            
-                            if (checkLeftFirst) {
-                                if (leftOpen) {
-                                    this.setSolid(x, y, false);
-                                    this.setSolid(x - 1, y + 1, true);
-                                    moved = true;
-                                    moveCount++;
-                                } else if (rightOpen) {
-                                    this.setSolid(x, y, false);
-                                    this.setSolid(x + 1, y + 1, true);
-                                    moved = true;
-                                    moveCount++;
-                                }
-                            } else {
-                                if (rightOpen) {
-                                    this.setSolid(x, y, false);
-                                    this.setSolid(x + 1, y + 1, true);
-                                    moved = true;
-                                    moveCount++;
-                                } else if (leftOpen) {
-                                    this.setSolid(x, y, false);
-                                    this.setSolid(x - 1, y + 1, true);
-                                    moved = true;
-                                    moveCount++;
-                                }
-                            }
                         }
                     }
                 }
             }
         }
-        if (moved) {
-            // Only upload texture to GPU if something changed
-            this.ctx.putImageData(this.imageData, 0, 0);
-        }
+        
+        if (moved) this.updateCanvas();
         return moveCount;
     }
 

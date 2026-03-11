@@ -398,9 +398,15 @@ function gameLoop() {
         if (state.terrain.updateGravity) {
             const now = performance.now();
             const activeWells = state.activeGravityWells || [];
-            const pixelsMoved = state.terrain.updateGravity(activeWells, state.gravityCenter);
             
-            if (pixelsMoved > 1000) {
+            let totalMoved = 0;
+            // When global gravity is on, we do 2 sub-steps for smoother physics
+            const steps = state.gravityCenter ? 2 : 1;
+            for (let s = 0; s < steps; s++) {
+                totalMoved += state.terrain.updateGravity(activeWells, state.gravityCenter);
+            }
+            
+            if (totalMoved > 5000) { // Much higher threshold for planetary chaos
                 if (!state.isTerrainSettling) {
                     state.isTerrainSettling = true;
                     state.settleStartTime = now;
