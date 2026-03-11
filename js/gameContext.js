@@ -46,7 +46,8 @@ export const state = {
     screenShake: { intensity: 0, startTime: 0, duration: 0 },
     laserBeams: [], // transient beam visuals: { x1, y1, x2, y2, width, color, expiresAt, duration }
     windParticles: [], // visual only particles for wind
-    activeGlobalWaves: [] // global map effects: { x, speed, amplitude, frequency }
+    activeGlobalWaves: [], // global map effects: { x, speed, amplitude, frequency }
+    activeGravityWells: [] // { x, y, radius, strength, expiresAt }
 };
 
 export const EDGE_BEHAVIORS = {
@@ -491,6 +492,32 @@ export function draw() {
                 tank.draw(state.ctx);
             }
         });
+
+        // Render Gravity Wells
+        if (state.activeGravityWells && state.activeGravityWells.length > 0) {
+            state.activeGravityWells = state.activeGravityWells.filter(well => well.expiresAt > now);
+            state.activeGravityWells.forEach(well => {
+                const remaining = well.expiresAt - now;
+                const alpha = Math.min(0.4, remaining / 2000);
+                const pulse = 0.8 + Math.sin(now / 200) * 0.2;
+                
+                state.ctx.beginPath();
+                const gradient = state.ctx.createRadialGradient(well.x, well.y, 0, well.x, well.y, well.radius * pulse);
+                gradient.addColorStop(0, `rgba(100, 0, 255, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(50, 0, 150, ${alpha * 0.5})`);
+                gradient.addColorStop(1, 'transparent');
+                
+                state.ctx.fillStyle = gradient;
+                state.ctx.arc(well.x, well.y, well.radius * pulse, 0, Math.PI * 2);
+                state.ctx.fill();
+                
+                // Core
+                state.ctx.beginPath();
+                state.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                state.ctx.arc(well.x, well.y, 3, 0, Math.PI * 2);
+                state.ctx.fill();
+            });
+        }
 
         // Render Explosions (Centralized System)
         const now = performance.now();

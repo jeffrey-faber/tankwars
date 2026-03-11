@@ -148,6 +148,7 @@ function initGameFromConfig(config) {
     }
 
     state.activeGlobalWaves = [];
+    state.activeGravityWells = [];
 
     // Set canvas dimensions
     const canvasWidth = 1200;
@@ -279,6 +280,7 @@ function resetRound() {
     }
 
     state.activeGlobalWaves = [];
+    state.activeGravityWells = [];
 
     // Selection of active edge behavior for this round
     if (state.edgeBehavior === 'random') {
@@ -396,6 +398,29 @@ function gameLoop() {
         if (state.terrain.updateGravity) {
             const pixelsMoved = state.terrain.updateGravity();
             state.isTerrainSettling = pixelsMoved > 200; 
+        }
+
+        // Apply Gravity Wells to Tanks
+        if (state.activeGravityWells && state.activeGravityWells.length > 0) {
+            const now = performance.now();
+            // ... (tank logic already added) ...
+            
+            // Apply to Projectiles
+            state.projectiles.forEach(proj => {
+                state.activeGravityWells.forEach(well => {
+                    if (well.expiresAt > now) {
+                        const dx = well.x - proj.x;
+                        const dy = well.y - proj.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < well.radius) {
+                            const force = (1 - dist / well.radius) * well.strength * 0.5;
+                            const angle = Math.atan2(dy, dx);
+                            proj.vx += Math.cos(angle) * force;
+                            proj.vy += Math.sin(angle) * force;
+                        }
+                    }
+                });
+            });
         }
 
         // Process Global Waves (Tectonic Ripple)

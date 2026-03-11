@@ -850,6 +850,12 @@ export class Tank {
             damage = 0;
             projectileColor = '#000000';
             special = 'terrain_invert';
+        } else if (this.selectedWeapon.startsWith('grav_well')) {
+            const item = this.inventory.find(i => i.id === this.selectedWeapon);
+            explosionRadius = item?.effect?.radius || 150;
+            damage = 0;
+            projectileColor = '#6600ff';
+            special = 'gravity_well';
         }
         
         const barrelLength = Math.min(20, 15 + extraDistance);
@@ -995,7 +1001,7 @@ export class Tank {
                 }
 
                 // Apex trigger for Event Horizon (Large Black Hole)
-                if (proj.type === 'blackhole_l' && proj.vy > 0) {
+                if ((proj.type === 'blackhole_l' || proj.special === 'gravity_well') && proj.vy > 0) {
                     hit = true;
                 }
 
@@ -1148,6 +1154,11 @@ export class Tank {
         }
 
         if (special === 'terrain_invert') {
+            // ... (existing terrain_invert logic) ...
+            return;
+        }
+
+        if (special === 'terrain_invert') {
             console.log("REALITY INVERTED!");
             if (state.terrain.invertTerrain) {
                 state.terrain.invertTerrain();
@@ -1157,6 +1168,46 @@ export class Tank {
                 if (t.alive) t.vy = Math.max(t.vy, 0.1); 
             });
             triggerScreenShake(25, 1000);
+            return;
+        }
+
+        if (special === 'terrain_invert') {
+            console.log("REALITY INVERTED!");
+            if (state.terrain.invertTerrain) {
+                state.terrain.invertTerrain();
+            }
+            // Give tanks a moment to realize they might be in the air now
+            state.tanks.forEach(t => { 
+                if (t.alive) t.vy = Math.max(t.vy, 0.1); 
+            });
+            triggerScreenShake(25, 1000);
+            return;
+        }
+
+        if (special === 'gravity_well') {
+            const item = this.inventory.find(i => i.id === type);
+            const radius = item?.effect?.radius || 150;
+            const strength = item?.effect?.strength || 0.3;
+            const duration = item?.effect?.duration || 10000;
+
+            console.log(`GRAVITY WELL ACTIVATED! Type: ${type}, Pos: ${Math.round(x)},${Math.round(y)}`);
+            
+            state.activeGravityWells.push({
+                x, y, radius, strength,
+                expiresAt: performance.now() + duration
+            });
+
+            // Throw a little dirt to get stuck in it (initial debris)
+            if (state.terrain.addTerrain) {
+                for (let i = 0; i < 8; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * radius * 0.5;
+                    state.terrain.addTerrain(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, 10);
+                }
+                state.terrain.updateCanvas();
+            }
+
+            triggerScreenShake(10, 500);
             return;
         }
 

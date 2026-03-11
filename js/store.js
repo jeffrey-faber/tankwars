@@ -381,6 +381,48 @@ export class Store {
                     damage: 0,
                     special: 'terrain_invert'
                 }
+            },
+            {
+                id: 'grav_well_s',
+                name: 'Micro-Gravity Anchor',
+                description: 'Deploys at apex. Creates a small, localized gravity well that pulls tanks and projectiles.',
+                price: 150,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 150,
+                    strength: 0.25,
+                    duration: 10000, // 10 seconds
+                    special: 'gravity_well'
+                }
+            },
+            {
+                id: 'grav_well_m',
+                name: 'Gravitational Nexus',
+                description: 'Powerful gravity well that attracts nearby matter and traps dirt.',
+                price: 250,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 250,
+                    strength: 0.4,
+                    duration: 15000,
+                    special: 'gravity_well'
+                }
+            },
+            {
+                id: 'grav_well_l',
+                name: 'Supermassive Singularity Core',
+                description: 'MASSIVE gravity distortion. Can pull entire teams into a single point. Generates its own orbit of debris.',
+                price: 450,
+                category: 'experimental',
+                effect: {
+                    type: 'weapon',
+                    radius: 400,
+                    strength: 0.6,
+                    duration: 20000,
+                    special: 'gravity_well'
+                }
             }
         ];
         
@@ -585,6 +627,9 @@ export class Store {
             case 'global_wave': return '🌊';
             case 'global_wave_crazy': return '🌋';
             case 'terrain_invert': return '☯️';
+            case 'grav_well_s': return '📍';
+            case 'grav_well_m': return '🔆';
+            case 'grav_well_l': return '🕳️';
             default: return '❓';
         }
     }
