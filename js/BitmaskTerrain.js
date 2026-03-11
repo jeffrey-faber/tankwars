@@ -344,10 +344,11 @@ export class BitmaskTerrain {
         return floating;
     }
 
-    updateGravity() {
+    updateGravity(wells = []) {
         if (this.freezeGravity) return false;
         let moved = false;
         let moveCount = 0;
+        
         // Iterate from bottom to top (excluding bottom-most row)
         for (let y = this.height - 2; y >= 0; y--) {
             // Randomize x direction to prevent bias
@@ -358,6 +359,37 @@ export class BitmaskTerrain {
                 const x = xStart + (i * xDir);
                 
                 if (this.isSolid(x, y)) {
+                    // 1. Check for Gravity Well Influence
+                    let attracted = false;
+                    for (const well of wells) {
+                        const dx = well.x - x;
+                        const dy = well.y - y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (dist < well.radius && dist > 5) {
+                            // Determine attraction direction
+                            const adx = Math.sign(dx);
+                            const ady = Math.sign(dy);
+                            
+                            // Try to move towards well center
+                            const targetX = x + adx;
+                            const targetY = y + ady;
+                            
+                            if (targetX >= 0 && targetX < this.width && targetY >= 0 && targetY < this.height - 1) {
+                                if (!this.isSolid(targetX, targetY)) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(targetX, targetY, true);
+                                    moved = true;
+                                    moveCount++;
+                                    attracted = true;
+                                    break; // Only influenced by one well at a time
+                                }
+                            }
+                        }
+                    }
+                    if (attracted) continue;
+
+                    // 2. Fallback to standard downward gravity
                     // Check directly below
                     if (!this.isSolid(x, y + 1)) {
                         this.setSolid(x, y, false);
