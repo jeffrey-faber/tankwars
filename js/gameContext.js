@@ -414,6 +414,7 @@ export function drawHUD() {
 
 export function draw() {
     if (!state.isGameOver) {
+        const now = performance.now();
         let offsetX = 0;
         let offsetY = 0;
 
@@ -520,7 +521,6 @@ export function draw() {
         }
 
         // Render Explosions (Centralized System)
-        const now = performance.now();
         state.activeExplosions = state.activeExplosions.filter(exp => exp.startTime + exp.duration > now);
         for (const exp of state.activeExplosions) {
             const elapsed = now - exp.startTime;
@@ -541,7 +541,6 @@ export function draw() {
 
         // Render transient laser beams in world space (shake-aware).
         if (Array.isArray(state.laserBeams) && state.laserBeams.length > 0) {
-            const now = performance.now();
             state.laserBeams = state.laserBeams.filter(beam => beam && beam.expiresAt > now);
             for (const beam of state.laserBeams) {
                 const remaining = Math.max(0, beam.expiresAt - now);
