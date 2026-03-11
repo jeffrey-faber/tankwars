@@ -1503,7 +1503,7 @@ export class Tank {
         const ny = ddy / dist;
 
         // Apply gravitational force
-        const force = gc.strength || 0.15;
+        const force = gc.strength || 0.2;
         this.vx += nx * force;
         this.vy += ny * force;
 
@@ -1514,9 +1514,9 @@ export class Tank {
             this.vy = (this.vy / speed) * 12;
         }
 
-        // Air friction
-        this.vx *= 0.99;
-        this.vy *= 0.99;
+        // Air friction — higher than normal mode so tanks settle onto terrain rather than orbiting
+        this.vx *= 0.97;
+        this.vy *= 0.97;
 
         // Move tank
         this.x += this.vx;

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls -la /e/development/games/tankwars/js/*.js | grep -v test | grep -v node_modules)"
+      "Bash(ls -la /e/development/games/tankwars/js/*.js | grep -v test | grep -v node_modules)",
+      "Bash(cd \"E:\\\\development\\\\games\\\\tankwars\" && npm test -- orbital.test.js 2>&1)",
+      "Bash(cd \"E:\\\\development\\\\games\\\\tankwars\" && npm test 2>&1)"
     ]
   }
 }
