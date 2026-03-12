@@ -146,6 +146,22 @@ describe('orbital landing — core directly below tank', () => {
         expect(tank.vy).toBeLessThan(0.5);
     });
 
+    it('ejects tank center when terrain overlaps the body', () => {
+        const terrain = makeTerrain();
+        const tank = makeTank(390, 210); // center ~= (400, 205)
+        setGravityCenter(400, 500, 0.15);
+
+        terrain.setSolid(400, 205, true);
+        terrain.setSolid(399, 205, true);
+        terrain.setSolid(401, 205, true);
+
+        tank.applyGravity(terrain);
+
+        const cx = Math.round(tank.x + tank.width / 2);
+        const cy = Math.round(tank.y - tank.height / 2);
+        expect(terrain.isSolid(cx, cy)).toBe(false);
+    });
+
     it('DIAGNOSE: fails to land on terrain 30px below center (beyond default scan range)', () => {
         const terrain = makeTerrain();
         // Terrain surface 30px below tank center — this is > halfSize+8 = 20

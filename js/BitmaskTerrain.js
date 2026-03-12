@@ -372,13 +372,23 @@ export class BitmaskTerrain {
         return floating;
     }
 
-    updateGravity(wells = [], globalWell = null) {
+    updateGravity(wells = [], globalWell = null, blockers = []) {
         if (this.freezeGravity) return 0;
         
         let moved = false;
         let moveCount = 0;
         const width = this.width;
         const height = this.height;
+        const hasBlockers = Array.isArray(blockers) && blockers.length > 0;
+        const isBlockedCell = (tx, ty) => {
+            if (!hasBlockers) return false;
+            for (const b of blockers) {
+                if (tx >= b.minX && tx <= b.maxX && ty >= b.minY && ty <= b.maxY) {
+                    return true;
+                }
+            }
+            return false;
+        };
 
         // Pre-calculate well bounding boxes
         const activeWells = wells.map(w => ({
@@ -425,6 +435,7 @@ export class BitmaskTerrain {
                     let attracted = false;
 
                     // 1. Local Wells
+                    let localMoved = false;
                     for (const well of activeWells) {
                         if (x >= well.minX && x <= well.maxX && y >= well.minY && y <= well.maxY) {
                             const dx = well.x - x;
@@ -434,24 +445,26 @@ export class BitmaskTerrain {
                                 const adx = Math.sign(dx);
                                 const ady = Math.sign(dy);
                                 const targetIdx = (y + ady) * width + (x + adx);
-                                if (this.data[targetIdx] === 0) {
+                                if (this.data[targetIdx] === 0 && !isBlockedCell(x + adx, y + ady)) {
                                     this.setSolid(x, y, false);
                                     this.setSolid(x + adx, y + ady, true);
                                     moved = true;
                                     moveCount++;
+                                    localMoved = true;
                                 }
                                 attracted = true; 
                                 break;
                             }
                         }
                     }
-                    if (attracted) continue;
+                    if (attracted && localMoved) continue;
 
                     // 2. Global Core
                     if (globalWell) {
                         const dx = globalWell.x - x;
                         const dy = globalWell.y - y;
                         const dist2 = dx * dx + dy * dy;
+                        let coreMoved = false;
                         if (dist2 > 25) {
                             // Distance-based probability gate: close pixels always move,
                             // far pixels move less often — creates fluid gradual collapse
@@ -489,37 +502,42 @@ export class BitmaskTerrain {
 
                                 for (const path of paths) {
                                     if (path.tx >= 0 && path.tx < width && path.ty >= 0 && path.ty < height - 1) {
-                                        if (this.data[path.ty * width + path.tx] === 0) {
+                                        if (this.data[path.ty * width + path.tx] === 0 && !isBlockedCell(path.tx, path.ty)) {
                                             this.setSolid(x, y, false);
                                             this.setSolid(path.tx, path.ty, true);
                                             moved = true;
                                             moveCount++;
+                                            coreMoved = true;
                                             break;
                                         }
                                     }
                                 }
                             }
                         }
-                        continue;
+                        if (coreMoved) continue;
                     }
 
                     // 3. Standard Gravity
                     if (y + 1 < height - 1) {
                         if (this.data[yNextOffset + x] === 0) {
-                            this.setSolid(x, y, false);
-                            this.setSolid(x, y + 1, true);
-                            moved = true;
-                            moveCount++;
+                            if (!isBlockedCell(x, y + 1)) {
+                                this.setSolid(x, y, false);
+                                this.setSolid(x, y + 1, true);
+                                moved = true;
+                                moveCount++;
+                            }
                         } else {
                             const leftOpen = x > 0 && this.data[yNextOffset + x - 1] === 0;
                             const rightOpen = x < width - 1 && this.data[yNextOffset + x + 1] === 0;
                             if (leftOpen || rightOpen) {
                                 const moveRight = (leftOpen && rightOpen) ? (Math.random() > 0.5) : rightOpen;
                                 const adx = moveRight ? 1 : -1;
-                                this.setSolid(x, y, false);
-                                this.setSolid(x + adx, y + 1, true);
-                                moved = true;
-                                moveCount++;
+                                if (!isBlockedCell(x + adx, y + 1)) {
+                                    this.setSolid(x, y, false);
+                                    this.setSolid(x + adx, y + 1, true);
+                                    moved = true;
+                                    moveCount++;
+                                }
                             }
                         }
                     }

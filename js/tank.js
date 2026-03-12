@@ -1556,6 +1556,26 @@ export class Tank {
         // Screen bounds
         this.clampToMapBounds('bounce');
 
+        // If terrain has flowed into the tank body, push back opposite "down"
+        // so tanks do not slowly phase through collapsing terrain.
+        let centerTx = Math.round(this.x + this.width / 2);
+        let centerTy = Math.round(this.y - this.height / 2);
+        if (terrain.isSolid(centerTx, centerTy)) {
+            for (let step = 0; step < 24; step++) {
+                this.x -= nx;
+                this.y -= ny;
+                this.clampToMapBounds('bounce');
+                centerTx = Math.round(this.x + this.width / 2);
+                centerTy = Math.round(this.y - this.height / 2);
+                if (!terrain.isSolid(centerTx, centerTy)) break;
+            }
+            const towardTerrain = this.vx * nx + this.vy * ny;
+            if (towardTerrain > 0) {
+                this.vx -= towardTerrain * nx;
+                this.vy -= towardTerrain * ny;
+            }
+        }
+
         // Landing detection: ray cast from tank center in "down" direction
         const halfSize = Math.max(this.width, this.height) / 2 + 2;
         const newCx = this.x + this.width / 2;

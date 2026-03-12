@@ -471,7 +471,15 @@ function gameLoop() {
 
             let totalMoved = 0;
             if (!skipFrame) {
-                totalMoved = state.terrain.updateGravity(activeWells, state.gravityCenter);
+                const terrainBlockers = (state.tanks || [])
+                    .filter(t => t.alive)
+                    .map(t => ({
+                        minX: Math.floor(t.x),
+                        maxX: Math.ceil(t.x + t.width),
+                        minY: Math.floor(t.y - t.height),
+                        maxY: Math.ceil(t.y)
+                    }));
+                totalMoved = state.terrain.updateGravity(activeWells, state.gravityCenter, terrainBlockers);
             }
             
             if (totalMoved > 5000) { // Much higher threshold for planetary chaos

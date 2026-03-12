@@ -83,7 +83,7 @@ describe('BitmaskTerrain', () => {
         terrain.setSolid(51, h - 2, false);
         
         const moved = terrain.updateGravity();
-        expect(moved).toBe(true);
+        expect(moved).toBeGreaterThan(0);
         
         // Should have moved from original spot
         expect(terrain.isSolid(50, h - 3)).toBe(false);
@@ -92,5 +92,36 @@ describe('BitmaskTerrain', () => {
         const left = terrain.isSolid(49, h - 2);
         const right = terrain.isSolid(51, h - 2);
         expect(left || right).toBe(true);
+    });
+
+    it('should still use sand fallback when global core pull is blocked', () => {
+        // Pixel tries to move left toward core, but all direct-core paths are blocked.
+        terrain.setSolid(50, 50, true);
+
+        terrain.updateGravity([], { x: 0, y: 50, strength: 0.2 }, [{
+            minX: 49,
+            maxX: 49,
+            minY: 49,
+            maxY: 51
+        }]);
+
+        // It should still settle down via standard gravity fallback.
+        expect(terrain.isSolid(50, 50)).toBe(false);
+        expect(terrain.isSolid(50, 51)).toBe(true);
+    });
+
+    it('should not move terrain pixels into tank blocker cells', () => {
+        terrain.setSolid(20, 10, true);
+
+        terrain.updateGravity([], null, [{
+            minX: 18,
+            maxX: 22,
+            minY: 11,
+            maxY: 20
+        }]);
+
+        // Downward move into y=11 is blocked, so pixel stays in place.
+        expect(terrain.isSolid(20, 10)).toBe(true);
+        expect(terrain.isSolid(20, 11)).toBe(false);
     });
 });
