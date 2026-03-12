@@ -372,13 +372,15 @@ export class BitmaskTerrain {
         return floating;
     }
 
-    updateGravity(wells = [], globalWell = null, blockers = []) {
+    updateGravity(wells = [], globalWell = null, blockers = [], options = {}) {
         if (this.freezeGravity) return 0;
         
         let moved = false;
         let moveCount = 0;
         const width = this.width;
         const height = this.height;
+        const coreAggression = Math.max(0.1, options.coreAggression ?? 1);
+        const allowGlobalFallback = options.allowGlobalFallback === true;
         const hasBlockers = Array.isArray(blockers) && blockers.length > 0;
         const isBlockedCell = (tx, ty) => {
             if (!hasBlockers) return false;
@@ -469,7 +471,7 @@ export class BitmaskTerrain {
                             // Distance-based probability gate: close pixels always move,
                             // far pixels move less often — creates fluid gradual collapse
                             // and greatly reduces CPU load from distant terrain
-                            const moveProbability = Math.min(1.0, 70000 / dist2); // ~265px = always
+                            const moveProbability = Math.min(1.0, (70000 * coreAggression) / dist2);
                             if (Math.random() < moveProbability) {
                                 const adx = Math.sign(dx);
                                 const ady = Math.sign(dy);
@@ -515,6 +517,7 @@ export class BitmaskTerrain {
                             }
                         }
                         if (coreMoved) continue;
+                        if (!allowGlobalFallback) continue;
                     }
 
                     // 3. Standard Gravity

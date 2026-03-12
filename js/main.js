@@ -463,7 +463,10 @@ function gameLoop() {
 
             let totalMoved = 0;
             const weaponOrbital = state.gravityCenter && !state.isOrbitalMap;
-            const gravityPasses = weaponOrbital ? 3 : 1;
+            const gravityPasses = weaponOrbital ? 8 : 1;
+            const gravityOptions = weaponOrbital
+                ? { allowGlobalFallback: true, coreAggression: 4 }
+                : { allowGlobalFallback: false, coreAggression: 1 };
             for (let pass = 0; pass < gravityPasses; pass++) {
                 const terrainBlockers = (state.tanks || [])
                     .filter(t => t.alive)
@@ -473,7 +476,7 @@ function gameLoop() {
                         minY: Math.floor(t.y - t.height),
                         maxY: Math.ceil(t.y)
                     }));
-                totalMoved += state.terrain.updateGravity(activeWells, state.gravityCenter, terrainBlockers);
+                totalMoved += state.terrain.updateGravity(activeWells, state.gravityCenter, terrainBlockers, gravityOptions);
             }
             
             if (totalMoved > 5000) { // Much higher threshold for planetary chaos

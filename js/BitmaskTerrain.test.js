@@ -103,11 +103,28 @@ describe('BitmaskTerrain', () => {
             maxX: 49,
             minY: 49,
             maxY: 51
-        }]);
+        }], {
+            allowGlobalFallback: true
+        });
 
         // It should still settle down via standard gravity fallback.
         expect(terrain.isSolid(50, 50)).toBe(false);
         expect(terrain.isSolid(50, 51)).toBe(true);
+    });
+
+    it('should keep core mode strict when fallback is disabled', () => {
+        terrain.setSolid(50, 50, true);
+
+        terrain.updateGravity([], { x: 0, y: 50, strength: 0.2 }, [{
+            minX: 49,
+            maxX: 49,
+            minY: 49,
+            maxY: 51
+        }], {
+            allowGlobalFallback: false
+        });
+
+        expect(terrain.isSolid(50, 50)).toBe(true);
     });
 
     it('should not move terrain pixels into tank blocker cells', () => {
