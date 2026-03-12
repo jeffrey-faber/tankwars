@@ -58,9 +58,6 @@ function getOrbitalTankPositions(count) {
     return positions;
 }
 
-// Throttle terrain gravity for weapon-triggered orbital (every 2nd frame)
-let gravityFrameCounter = 0;
-
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -464,13 +461,10 @@ function gameLoop() {
             const now = performance.now();
             const activeWells = state.activeGravityWells || [];
 
-            // Weapon-triggered orbital: throttle to every 2nd frame to reduce putImageData cost.
-            // Orbital map: terrain is pre-settled, no throttle needed (moved=0 → no putImageData).
-            const weaponOrbital = state.gravityCenter && !state.isOrbitalMap;
-            const skipFrame = weaponOrbital && (gravityFrameCounter++ % 2 === 1);
-
             let totalMoved = 0;
-            if (!skipFrame) {
+            const weaponOrbital = state.gravityCenter && !state.isOrbitalMap;
+            const gravityPasses = weaponOrbital ? 3 : 1;
+            for (let pass = 0; pass < gravityPasses; pass++) {
                 const terrainBlockers = (state.tanks || [])
                     .filter(t => t.alive)
                     .map(t => ({
@@ -479,7 +473,7 @@ function gameLoop() {
                         minY: Math.floor(t.y - t.height),
                         maxY: Math.ceil(t.y)
                     }));
-                totalMoved = state.terrain.updateGravity(activeWells, state.gravityCenter, terrainBlockers);
+                totalMoved += state.terrain.updateGravity(activeWells, state.gravityCenter, terrainBlockers);
             }
             
             if (totalMoved > 5000) { // Much higher threshold for planetary chaos
