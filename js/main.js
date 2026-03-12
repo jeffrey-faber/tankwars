@@ -11,26 +11,48 @@ import { state, getNextAliveTankIndex, showGameOverOverlay, draw, drawHUD, isSet
 import { initMobileMode, setMobileControlsVisibility } from './mobileManager.js';
 
 // ─── Orbital map constants & helpers ────────────────────────────────────────
-const ORBIT_CX = 600;
-const ORBIT_CY = 300;
-const ORBIT_RADIUS = 210;
+const ORBIT_RADIUS_RATIO = 0.35;
+const ORBIT_MARGIN = 40;
+const ORBIT_SPAWN_OFFSET = 20;
+
+function getOrbitConfig() {
+    const width = state.canvas?.width || 1200;
+    const height = state.canvas?.height || 600;
+    const centerX = Math.floor(width / 2);
+    const centerY = Math.floor(height / 2);
+    const maxAllowedRadius = Math.max(80, Math.floor(Math.min(centerX, centerY) - ORBIT_MARGIN));
+    const preferredRadius = Math.floor(Math.min(width, height) * ORBIT_RADIUS_RATIO);
+    const radius = Math.max(80, Math.min(preferredRadius, maxAllowedRadius));
+    return { centerX, centerY, radius };
+}
 
 function initOrbitalRound() {
-    state.terrain.bakeOrbitMap(ORBIT_CX, ORBIT_CY, ORBIT_RADIUS);
-    state.gravityCenter = { x: ORBIT_CX, y: ORBIT_CY, strength: 0.2, turnsLeft: Infinity };
+    const orbit = getOrbitConfig();
+    state.orbitConfig = orbit;
+    state.terrain.bakeOrbitMap(orbit.centerX, orbit.centerY, orbit.radius);
+    state.gravityCenter = { x: orbit.centerX, y: orbit.centerY, strength: 0.2, turnsLeft: Infinity };
     state.isOrbitalMap = true;
     state.wind = 0;
 }
 
 function getOrbitalTankPositions(count) {
+    const orbit = state.orbitConfig || getOrbitConfig();
+    const canvasWidth = state.canvas?.width || 1200;
+    const canvasHeight = state.canvas?.height || 600;
+    const tankWidth = 20;
+    const tankHeight = 10;
+    const minY = tankHeight + 2;
+    const maxY = canvasHeight - tankHeight - 5;
     const positions = [];
     for (let i = 0; i < count; i++) {
         // Evenly distribute around the planet, starting from the top
         const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
-        const dist = ORBIT_RADIUS + 20;
+        const dist = orbit.radius + ORBIT_SPAWN_OFFSET;
+        const x = orbit.centerX + dist * Math.cos(angle) - (tankWidth / 2);
+        const y = orbit.centerY + dist * Math.sin(angle);
         positions.push({
-            x: ORBIT_CX + dist * Math.cos(angle) - 10,
-            y: ORBIT_CY + dist * Math.sin(angle),
+            x: Math.max(0, Math.min(canvasWidth - tankWidth, x)),
+            y: Math.max(minY, Math.min(maxY, y)),
         });
     }
     return positions;

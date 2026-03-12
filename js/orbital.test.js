@@ -94,6 +94,21 @@ describe('orbital gravity force', () => {
         const speed = Math.sqrt(tank.vx ** 2 + tank.vy ** 2);
         expect(speed).toBeLessThanOrEqual(12.1); // slight float tolerance
     });
+
+    it('keeps tanks inside map bounds while orbital gravity is active', () => {
+        const terrain = makeTerrain();
+        const tank = makeTank(790, 5);
+        tank.vx = 8;
+        tank.vy = -12;
+        setGravityCenter(760, 0, 0.2);
+
+        simulate(tank, terrain, 120);
+
+        expect(tank.x).toBeGreaterThanOrEqual(0);
+        expect(tank.x).toBeLessThanOrEqual(state.canvas.width - tank.width);
+        expect(tank.y).toBeGreaterThanOrEqual(tank.height);
+        expect(tank.y).toBeLessThanOrEqual(state.canvas.height - tank.height - 5);
+    });
 });
 
 // ─── landing detection ────────────────────────────────────────────────────────

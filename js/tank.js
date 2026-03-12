@@ -156,6 +156,36 @@ export class Tank {
         }
     }
 
+    clampToMapBounds(mode = 'stop') {
+        const canvasWidth = state.canvas?.width || 1200;
+        const canvasHeight = state.canvas?.height || 800;
+        const minX = 0;
+        const maxX = canvasWidth - this.width;
+        const minY = this.height;
+        const maxY = canvasHeight - this.height - 5;
+        const shouldBounce = mode === 'bounce';
+
+        if (this.x < minX) {
+            this.x = minX;
+            if (shouldBounce) this.vx = Math.abs(this.vx) * 0.5;
+            else if (this.vx < 0) this.vx = 0;
+        } else if (this.x > maxX) {
+            this.x = maxX;
+            if (shouldBounce) this.vx = -Math.abs(this.vx) * 0.5;
+            else if (this.vx > 0) this.vx = 0;
+        }
+
+        if (this.y < minY) {
+            this.y = minY;
+            if (shouldBounce) this.vy = Math.abs(this.vy) * 0.5;
+            else if (this.vy < 0) this.vy = 0;
+        } else if (this.y > maxY) {
+            this.y = maxY;
+            if (shouldBounce) this.vy = -Math.abs(this.vy) * 0.5;
+            else if (this.vy > 0) this.vy = 0;
+        }
+    }
+
     handleLanding(currentY, impactVelocity = 0) {
         const fallDistance = currentY - this.lastSolidY;
         
@@ -1484,6 +1514,7 @@ export class Tank {
             }
         }
         
+        this.clampToMapBounds();
         this.checkBuried(terrain);
     }
 
@@ -1523,8 +1554,7 @@ export class Tank {
         this.y += this.vy;
 
         // Screen bounds
-        if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx) * 0.5; }
-        if (this.x > canvasWidth - this.width) { this.x = canvasWidth - this.width; this.vx = -Math.abs(this.vx) * 0.5; }
+        this.clampToMapBounds('bounce');
 
         // Landing detection: ray cast from tank center in "down" direction
         const halfSize = Math.max(this.width, this.height) / 2 + 2;
@@ -1579,6 +1609,7 @@ export class Tank {
             }
             this.lastSolidY = this.y;
         }
+        this.clampToMapBounds('bounce');
     }
 
     checkBuried(terrain) {
